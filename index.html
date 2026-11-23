@@ -253,7 +253,9 @@ const OUTFITS={
   court0:{n:'궁중 나들이옷',top:'#f6c9d8',bot:'#3f6fb0',rib:'#d9412e',job:1},
   court1:{n:'왕실 예복',top:'#e9b930',bot:'#c8392f',rib:'#2e4a8a',job:1},
   court2:{n:'대례복',top:'#c8392f',bot:'#2e2a5a',rib:'#f7d24a',hatF:'gache',hatM:'ikseon',job:1},
-  bobu:{n:'보부상 차림',top:'#e9e4d8',bot:'#8a7a5a',rib:'#c9a86a',hat:'straw',job:1,mkt:700}
+  bobu:{n:'보부상 차림',top:'#e9e4d8',bot:'#8a7a5a',rib:'#c9a86a',hat:'straw',job:1,mkt:700},
+  merch1:{n:'객주 차림',top:'#5a7a4a',bot:'#e9e4d8',rib:'#f7d24a',job:1},
+  merch2:{n:'거상 차림',top:'#2e4a6a',bot:'#dfe9ee',rib:'#f7d24a',hat:'gat',job:1}
 };
 // 옛말로 바꿔 보여 주기: 대사와 이름에 남아 있는 요즘 말을 조선 마을에 맞게 고친다
 const JZ=[['빵집','떡집'],['갓 구운 빵','갓 찐 떡'],['빵','떡'],['오븐','시루'],['타르트','화전'],['파이','정과'],['잡화점','만물상'],['로켓 발사대','하늘을 나는 수레'],['녹음기','소리 단지'],['기계','기구'],['텐트','움막']];
@@ -298,6 +300,12 @@ const MERCH={peddler:{skin:'#e0b48c',hair:'#2e2a2a',shirt:'#e9e4d8',bot:'#8a7a5a
 // 보부상이 파는 것: [아이템, 값, 장날 하루에 살 수 있는 개수]. 가구와 옷은 따로 붙는다
 const MKT_GOODS=[['iron',55,5],['feed',6,20],['yeot',20,5],['ginseng',420,1]];
 const MKT_WANT=['apple','persimmon','mushroom','shell','wood','stone','crucian','scad','mackerel','meat','hide','egg','milk','flower','chestnut','turnip','carrot','carp'];
+// 상인의 길: 만물상 은하 밑에서 물건 보는 눈을 기르고(안목 겨루기) 주문받은 물건을 댄다(납품). need[자리]=오르는 조건(done 안목 겨루기·sold 납품 횟수),
+// eye[0 날마다·1 객주 시험·2 거상 시험]={n 문제 수, ratio 두 물건 값 차이의 최소 배수, time 한 문제 시간, bad 틀려도 되는 수}
+const TRADE={ranks:['보부상','객주','거상'],need:[{stat:2},{stat:7,done:5,sold:4,npc:'eunha',h:2},{stat:13,done:14,sold:12,npc:'king',h:2}],pay:[50,100,180],fit:['bobu','merch1','merch2'],
+  eye:[{n:6,ratio:1.3,time:5,bad:2},{n:8,ratio:1.15,time:4,bad:1},{n:10,ratio:1.08,time:3.5,bad:1}],
+  goods:[['wood','stone','apple','persimmon','flower','mushroom','shell','minnow','crucian','scad','egg','turnip'],['mackerel','carrot','meat','hide','milk','chestnut','feather','iron']],
+  royal:['carp','snapper','antler','pumpkin','watermelon','strawberry','milk','hide','salmon','catfish','sweetfish']};
 // 왕실의 길: 중전에게 예법을 수련하고, 간택(세자나 공주의 배필)과 책봉 의식을 거친다. need[자리]=오르는 조건(mate=배필과의 ♥),
 // pay=수련 수고비, stipend=날마다 받는 내탕금, rounds[0 수련·1 간택·2 책봉]=따라 할 동작의 길이
 const COURT={need:[{stat:2},{stat:8,done:6,mate:3,npc:'queen',h:2},{stat:14,done:16,mate:5,npc:'king',h:3}],pay:[60,120,200],stipend:[0,150,400],
@@ -582,6 +590,9 @@ function fixState(s){
   if(!s.court||typeof s.court!=='object')s.court=null;
   // 장날 물건(mkt={day,furn 파는 가구,want 인기 품목,left 남은 개수}). 장날마다 새로 정한다
   if(!s.mkt||typeof s.mkt!=='object')s.mkt=null;
+  // 상인의 길(merch={rank,done 안목 겨루기,sold 납품,day,order 오늘 주문})과 내세울 호칭(title: 어느 길의 이름을 쓸지)
+  if(!s.merch||typeof s.merch!=='object')s.merch=null;
+  if(!['court','cook','merch'].includes(s.title))s.title=null;
   s.dexDone=s.dexDone||{};
   if(!s.dex){s.dex={};for(const k in s.inv)if(!ITEMS[k].seed)s.dex[k]=s.inv[k]}
   return s;
@@ -644,8 +655,11 @@ function train(k,n){
 // 왕실의 자리 이름: 처음에는 모습에 따라 궁녀·별감, 간택 뒤에는 배필이 세자냐 공주냐에 따라 정해진다
 const courtTitle=()=>{const C=S.court;return C.rank===0?(S.sex==='f'?'궁녀':'별감'):C.mate==='princess'?(C.rank===1?'부마':'국서'):(C.rank===1?'세자빈':'왕비')};
 // 내세우는 호칭: 간택된 뒤에는 왕실의 자리, 아니면 수라간의 자리, 그도 아니면 마을에서의 이름
-const rankName=()=>S.court&&S.court.rank>=1?courtTitle():S.job?JOBS[S.job.k].ranks[S.sex==='f'?'f':'m'][S.job.rank]:S.court?courtTitle():TITLES[Math.min(S.level,TITLES.length)-1];
-const sellPrice=id=>Math.ceil(ITEMS[id].p*(perk('eunha')?1.1:1)*(1+sv('trade')*.02));
+// 길마다의 자리 이름. 내세울 호칭은 신분 창에서 고르고, 고르지 않았으면 왕실(간택 뒤) → 수라간 → 상인 → 궁녀·별감 → 마을 이름 순서로 정한다
+const trackTitle=k=>k==='court'?(S.court?courtTitle():null):k==='cook'?(S.job?JOBS.cook.ranks[S.sex==='f'?'f':'m'][S.job.rank]:null):k==='merch'?(S.merch?TRADE.ranks[S.merch.rank]:null):null;
+const rankName=()=>trackTitle(S.title)||(S.court&&S.court.rank>=1?courtTitle():null)||trackTitle('cook')||trackTitle('merch')||trackTitle('court')||TITLES[Math.min(S.level,TITLES.length)-1];
+// 파는 값: 은하와 친하면 10%, 수완 1마다 2%, 상인의 자리가 오를 때마다 5% 더 받는다
+const sellPrice=id=>Math.ceil(ITEMS[id].p*(perk('eunha')?1.1:1)*(1+sv('trade')*.02)*(1+(S.merch?S.merch.rank*.05:0)));
 const comfort=()=>S.placed.reduce((a,f)=>a+FURN[f.id].c,0);
 // 기력: 일을 하면 줄고, 음식을 먹거나 자면 찬다
 const maxEn=()=>Math.min(200,Math.min(160,100+(S.level-1)*6)+sv('arms')*2);
@@ -1216,6 +1230,7 @@ function renderTown(c){
     list.push([ry(n)+.1,()=>drawChar(c,x,y,NPCS[id],n.dir,n.t<1,now+n.x)]);
     if(n.emo)labels.push(()=>bubble(c,x,y-56,n.emo.k,n.emo.k==='♥'?'#d94a74':'#e0453a'));
     else if(S.quests.some(q=>q.npc===id&&!q.done))labels.push(()=>bubble(c,x,y-56,'?','#2b7fb5'));
+    else if(id==='eunha'&&S.merch&&S.merch.order&&!S.merch.order.done&&have(S.merch.order.item)>=S.merch.order.n)labels.push(()=>bubble(c,x,y-56,'!','#dd6a1c')); // 납품할 물건이 다 모였다
     if(Math.abs(rx(n)-rx(P))+Math.abs(ry(n)-ry(P))<3.2)labels.push(()=>label(c,x,y+9,NPCS[id].name));
   }
   const px=(rx(P)+.5)*T,py=(ry(P)+.9)*T;
@@ -1466,14 +1481,19 @@ function faceTarget(){
   if(tg&&tg.t==='bld'){const b=tg.b;if(!(P.x===b.door[0]&&P.y===b.door[1]&&P.dir[1]===-1))tg=null}
   // 일직선 앞쪽 네 칸 안에 들짐승이 있으면 물가보다 사냥이 먼저다
   if(!tg||tg.t==='water'){const b=beastInLine();if(b)return{x:b.x,y:b.y,tg:{t:'beast',b}}}
+  // 밭 한가운데 남은 빈칸(둘레 세 곳 이상이 밭)에 서 있으면, 옆 밭보다 발밑 빈칸을 먼저 간다
+  if(scene==='town'&&(!tg||tg.t==='soil')&&tillable(P.x,P.y)&&soilSides(P.x,P.y)>=3)return{x:P.x,y:P.y,tg:{t:'till',x:P.x,y:P.y}};
   if(tg)return{x:fx,y:fy,tg};
   if(scene==='town'){
+    // 바라보는 칸이 내 땅의 빈 풀밭이면 그 칸을 간다. 밭 위에 서 있어도 마찬가지다 (예전에는 발밑 밭이 먼저라, 밭에 둘러싸인 빈칸을 갈 수 없었다)
+    if(tillable(fx,fy))return{x:fx,y:fy,tg:{t:'till',x:fx,y:fy}};
     if(S.farm[P.x+','+P.y])return{x:P.x,y:P.y,tg:{t:'soil',x:P.x,y:P.y}};
-    // 내 땅의 빈 풀밭을 바라보고 있으면 밭을 갈 수 있다
-    if(inFarm(fx,fy)&&!npcOn(fx,fy)&&!herdOn(fx,fy)&&!S.pickups.some(p=>p.x===fx&&p.y===fy))return{x:fx,y:fy,tg:{t:'till',x:fx,y:fy}};
   }
   return null;
 }
+// 갈 수 있는 칸: 내 땅의 빈 풀밭이고, 아직 밭이 아니며, 누가 서 있거나 주울 것이 놓여 있지 않다
+const tillable=(x,y)=>inFarm(x,y)&&!S.farm[x+','+y]&&!npcOn(x,y)&&!herdOn(x,y)&&!S.pickups.some(p=>p.x===x&&p.y===y);
+const soilSides=(x,y)=>DIRS.reduce((a,d)=>a+(S.farm[(x+d[0])+','+(y+d[1])]?1:0),0);
 function act(tg,x,y){
   switch(tg.t){
   case 'npc':talk(tg.id);break;
@@ -1520,6 +1540,12 @@ function clickTile(x,y,low){
   let tg=targetAt(x,y);
   // 지붕이나 나무 윗부분을 눌렀으면 그 건물·나무를 누른 것으로 본다 (주울 것이 놓인 칸은 제외)
   if(!tg&&(scene==='town'||scene==='palace')&&low&&!S.pickups.some(p=>p.x===x&&p.y===y)){const t2=targetAt(x,y+1);if(t2&&(t2.t==='tree'||t2.t==='bld'||t2.t==='pen'||t2.t==='stall')){tg=t2;y++}}
+  if(!tg&&scene==='town'&&tillable(x,y)&&soilSides(x,y)>=3){
+    // 밭 한가운데 남은 빈칸을 누르면: 그 위나 바로 옆이면 곧바로 갈고, 멀면 옆까지 걸어가서 간다
+    const d=Math.abs(x-P.x)+Math.abs(y-P.y),go=()=>{if(Math.abs(x-P.x)+Math.abs(y-P.y)===1){P.dir=[x-P.x,y-P.y];till(x,y)}};
+    if(d===0)till(x,y);else if(d===1)go();else setPath((a,b)=>Math.abs(a-x)+Math.abs(b-y)===1,go);
+    return;
+  }
   if(!tg){if(walkable(x,y))walkThen(x,y,null);return}
   if(tg.t==='beast'){huntClick(tg.b);return}
   if(tg.t==='bld'){const b=tg.b;walkThen(b.door[0],b.door[1],()=>{P.dir=[0,-1];act(tg)});return}
@@ -1577,7 +1603,7 @@ function mgPress(){
   if(m.kind==='forge'){forgeHit(m);return}
   if(m.kind==='milk'){milkPress(m);return}
   if(m.kind==='cook'){cookPress(m);return}
-  if(m.kind==='rite')return; // 예법 따라 하기는 방향키나 화면의 화살표로 한다
+  if(m.kind==='rite'||m.kind==='eye')return; // 예법 따라 하기와 안목 겨루기는 방향키나 화면을 눌러서 한다
   if(m.kind==='haggle'){hagglePress(m);return}
   if(m.cool>0)return;
   if(m.kind==='hunt'){shoot(m);return}
@@ -1610,6 +1636,22 @@ function mgEnd(){
     if(m.good<m.need||!f||S.coins<f.cost||have('iron')<f.iron||have('wood')<f.wood){toast('쇠가 식어 버렸어요 ('+m.good+'/'+m.need+'). 재료는 그대로이니 다시 두드려 봐요');sfx('err');return}
     addCoins(-f.cost);gain('iron',-f.iron);gain('wood',-f.wood);S.tools[k]=lv+1;addXp(20);addFriend('moru',5);sfx('level');
     toast(TOOLS[k].n+' +'+(lv+1)+' 완성! '+TOOLS[k].d[lv+1]);saveAll();return;
+  }
+  if(m.kind==='eye'){
+    N.eunha.hold=0;if(!m.fin)return;
+    S.min=Math.min(1380,S.min+25);
+    const M=S.merch,say=text=>dialog({npc:'eunha',who:NPCS.eunha.name,text});
+    if(!m.exam){
+      // 날마다 하는 안목 겨루기
+      if(!m.ok){toast('눈썰미가 흐려졌어요. 물건 값을 더 익히고 다시 해 봐요');sfx('err');return}
+      const pay=TRADE.pay[M.rank]+m.good*10;M.done++;M.day=S.day;addCoins(pay);addXp(12);addFriend('eunha',4);train('trade',Math.max(1,m.good-1));sfx('coin');saveAll();
+      say((m.bad?'제법이에요. 물건 보는 눈이 늘고 있어요.':'하나도 안 틀렸네요! 타고난 장사꾼이에요.')+'\n(수고비 '+won(pay)+'을 받았어요. 지금까지 안목 겨루기 '+M.done+'번)');return;
+    }
+    if(!m.ok){say('아직은 눈이 덜 여물었어요. 물건을 더 다뤄 보고 다시 와요.');return}
+    const r=++M.rank,prize=r===1?600:1800;grantTradeFit(r);addCoins(prize);addXp(r===1?70:140);sfx('level');saveAll();
+    say((r===1?'이제 좌판을 맡겨도 되겠어요. 오늘부터 어엿한 객주예요.':'이 마을에서 {name} 씨만 한 장사꾼은 없어요. 궁에서도 물건을 대 달라는 기별이 왔어요.')
+      +'\n('+jo(TRADE.ranks[r],'이','가')+' 되었어요! '+OUTFITS[TRADE.fit[r]].n+'과 '+won(prize)+'을 받았어요. 물건을 '+r*5+'% 더 비싸게 팔고, 장날 흥정도 유리해져요.'+(r===2?' 값을 후하게 쳐 주는 왕실 납품 주문도 들어와요.':'')+')');
+    return;
   }
   if(m.kind==='haggle'){
     if(!m.fin)return;
@@ -1692,6 +1734,7 @@ function updMg(dt){
   if(m.kind==='cook'){updCook(m,dt);return}
   if(m.kind==='rite'){updRite(m,dt);return}
   if(m.kind==='haggle'){updHaggle(m,dt);return}
+  if(m.kind==='eye'){updEye(m,dt);return}
   if(m.cool>0){
     m.cool-=dt;
     if(m.cool<=0){m.note='';if(m.fin)mgEnd();else if(m.kind==='mine')m.r=36;else if(m.kind==='chop'){m.zc=rnd(.3,.7);m.pos=Math.random()<.5?0:1;m.dir=m.pos?-1:1}}
@@ -1728,6 +1771,21 @@ function drawMg(c,labels){
     rr(c,x0-3,by-3,w+6,18,9,'rgba(20,40,20,.78)');rr(c,x0,by,w,12,6,'#f3ead6');rr(c,hx-14,by,28,12,3,'#8fd06a');rr(c,hx-6,by,12,12,2,'#f7c531');rr(c,hx-1.5,by-4,3,20,1.5,'#3a3a40');
     for(const q of m.notes){const x=hx+(q.t-m.t)*90;if(q.s===1||x<x0+5||x>x0+w-5)continue;circ(c,x,by+6,5,q.s?'#9aa3a8':'#f08a2a');if(!q.s)circ(c,x-1.5,by+4.5,1.8,'#f7d24a')}
     labels.push(()=>label(c,bx,by-14,m.note||'박자에 맞춰 행동! '+m.good+'/'+m.need));return;
+  }
+  if(m.kind==='eye'){
+    // 두 물건을 나란히 보여 준다. 고른 뒤에는 값을 밝히고, 비싼 쪽을 초록으로 칠한다
+    const p=ritePad(),q=m.pairs[Math.min(m.i,m.pairs.length-1)],show=m.rev>0||m.fin;
+    rr(c,p.cx-82,p.cy-46,164,94,16,'rgba(20,40,20,.84)');
+    for(let s=0;s<2;s++){
+      const x=p.cx+(s?41:-41),y=p.cy-14,id=q[s];
+      circ(c,x,y,21,show?(s===m.ans?'#8fd06a':'#b9b7a8'):'#f3ead6');
+      if(show&&m.pickd===s){c.lineWidth=3;c.strokeStyle=s===m.ans?'#f7c531':'#d9412e';c.beginPath();c.arc(x,y,22.5,0,7);c.stroke()}
+      blit(c,itemSpr(id),x,y);
+      c.font='11px '+FONT;c.textAlign='center';c.textBaseline='middle';c.fillStyle='#fffbe8';c.fillText(jz(ITEMS[id].n),x,p.cy+17);
+      if(show){c.fillStyle='#f7d24a';c.fillText(ITEMS[id].p+'냥',x,p.cy+31)}
+    }
+    if(!show){rr(c,p.cx-60,p.cy+36,120,5,2.5,'#5a6a5a');rr(c,p.cx-60,p.cy+36,120*clamp(1-m.t/m.time,0,1),5,2.5,'#f7c531')}
+    labels.push(()=>label(c,p.cx,p.cy-58,m.note||'어느 쪽이 더 비쌀까요? '+Math.min(m.i+1,m.pairs.length)+'/'+m.pairs.length+' · 맞힌 것 '+m.good));return;
   }
   if(m.kind==='haggle'){
     // 값 눈금(100%~160%). 객주가 망설이기 시작하면 눈금이 떨린다
@@ -2062,7 +2120,7 @@ function openBroker(){
 function startHaggle(id,n){
   if(!isMarket()||have(id)<n||n<1||!useEn(1))return;
   const tr=sv('trade');
-  mg={kind:'haggle',o:{x:P.x,y:P.y,sh:0},id,n,want:S.mkt.want.includes(id),mult:1,lim:Math.min(1.58,rnd(1.15,1.45)+tr*.008),warn:.05+tr*.004,t:0,note:'',cool:0,fin:false,ok:false,end:0};P.path=[];P.after=null;
+  mg={kind:'haggle',o:{x:P.x,y:P.y,sh:0},id,n,want:S.mkt.want.includes(id),mult:1,lim:Math.min(1.58,rnd(1.15,1.45)+tr*.008+(S.merch?S.merch.rank*.03:0)),warn:.05+tr*.004,t:0,note:'',cool:0,fin:false,ok:false,end:0};P.path=[];P.after=null;
   tip('haggle','값이 오르는 동안 기다리다가 행동으로 값을 불러요. 눈금이 떨리면 객주가 망설인다는 뜻이니 얼른 불러요');
 }
 function hagglePress(m){
@@ -2073,6 +2131,79 @@ function updHaggle(m,dt){
   if(m.fin){m.end-=dt;if(m.end<=0)mgEnd();return}
   m.t+=dt;m.mult+=dt*.11;
   if(m.mult>=m.lim){m.fin=true;m.ok=false;m.mult=.9;m.end=.9;m.note='그 값엔 못 사오!';sfx('err')}
+}
+// ───────── 상인의 길 ─────────
+function grantTradeFit(r){const k=TRADE.fit[r];if(!S.owned.includes(k))S.owned.push(k)}
+// 오늘의 납품 주문: 자리가 오를수록 값진 물건을 많이 찾고, 거상은 절반쯤이 왕실 주문이다. 값은 만물상에 팔 때보다 40~80% 더 쳐 준다
+function rollOrder(){
+  const M=S.merch;if(!M)return;
+  const sea=season(),ok=k=>CROPS[k]?CROPS[k].s.includes(sea):k==='chestnut'?sea===2:k==='feather'?sea>=2:(k==='apple'||k==='persimmon'||k==='flower')?sea!==3:SFISH.some(f=>f[0]===k)?SFISH[sea][0]===k:true;
+  const royal=M.rank>=2&&Math.random()<.5,pool=(royal?TRADE.royal:M.rank?TRADE.goods[0].concat(TRADE.goods[1]):TRADE.goods[0]).filter(ok);
+  const item=pick(pool),n=royal?ri(3,5):M.rank?ri(5,8):ri(4,6);
+  M.order={item,n,royal,pay:Math.round(sellPrice(item)*n*(royal?1.8:M.rank?1.5:1.4)),done:false};
+}
+function tradeTalk(){
+  const d=NPCS.eunha,say=(text,choices)=>dialog({npc:'eunha',who:d.name,text,choices}),M=S.merch;
+  if(!M){
+    if(sv('trade')<TRADE.need[0].stat){say('장사를 배워 보고 싶어요? 수완이 적어도 '+TRADE.need[0].stat+' 이상은 되어야 맡길 수 있어요.\n(지금 수완 '+sv('trade')+' · 아래 "신분"에서 스탯 점수로 올려요.)');return}
+    say('눈썰미가 있어 보여요. 내 밑에서 장사를 배워 볼래요? 물건 보는 눈을 기르고, 주문받은 물건을 대 주는 일이에요.',[['해 볼게요',()=>{
+      S.merch={rank:0,done:0,sold:0,day:0,order:null};grantTradeFit(0);rollOrder();sfx('level');saveAll();
+      say('오늘부터 {name} 씨는 '+jo(TRADE.ranks[0],'이에요','예요')+'. 날마다 주문을 하나씩 줄게요. 물건을 모아 오면 가게 값보다 후하게 쳐 줄게요.\n('+OUTFITS.bobu.n+'을 받았어요. 옷장에서 입을 수 있어요.)');
+    }],['좀 더 생각해 볼게요',null]]);return;
+  }
+  if(!M.order)rollOrder();
+  const o=M.order,it=ITEMS[o.item],ch=[];let text;
+  if(!o.done){
+    text=(o.royal?'오늘은 궁에서 들어온 주문이에요. ':'오늘 주문이에요. ')+it.n+' '+o.n+'개를 구해 줘요. 값은 '+won(o.pay)+'으로 쳐 줄게요.\n(가진 '+it.n+' '+have(o.item)+'/'+o.n+'개)';
+    if(have(o.item)>=o.n)ch.push(['납품하기',deliver]);
+  }else text='오늘 주문은 잘 받았어요. 내일 새 주문을 줄게요.';
+  if(M.day!==S.day)ch.push(['안목 겨루기',()=>startEye(0)]);
+  if(M.rank<2)ch.push(['승급 겨루기',tradePromo]);
+  ch.push(['그만',null]);
+  say(text+'\n(안목 겨루기 '+M.done+'번 · 납품 '+M.sold+'번)',ch);
+}
+function deliver(){
+  const M=S.merch,o=M.order;if(!o||o.done||have(o.item)<o.n)return;
+  gain(o.item,-o.n);o.done=true;M.sold++;addCoins(o.pay);addXp(15);addFriend('eunha',5);if(o.royal)addFriend('king',4);train('trade',3);sfx('coin');saveAll();
+  dialog({npc:'eunha',who:NPCS.eunha.name,text:(o.royal?'틀림없이 궁으로 올려 보낼게요. 전하께서도 기뻐하실 거예요.':'딱 맞게 가져왔네요. 역시 믿고 맡길 만해요.')+'\n('+won(o.pay)+'을 받았어요. 지금까지 납품 '+M.sold+'번)'});
+}
+function tradePromo(){
+  const M=S.merch,q=TRADE.need[M.rank+1],d=NPCS.eunha,say=(text,choices)=>dialog({npc:'eunha',who:d.name,text,choices}),m=v=>v?'✓ ':'✗ ',E=TRADE.eye[M.rank+1];
+  const ok=[sv('trade')>=q.stat,M.done>=q.done,M.sold>=q.sold,hearts(q.npc)>=q.h];
+  const list=m(ok[0])+'수완 '+q.stat+' (지금 '+sv('trade')+')\n'+m(ok[1])+'안목 겨루기 '+q.done+'번 (지금 '+M.done+'번)\n'+m(ok[2])+'납품 '+q.sold+'번 (지금 '+M.sold+'번)\n'+m(ok[3])+NPCS[q.npc].name+' ♥'+q.h+' (지금 ♥'+hearts(q.npc)+')';
+  if(!ok.every(Boolean)){say(jo(TRADE.ranks[M.rank+1],'이','가')+' 되려면 이만큼은 갖춰야 해요.\n'+list);return}
+  say('다 갖췄네요. 값이 비슷한 물건 '+E.n+'쌍을 내놓을게요. '+E.bad+'번까지만 틀려도 돼요.',[['겨뤄 볼게요',()=>startEye(M.rank+1)],['다음에요',null]]);
+}
+// 안목 겨루기: 두 물건 가운데 더 비싼 쪽을 고른다 (왼쪽·오른쪽 방향키, 또는 물건을 누르기). 시험일수록 값이 비슷한 물건끼리 나온다
+function startEye(ex){
+  if(!useEn(2))return;
+  const E=TRADE.eye[ex],pool=Object.keys(ITEMS).filter(k=>!ITEMS[k].seed&&!ITEMS[k].nodex),pairs=[];
+  for(let g=0;pairs.length<E.n&&g<800;g++){
+    const a=pick(pool),b=pick(pool),r=Math.max(ITEMS[a].p,ITEMS[b].p)/Math.min(ITEMS[a].p,ITEMS[b].p);
+    if(a===b||r<E.ratio||(ex&&r>2.2)||pairs.some(q=>q.includes(a)||q.includes(b)))continue;
+    pairs.push([a,b]);
+  }
+  if(!pairs.length)return;
+  mg={kind:'eye',o:{x:P.x,y:P.y,sh:0},pairs,exam:ex,time:E.time,maxBad:E.bad,i:0,ans:0,pickd:-1,good:0,bad:0,t:0,rev:0,note:'',cool:0,fin:false,ok:false,end:0};
+  eyeSet(mg);P.path=[];P.after=null;keys.length=0;N.eunha.hold=90;
+  tip('eye','두 물건 가운데 더 비싼 쪽을 골라요. 왼쪽·오른쪽 방향키를 누르거나 물건을 눌러요. 그만두려면 Esc');
+}
+function eyeSet(m){const q=m.pairs[m.i];m.ans=ITEMS[q[0]].p>=ITEMS[q[1]].p?0:1;m.t=0;m.pickd=-1;m.note=''}
+function eyePick(s){
+  const m=mg;if(!m||m.kind!=='eye'||m.fin||m.rev>0)return;
+  m.pickd=s;const ok=s===m.ans;if(ok){m.good++;sfx('pick')}else{m.bad++;sfx('err')}
+  m.note=ok?'맞아요!':s<0?'머뭇거렸어요':'아쉬워요';m.rev=1;
+}
+function eyeClick(wx,wy){const p=ritePad();if(Math.abs(wx-p.cx)<=82&&Math.abs(wy-p.cy)<=48)eyePick(wx<p.cx?0:1)}
+function updEye(m,dt){
+  if(m.fin){m.end-=dt;if(m.end<=0)mgEnd();return}
+  if(m.rev>0){
+    m.rev-=dt;if(m.rev>0)return;
+    if(m.bad>m.maxBad){m.fin=true;m.ok=false;m.end=.5;m.note='눈썰미가 흐려졌어요';return}
+    if(++m.i>=m.pairs.length){m.fin=true;m.ok=true;m.end=.6;m.note='끝! 맞힌 것 '+m.good+'/'+m.pairs.length;return}
+    eyeSet(m);return;
+  }
+  m.t+=dt;if(m.t>=m.time)eyePick(-1);
 }
 // ───────── 왕실의 길 ─────────
 function grantCourtFit(r){const k=COURT.fit[r];if(!S.owned.includes(k))S.owned.push(k)}
@@ -2202,7 +2333,23 @@ function openStatus(){
       body.appendChild(el('p','note',q?'다음 자리의 조건: 기품 '+q.stat+' (지금 '+sv('grace')+') · 예법 수련 '+q.done+'번 (지금 '+C.done+'번) · '+mates.map(id=>NPCS[id].name+' ♥'+q.mate+' (지금 ♥'+hearts(id)+')').join(' 또는 ')
         +' · '+NPCS[q.npc].name+' ♥'+q.h+' (지금 ♥'+hearts(q.npc)+') · 다 갖추면 중전에게 '+(C.rank?'책봉 의식을':'간택을')+' 청해요':'왕실에서 가장 높은 자리에 올랐어요.'));
     }
-    body.appendChild(el('p','note','문관·무관·상인의 길은 차례로 열릴 예정이에요.'));
+    const M=S.merch;
+    if(!M)body.appendChild(el('p','note','상인의 길: 만물상의 은하에게 "장사 일"을 청해요. 수완이 '+TRADE.need[0].stat+' 이상이면 배울 수 있어요. ('+TRADE.ranks.join(' → ')+')'));
+    else{
+      const q=TRADE.need[M.rank+1],o=M.order;
+      body.appendChild(el('p','note','상인의 길: '+TRADE.ranks.map((t,i)=>i===M.rank?'【'+t+'】':t).join(' → ')+' · 안목 겨루기 '+M.done+'번 · 납품 '+M.sold+'번'+(M.rank?' · 파는 값 +'+M.rank*5+'%':'')));
+      if(o)body.appendChild(el('p','note','오늘 주문: '+(o.done?'납품을 마쳤어요':(o.royal?'[왕실] ':'')+ITEMS[o.item].n+' '+o.n+'개 → '+won(o.pay)+' (가진 것 '+have(o.item)+'개)')));
+      body.appendChild(el('p','note',q?'다음 자리의 조건: 수완 '+q.stat+' (지금 '+sv('trade')+') · 안목 겨루기 '+q.done+'번 (지금 '+M.done+'번) · 납품 '+q.sold+'번 (지금 '+M.sold+'번) · '+NPCS[q.npc].name+' ♥'+q.h+' (지금 ♥'+hearts(q.npc)+') · 다 갖추면 은하에게 승급 겨루기를 청해요':'상인으로서 가장 높은 자리에 올랐어요.'));
+    }
+    // 걷는 길이 둘 이상이면 어느 이름을 내세울지 고른다
+    const mine=['court','cook','merch'].filter(k=>trackTitle(k));
+    if(mine.length>1){
+      body.appendChild(el('p','sub','내세울 호칭'));
+      const t=el('div','tabs');t.style.flexWrap='wrap';
+      for(const k of mine){const b=el('button','btn'+(rankName()===trackTitle(k)?' on':''),trackTitle(k));b.type='button';b.onclick=()=>{S.title=k;touch();openStatus()};t.appendChild(b)}
+      body.appendChild(t);
+    }
+    body.appendChild(el('p','note','문관·무관의 길은 차례로 열릴 예정이에요.'));
   });
 }
 function updBeasts(dt){
@@ -2526,6 +2673,7 @@ function nextDay(forced){
   applyMarket();
   if(isMarket())msgs.push('오늘은 닷새에 한 번 서는 장날이에요. 만물상 동쪽 마당에 보부상과 객주가 왔어요');else if(marketIn()===1)msgs.push('내일은 장날이에요. 팔 물건을 모아 두세요');
   S.wild=sea===2?5:4;spawnBeasts();dayStock(msgs);
+  if(S.merch)rollOrder();
   if(S.court&&S.court.rank>=1){const p=COURT.stipend[S.court.rank];S.coins+=p;msgs.push('왕실에서 내탕금 '+p+'냥을 보내왔어요')}
   if(forced)msgs.push('깜빡 졸아서 집에 돌아와 잠들었어요');
   if(S.build){S.house=S.build;S.build=0;msgs.push('새 집 완성! '+HOUSES[S.house-1].n+' · 방이 넓어졌어요');sfx('level')}
@@ -2583,6 +2731,7 @@ function talk(id){
   if(id==='moru'){ch.push(['짓기·고치기',buildTalk]);ch.push(['연장 벼리기',openForge])}
   if(id==='yeon')ch.push(['수라간 일',kitchenTalk]);
   if(id==='queen')ch.push(['궁중 일',courtTalk]);
+  if(id==='eunha')ch.push(['장사 일',tradeTalk]);
   ch.push(['또 봐요',null]);
   dialog({npc:id,who:d.name,role:d.role+' · ♥'+h,text,choices:ch});
 }
@@ -2821,6 +2970,8 @@ function openHelp(){
       '궁궐: 마을 북쪽(만물상 옆) 길 끝으로 가면 한양 궁궐이에요. 임금·중전·세자·연 상궁·무진과 인사와 선물로 친해져요. 남쪽 궐문으로 나오면 마을이에요.',
       '신분과 스탯: 레벨이 오르면 점수를 받아 손맛·기품·학식·무예·수완을 올려요. 요리·인사와 선물·도감·사냥·장사를 해도 조금씩 저절로 올라요.',
       '5일장: 닷새마다(5·10·15…일) 만물상 동쪽 마당에 장이 서요. 보부상은 쇳돌·엿·산삼과 장날에만 나오는 가구·옷을 팔아요. 객주에게는 흥정해서 팔아요. 값이 오르는 동안 기다리다 행동으로 값을 부르는데, 눈금이 떨릴 때가 마지막 기회예요. 인기 품목은 30% 더 받아요.',
+      '상인의 길: 수완이 2 이상이면 만물상 은하에게 "장사 일"로 들어가요. 날마다 안목 겨루기(두 물건 가운데 더 비싼 쪽을 왼쪽·오른쪽 방향키나 눌러서 고르기)를 하고, 주문받은 물건을 모아 납품하면 가게 값보다 후하게 받아요. 보부상 → 객주 → 거상으로 오를수록 파는 값과 장날 흥정이 유리해지고, 거상이 되면 왕실 주문도 들어와요.',
+      '밭 갈기: 바라보는 칸이 내 땅의 빈 풀밭이면 그 칸을 갈아요. 밭 한가운데 남은 빈칸은 그 위에 서서 행동하거나, 그 칸을 눌러도 갈려요.',
       '왕실의 길: 기품이 2 이상이면 중전에게 "궁중 일"로 예법을 배워요. 날마다 예법 수련(보여 주는 동작의 차례를 방향키나 화면의 화살표로 따라 하기)을 하고, 세자나 공주와 가까워지면 간택에 나서 세자빈·부마가 돼요. 더 가까워지면 책봉 의식을 거쳐 왕비·국서가 되고, 날마다 내탕금을 받아요.',
       '수라간: 손맛이 2 이상이면 연 상궁에게 말을 걸어 수라간에 들어가요. 수라간 문 앞에서 음식을 짓고(행동으로 부채질해 바늘을 초록 띠 안에 두기), 연 상궁에게 수라상을 올리면 하사금을 받아요. 조건을 갖추면 승급 시험을 봐요.',
       '대장간: 모루네 집 옆 화덕 앞에서 행동하거나 모루에게 말을 걸어 연장을 벼려요. 쇳덩이가 초록 칸에 닿는 박자에 맞춰 두드려요. 쇳돌은 바위를 잘 맞혀 캐면 섞여 나와요.',
@@ -3006,7 +3157,7 @@ function openSay(){
 // ───────── 조작 ─────────
 window.addEventListener('keydown',e=>{
   if(e.target&&e.target.tagName==='INPUT')return;
-  if(e.code==='Escape'){if(!$('modal').hidden)closeModal();else if(decoMode)setDeco(false);else if(placing)stopPlacing();else if(mg&&mg.kind==='rite'){mgEnd();toast('예법 수련을 그만뒀어요')}return}
+  if(e.code==='Escape'){if(!$('modal').hidden)closeModal();else if(decoMode)setDeco(false);else if(placing)stopPlacing();else if(mg&&(mg.kind==='rite'||mg.kind==='eye')){mgEnd();toast('그만뒀어요')}return}
   if(!started||sleeping)return;
   const go=e.code==='Space'||e.code==='KeyE'||e.code==='Enter';
   if(!$('dlg').hidden){
@@ -3016,6 +3167,7 @@ window.addEventListener('keydown',e=>{
   if(!$('modal').hidden)return;
   // 예법 따라 하기 중에는 방향키가 걷기가 아니라 동작 입력이다
   if(mg&&mg.kind==='rite'&&KEYDIR[e.code]){e.preventDefault();if(!e.repeat){const q=KEYDIR[e.code];ritePress(DIRS.findIndex(v=>v[0]===q[0]&&v[1]===q[1]))}return}
+  if(mg&&mg.kind==='eye'&&KEYDIR[e.code]){e.preventDefault();if(!e.repeat&&KEYDIR[e.code][0])eyePick(KEYDIR[e.code][0]<0?0:1);return}
   if(KEYDIR[e.code]){e.preventDefault();if(!keys.includes(e.code))keys.push(e.code);if(fishing){fishing=null;toast('낚시를 그만뒀어요')}if(mg)mgEnd();return}
   if(go){if(e.target&&e.target.tagName==='BUTTON'&&e.code!=='KeyE')return;e.preventDefault();if(!e.repeat)interact();return}
   if(e.code==='KeyB')openBag();
@@ -3028,6 +3180,7 @@ cv.addEventListener('pointerdown',e=>{
   if(decoMode){decoClick(Math.floor(wx/T),Math.floor(wy/T));return}
   if(placing&&scene==='town'){placeClick(Math.floor(wx/T),Math.floor(wy/T));return}
   if(mg&&mg.kind==='rite'){riteClick(wx,wy);return}
+  if(mg&&mg.kind==='eye'){eyeClick(wx,wy);return}
   if((scene==='town'||scene==='palace')&&npcOut())for(const id of NPC_IDS){
     if(!npcHere(id))continue;
     const n=N[id],cx=(rx(n)+.5)*T,fy=(ry(n)+.9)*T;
