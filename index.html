@@ -53,6 +53,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15p
 #actBtn{position:absolute;right:12px;bottom:12px;width:66px;height:66px;border-radius:50%;border:3px solid var(--accent-ink);
   background:var(--accent);color:var(--accent-ink);font-family:var(--display);font-size:17px;cursor:pointer;box-shadow:0 4px 0 var(--shade)}
 #actBtn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--shade)}
+#stage,#bar{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+.btn,#actBtn{touch-action:manipulation}
 #dlg{position:absolute;left:10px;right:10px;bottom:10px;background:var(--surface);border:2px solid var(--line);border-radius:16px;
   padding:12px 14px;box-shadow:0 4px 0 var(--shade);display:flex;flex-direction:column;gap:8px}
 #dlgWho{font-family:var(--display);font-size:17px;color:var(--accent);display:flex;align-items:center;gap:8px}
@@ -390,7 +392,7 @@ const RECIPES={h_bam:{need:{chestnut:2},rank:0,home:1},h_egg:{need:{egg:1},rank:
   d_egg:{need:{egg:2},rank:0,home:1},d_fish:{need:{fish:1,wood:1},rank:0,home:1},d_kimchi:{need:{turnip:2},rank:0},d_jeon:{need:{mushroom:2,egg:1},rank:0},
   d_juk:{need:{pumpkin:1},rank:1},d_meat:{need:{meat:2},rank:1},d_hwachae:{need:{watermelon:1},rank:1},d_tarak:{need:{milk:1,chestnut:1},rank:2},d_sam:{need:{ginseng:1,meat:1},rank:2}};
 // 궁궐: 마을 북쪽 길 끝(PAL_X,0)으로 나가면 궁궐 남쪽 궐문에 선다. 타일 7=박석 마당, 8=궁궐 담
-const PAL_X=18;
+let PAL_X=18;
 const PBLD=[
   {id:'hall',pal:1,n:'정전',x:14,y:4,w:8,h:3,door:[17,7],tier:1},
   {id:'kitchen',pal:1,n:'수라간',x:26,y:12,w:5,h:2,door:[28,14]},
@@ -400,7 +402,8 @@ const PBLD=[
 const BLD=[
   {id:'home',x:4,y:7,w:3,h:2,door:[5,9]}, {id:'shop',x:14,y:7,w:4,h:2,door:[15,9],roof:'#8a63c9',wall:'#f6efdc',tile:1},
   {id:'moru',x:27,y:7,w:3,h:2,door:[28,9],roof:'#6b5a4c',wall:'#d9c3a0'}, {id:'sol',x:9,y:14,w:3,h:2,door:[10,16],roof:'#e58aa6',wall:'#fff3e2'},
-  {id:'dami',x:16,y:14,w:3,h:2,door:[17,16],roof:'#e9b930',wall:'#e8f0f5'}, {id:'parang',x:27,y:14,w:3,h:2,door:[28,16],roof:'#3f8fc4',wall:'#e9f2ee'}
+  {id:'dami',x:16,y:14,w:3,h:2,door:[17,16],roof:'#e9b930',wall:'#e8f0f5'}, {id:'parang',x:27,y:14,w:3,h:2,door:[28,16],roof:'#3f8fc4',wall:'#e9f2ee'},
+  {id:'hun',x:31,y:8,w:3,h:2,door:[32,10],roof:'#2e4a6a',wall:'#f3ead6'} /* 서당. 처음 모양의 마을에서는 나무를 다 놓은 뒤에 세운다(legacyTown) */
 ];
 const PLOTS=[[8,8],[9,8],[10,8],[11,8],[8,9],[9,9],[10,9],[11,9],[8,7],[9,7],[10,7],[11,7]];
 const BOARD=[19,10], SPAWN=[5,10];
@@ -521,11 +524,31 @@ const NPCS={
 const NPC_IDS=Object.keys(NPCS),TOWN_IDS=NPC_IDS.filter(id=>!NPCS[id].at);
 // 왕실 사람들의 처음 이름과 옷. 책봉으로 임금이 바뀌면 이름이 달라지므로, 되돌릴 때 쓴다
 const NPC_BASE={};for(const id of ['king','queen','prince','princess'])NPC_BASE[id]={name:NPCS[id].name,role:NPCS[id].role,shirt:NPCS[id].shirt,bot:NPCS[id].bot};
-// ───────── 마을 지도 (항상 같은 모양으로 생성) ─────────
+// ───────── 마을 지도 ─────────
 // 타일: 0 풀 1 길 2 모래 3 민물 4 바다 5 다리 6 숲 가장자리
 // 지금 서 있는 지도의 것이 이 변수들에 들어 있다. 마을(TOWN)과 사냥터(WILD)를 오갈 때 useMap으로 바꿔 끼운다
 let tile=[],objAt=[],TREES=[],ROCKS=[],GRASS=[],SAND=[];
-(function genMap(){
+// 마을의 자리는 마을마다 다르다. 씨앗(S.seed)이 0이면 처음 만든 모양(LEGACY) 그대로이고(예전 저장), 새로 시작한 마을은 씨앗으로 자리를 새로 정한다(randomTown).
+// 아래 값들이 그 마을의 자리다: BLD의 x·y·door, PLOTS, BOARD, SPAWN, FORGE_AT, FEST_AT, STALLS, PAL_X, WORKS의 x·y, 이웃의 anchor,
+// FARM(내 땅 네모 [x0,y0,x1,y1]), EXIT_Y(동쪽 끝 사냥터 길목의 줄), PIER(포구 잔교 끝)
+const FARM=[1,1,12,10],PIER=[20,24];let EXIT_Y=11;
+const LEGACY={bld:{home:[4,7],shop:[14,7],moru:[27,7],sol:[9,14],dami:[16,14],parang:[27,14],hun:[31,8]},
+  plots:[[8,8],[9,8],[10,8],[11,8],[8,9],[9,9],[10,9],[11,9],[8,7],[9,7],[10,7],[11,7]],board:[19,10],spawn:[5,10],forge:[30,8],fest:[20,7],stalls:[[19,8],[21,8]],pal:18,
+  anchors:{moru:[28,10],sol:[10,17],parang:[30,17],dami:[17,17],eunha:[16,10],hun:[33,10]},
+  works:{well:[15,12],pav:[31,12],mill:[21,13],sot:[34,12],boat:[21,24]},farm:[1,1,12,10],exitY:11,pier:[20,24]};
+function setLayout(L){
+  for(const b of BLD){const q=L.bld[b.id];b.x=q[0];b.y=q[1];b.door=[q[0]+1,q[1]+b.h]}
+  PLOTS.length=0;for(const p of L.plots)PLOTS.push(p.slice());
+  BOARD[0]=L.board[0];BOARD[1]=L.board[1];SPAWN[0]=L.spawn[0];SPAWN[1]=L.spawn[1];FORGE_AT[0]=L.forge[0];FORGE_AT[1]=L.forge[1];FEST_AT[0]=L.fest[0];FEST_AT[1]=L.fest[1];
+  STALLS.forEach((s,i)=>{s.x=L.stalls[i][0];s.y=L.stalls[i][1]});PAL_X=L.pal;
+  for(const id in L.anchors)NPCS[id].anchor=L.anchors[id].slice();
+  for(const k in L.works){WORKS[k].x=L.works[k][0];WORKS[k].y=L.works[k][1]}
+  for(let i=0;i<4;i++)FARM[i]=L.farm[i];EXIT_Y=L.exitY;PIER[0]=L.pier[0];PIER[1]=L.pier[1];
+}
+// 처음 만든 모양의 마을. 예전 저장(밭·우리·나무 번호가 좌표로 남아 있다)이 어긋나지 않게 차례와 값을 그대로 둔다
+function legacyTown(){
+  const tile=[],objAt=[],TREES=[],ROCKS=[],GRASS=[],SAND=[],BLD6=BLD.slice(0,6);
+  setLayout(LEGACY);
   for(let y=0;y<H;y++){tile.push(new Array(W).fill(0));objAt.push(new Array(W).fill(null))}
   for(let y=0;y<H;y++)for(let x=0;x<W;x++){
     if(y>=23)tile[y][x]=4; else if(y>=21)tile[y][x]=(x===0||x===W-1)?4:2; else if(x===0||x===W-1||y===0)tile[y][x]=6;
@@ -537,8 +560,8 @@ let tile=[],objAt=[],TREES=[],ROCKS=[],GRASS=[],SAND=[];
   for(let x=6;x<=30;x++)path(x,18);
   for(let y=11;y<=18;y++)path(13,y);
   for(let y=11;y<=20;y++)path(20,y);
-  for(const b of BLD){path(b.door[0],b.door[1]);path(b.door[0],b.door[1]+1)}
-  for(const b of BLD)for(let y=b.y;y<b.y+b.h;y++)for(let x=b.x;x<b.x+b.w;x++)objAt[y][x]={t:'bld',b};
+  for(const b of BLD6){path(b.door[0],b.door[1]);path(b.door[0],b.door[1]+1)}
+  for(const b of BLD6)for(let y=b.y;y<b.y+b.h;y++)for(let x=b.x;x<b.x+b.w;x++)objAt[y][x]={t:'bld',b};
   objAt[BOARD[1]][BOARD[0]]={t:'board'};
   const res=new Set(),R=(x,y)=>res.add(x+','+y);
   PLOTS.forEach(p=>R(p[0],p[1]));R(SPAWN[0],SPAWN[1]);
@@ -564,7 +587,7 @@ let tile=[],objAt=[],TREES=[],ROCKS=[],GRASS=[],SAND=[];
   // 궁궐 가는 북쪽 길도 같은 까닭으로 뒤에 낸다 (이 세로줄에는 나무·바위가 없다)
   for(let y=0;y<=10;y++)tile[y][PAL_X]=1;
   // 서당도 뒤에 세운다. 대장간 동쪽의 빈터(나무·바위가 없는 자리)이고, 문 앞은 큰길과 이어진다
-  const sd={id:'hun',x:31,y:8,w:3,h:2,door:[32,10],roof:'#2e4a6a',wall:'#f3ead6'};BLD.push(sd);
+  const sd=BLD[6];
   for(let y=sd.y;y<sd.y+sd.h;y++)for(let x=sd.x;x<sd.x+sd.w;x++)objAt[y][x]={t:'bld',b:sd};
   tile[sd.door[1]][sd.door[0]]=1;
   // 포구: 남쪽 길 끝 모래밭에서 바다로 뻗은 나무 잔교(타일 11) 두 칸
@@ -573,9 +596,151 @@ let tile=[],objAt=[],TREES=[],ROCKS=[],GRASS=[],SAND=[];
     if(objAt[y][x]||res.has(x+','+y))continue;
     if(tile[y][x]===0)GRASS.push([x,y]);else if(tile[y][x]===2)SAND.push([x,y]);
   }
-})();
+  return{tile,objAt,TREES,ROCKS,GRASS,SAND};
+}
+// ───────── 마을마다 다른 지도 (씨앗으로 생성) ─────────
+// 새로 시작한 마을은 씨앗 하나로 건물·길·개울·연못·내 땅의 자리를 정한다. 같은 씨앗이면 언제나 같은 마을이 나와야 한다(밭·우리·나무 번호가
+// 저장에 좌표로 남는다). 그러니 이 생성기의 결과가 달라지게 고치면 안 된다. 다르게 만들고 싶으면 S.gen을 올리고 새 생성기를 따로 둔다.
+// 큰 틀은 어느 마을이나 같다: 북쪽 끝 길=궁궐, 동쪽 끝 길=사냥터, 남쪽=바닷가와 포구, 개울은 북에서 남으로 흐른다.
+// 가로로 큰길(my)과 아랫길(sy)이 있고, 집은 길 바로 북쪽에 붙어 문이 길로 난다.
+function planTown(rng){
+  const ri=(a,b)=>a+Math.floor(rng()*(b-a+1)),shuf=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+  const my=ri(10,12),sy=my+7,by=my-4,L={bld:{},anchors:{},works:{},exitY:my,my,sy};
+  // 북쪽 띠: 내 땅(12칸), 장터(만물상 4 + 궁궐 길 1 + 마당 3), 대장간(집 3 + 화덕 1), 서당(3)을 개울(2) 양쪽에 나눠 늘어놓는다
+  const segs=shuf([{k:'farm',w:12},{k:'plaza',w:8},{k:'moru',w:4},{k:'hun',w:3}]),cut=ri(1,3);
+  const row=segs.slice(0,cut).concat([{k:'river',w:2}],segs.slice(cut)),extra=ri(0,5);
+  let x=1;row.forEach((s,i)=>{x+=(i?1:0)+(i===extra?1:0);s.x=x;x+=s.w});
+  const at=k=>row.find(s=>s.k===k).x,rN=at('river'),rM=rN+ri(-1,1),rS=rM+ri(-1,1);
+  L.river=[rN,rM,rS];
+  // 내 땅과 집, 처음 밭 자리(집 옆 네 칸씩 세 줄)
+  const fx=at('farm'),left=rng()<.5,hx=left?ri(fx+5,fx+8):ri(fx+1,fx+4),px=left?hx-5:hx+4;
+  L.farm=[fx,1,fx+11,my-1];L.bld.home=[hx,by];L.spawn=[hx+1,my-1];L.plots=[];
+  for(const py of [my-3,my-2,my-4])for(let i=0;i<4;i++)L.plots.push([px+i,py]);
+  // 장터: 만물상 옆으로 궁궐 가는 길이 나고, 그 옆 마당에 장날 좌판과 잔치 장대가 선다
+  const pz=at('plaza'),flip=rng()<.5,shop=flip?pz+4:pz,yard=flip?pz:pz+5;
+  L.bld.shop=[shop,by];L.pal=flip?pz+3:pz+4;L.stalls=[[yard,my-3],[yard+2,my-3]];L.fest=[yard+1,my-4];L.board=[yard,my-1];L.anchors.eunha=[shop+2,my-1];L.yard=yard;
+  const mz=at('moru'),mflip=rng()<.5,mo=mflip?mz+1:mz;
+  L.bld.moru=[mo,by];L.forge=[mflip?mz:mz+3,my-3];L.anchors.moru=[mo+1,my-1];
+  const hz=at('hun');L.bld.hun=[hz,by];L.anchors.hun=[hz+2,my-1];
+  // 남쪽 띠: 솔이네·다미네·파랑네(와 그 옆 연못), 큰길과 아랫길을 잇는 세로 길 둘(v1, 포구로 내려가는 v2)을 개울 양쪽에 나눠 놓는다
+  const wLen=Math.max(0,rM-3),eLen=31-rM; /* 서쪽 [2,rM-2], 동쪽 [rM+3,33] */
+  let placed=null;
+  for(let t=0;t<14&&!placed;t++){
+    const its=shuf([{k:'sol',w:3},{k:'dami',w:3},{k:'pp',w:7},{k:'v1',w:1},{k:'v2',w:1}]),k=ri(0,5),sides=[[its.slice(0,k),2,wLen],[its.slice(k),rM+3,eLen]];
+    if(sides.some(([a,,len])=>a.length&&a.reduce((n,s)=>n+s.w,0)+a.length-1>len))continue;
+    for(const [a,x0,len] of sides){
+      if(!a.length)continue;
+      const slack=len-(a.reduce((n,s)=>n+s.w,0)+a.length-1),pre=new Array(a.length+1).fill(0);
+      for(let i=0;i<slack;i++)pre[ri(0,a.length)]++;
+      let q=x0;a.forEach((s,i)=>{q+=pre[i]+(i?1:0);s.x=q;q+=s.w});
+    }
+    placed=its;
+  }
+  if(!placed)return null;
+  const sx=k=>placed.find(s=>s.k===k).x,v1=sx('v1'),v2=sx('v2'),pp=sx('pp'),pflip=rng()<.5,pr=pflip?pp+4:pp,pond=pflip?pp:pp+4;
+  L.bld.sol=[sx('sol'),sy-4];L.anchors.sol=[sx('sol')+1,sy-1];L.bld.dami=[sx('dami'),sy-4];L.anchors.dami=[sx('dami')+1,sy-1];
+  L.bld.parang=[pr,sy-4];L.anchors.parang=[pp+3,sy-1];L.pond=[pond,sy-4,rng()<.5?1:0];L.v=[v1,v2];L.pier=[v2,24];
+  const doors=[sx('sol')+1,sx('dami')+1,pr+1,v1,v2];L.sroad=[Math.max(2,Math.min(...doors)-2),Math.min(33,Math.max(...doors)+2)];
+  // 마을 복구 터: 우물은 만물상 맞은편, 정자는 서당 맞은편, 솟대는 동쪽 길 끝, 물레방아는 개울가. 길과 개울을 피해 가장 가까운 빈자리에 놓는다
+  const taken=new Set([v1,v2,rM,rM+1]);
+  const mill=shuf([rM-2,rM+2]).find(c=>c>=2&&c+1<=33&&!taken.has(c)&&!taken.has(c+1));if(mill==null)return null;
+  L.works.mill=[mill,my+2];taken.add(mill);taken.add(mill+1);
+  const site=(want,w,max)=>{for(let d=0;d<34;d++)for(const c of [want-d,want+d]){let ok=c>=2&&c+w-1<=max;for(let i=0;ok&&i<w;i++)if(taken.has(c+i))ok=false;if(ok){for(let i=0;i<w;i++)taken.add(c+i);return c}}return-1};
+  const sot=site(34,1,34),pav=site(hz,2,33),well=site(shop+1,1,33);if(sot<0||pav<0||well<0)return null;
+  L.works.sot=[sot,my+1];L.works.pav=[pav,my+1];L.works.well=[well,my+1];L.works.boat=[v2+1,24];
+  L.trees=[ri(4,6),ri(3,5),ri(14,18),ri(6,8)]; /* 사과나무, 감나무, 소나무, 바위 */
+  return L;
+}
+function layTown(L,rng){
+  const tile=[],objAt=[],TREES=[],ROCKS=[],GRASS=[],SAND=[],{my,sy}=L,[rN,rM,rS]=L.river,[v1,v2]=L.v;
+  setLayout(L);
+  for(let y=0;y<H;y++){tile.push(new Array(W).fill(0));objAt.push(new Array(W).fill(null))}
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++){
+    if(y>=23)tile[y][x]=4; else if(y>=21)tile[y][x]=(x===0||x===W-1)?4:2; else if(x===0||x===W-1||y===0)tile[y][x]=6;
+  }
+  for(let y=1;y<=22;y++){const c=y<my?rN:y<=sy?rM:rS;tile[y][c]=3;tile[y][c+1]=3}
+  for(let j=0;j<3;j++)for(let i=0;i<3;i++)if(!(L.pond[2]?(i===0&&j===0)||(i===2&&j===2):(i===2&&j===0)||(i===0&&j===2)))tile[L.pond[1]+j][L.pond[0]+i]=3;
+  const path=(x,y)=>{tile[y][x]=tile[y][x]===3?5:1};
+  for(let x=2;x<=W-1;x++)path(x,my); // 동쪽 끝은 사냥터로 나가는 길목
+  for(let x=L.sroad[0];x<=L.sroad[1];x++)path(x,sy);
+  for(let y=my;y<=sy;y++)path(v1,y);
+  for(let y=my;y<=20;y++)path(v2,y);
+  for(let y=0;y<my;y++)tile[y][PAL_X]=1;
+  for(const b of BLD){path(b.door[0],b.door[1]);path(b.door[0],b.door[1]+1);for(let y=b.y;y<b.y+b.h;y++)for(let x=b.x;x<b.x+b.w;x++)objAt[y][x]={t:'bld',b}}
+  objAt[BOARD[1]][BOARD[0]]={t:'board'};objAt[FORGE_AT[1]][FORGE_AT[0]]={t:'forge',x:FORGE_AT[0],y:FORGE_AT[1]};
+  tile[23][v2]=11;tile[24][v2]=11;
+  // 복구 터는 지을 때까지 비어 보여도 자리를 맡아 둔다(applyWorks가 같은 칸에 다시 얹는다)
+  for(const k in WORKS){const d=WORKS[k],o={t:'work',k,x:d.x,y:d.y};for(let i=0;i<d.w;i++)objAt[d.y][d.x+i]=o}
+  const res=new Set(),R=(x,y)=>res.add(x+','+y);
+  PLOTS.forEach(p=>R(p[0],p[1]));R(SPAWN[0],SPAWN[1]);
+  for(const id in L.anchors){const a=L.anchors[id];R(a[0],a[1])}
+  for(let j=0;j<3;j++)for(let i=0;i<3;i++)R(L.yard+i,my-4+j); // 장날 좌판과 잔치 장대가 서는 마당
+  const cells=[];
+  for(let y=2;y<21;y++)for(let x=2;x<W-2;x++)if(tile[y][x]===0&&!objAt[y][x]&&!res.has(x+','+y))cells.push([x,y]);
+  const shuf=a=>{for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]]}};
+  shuf(cells);
+  // 나무·바위는 둘레 8칸이 모두 비어 있을 때만 놓는다 → 길이 막히는 일이 없다
+  const free=(x,y)=>{for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;const t=tile[y+dy][x+dx];if(t===3||t===4||t===6||objAt[y+dy][x+dx])return false}return true};
+  const kinds=[];
+  L.trees.forEach((n,i)=>{for(let j=0;j<n;j++)kinds.push(['apple','persimmon','pine','rock'][i])});
+  shuf(kinds);
+  for(const [x,y] of cells){
+    if(!kinds.length)break;if(!free(x,y))continue;
+    const k=kinds.pop();
+    if(k==='rock'){const o={t:'rock',i:ROCKS.length,x,y,sh:0};ROCKS.push(o);objAt[y][x]=o}
+    else{const o={t:'tree',i:TREES.length,x,y,k,sh:0};TREES.push(o);objAt[y][x]=o}
+  }
+  for(let y=1;y<23;y++)for(let x=1;x<W-1;x++){
+    if(objAt[y][x]||res.has(x+','+y))continue;
+    if(tile[y][x]===0)GRASS.push([x,y]);else if(tile[y][x]===2)SAND.push([x,y]);
+  }
+  // 살펴보기: 집 앞에서 걸어서 문·이웃·길목·포구·터에 모두 닿는지, 막힌 구석이 없는지, 밭 갈 땅이 넉넉한지
+  const ok=(x,y)=>x>=0&&y>=0&&x<W&&y<H&&(tile[y][x]<=2||tile[y][x]===5||tile[y][x]===11)&&!objAt[y][x],seen=new Set([SPAWN.join()]),st=[SPAWN.slice()];
+  while(st.length){const [a,b]=st.pop();for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const k=(a+dx)+','+(b+dy);if(!seen.has(k)&&ok(a+dx,b+dy)){seen.add(k);st.push([a+dx,b+dy])}}}
+  const hit=(x,y)=>seen.has(x+','+y),near=(x,y)=>hit(x+1,y)||hit(x-1,y)||hit(x,y+1)||hit(x,y-1);
+  if(!ok(SPAWN[0],SPAWN[1])||!hit(W-1,my)||!hit(PAL_X,0)||!hit(v2,24))return null;
+  for(const b of BLD)if(!hit(b.door[0],b.door[1]))return null;
+  for(const id in L.anchors)if(!hit(L.anchors[id][0],L.anchors[id][1]))return null;
+  for(const k in WORKS)if(!near(WORKS[k].x,WORKS[k].y))return null;
+  if(!near(BOARD[0],BOARD[1])||!near(FORGE_AT[0],FORGE_AT[1])||!hit(STALLS[0].x,STALLS[0].y+1)||!hit(STALLS[1].x,STALLS[1].y+1)||!hit(FEST_AT[0],FEST_AT[1]+1))return null;
+  if(GRASS.concat(SAND).filter(q=>!hit(q[0],q[1])).length>2)return null;
+  let land=0;for(let y=FARM[1];y<=FARM[3];y++)for(let x=FARM[0];x<=FARM[2];x++)if(tile[y][x]===0&&!objAt[y][x])land++;
+  if(land<78||TREES.length+ROCKS.length<24)return null;
+  return{tile,objAt,TREES,ROCKS,GRASS,SAND};
+}
+function randomTown(seed){
+  const rng=mulberry(seed);
+  for(let t=0;t<60;t++){const L=planTown(rng);if(!L)continue;const m=layTown(L,rng);if(m)return m}
+  return null;
+}
+const TOWN={};let townSeed=-1,spotCache=new Map();
+// 씨앗에 맞는 마을을 짓는다. 못 지으면(그럴 일은 없어야 하지만) 처음 모양으로 둔다
+function buildTown(seed,init){
+  seed=seed>>>0;if(seed===townSeed)return;
+  const m=(seed&&randomTown(seed))||legacyTown();
+  Object.assign(TOWN,m);townSeed=seed;spotCache=new Map();
+  if(init)return;
+  useMap(TOWN);groundSeason=-1;
+  for(const id of TOWN_IDS.concat('hun')){const a=NPCS[id].anchor,n=N[id];n.x=n.fx=a[0];n.y=n.fy=a[1];n.t=1;n.hold=0}
+}
+buildTown(0,true);tile=TOWN.tile;objAt=TOWN.objAt;TREES=TOWN.TREES;ROCKS=TOWN.ROCKS;GRASS=TOWN.GRASS;SAND=TOWN.SAND;
+const newSeed=()=>(Math.floor(Math.random()*4294967295)+1)>>>0;
+// 같이 하는 친구는 자기 마을의 자리(x,y)를 보내온다. 마을 모양이 다르면 그 자리가 내 마을에서는 집이나 물 위일 수 있으니, 가장 가까운 걸을 수 있는 칸으로 옮겨 보여 준다
+function townSpot(x,y){
+  const k=x+','+y;let r=spotCache.get(k);if(r)return r;
+  const ok=(a,b)=>a>=0&&b>=0&&a<W&&b<H&&(TOWN.tile[b][a]<=2||TOWN.tile[b][a]===5||TOWN.tile[b][a]===11)&&!TOWN.objAt[b][a];
+  r=[x,y];
+  if(!ok(x,y)){
+    let bd=1e9;
+    for(let d=1;d<=9&&bd===1e9;d++)for(let dy=-d;dy<=d;dy++)for(let dx=-d;dx<=d;dx++){
+      if(Math.max(Math.abs(dx),Math.abs(dy))!==d||!ok(x+dx,y+dy))continue;
+      const q=dx*dx+dy*dy;if(q<bd){bd=q;r=[x+dx,y+dy]}
+    }
+    if(bd===1e9)r=SPAWN.slice();
+  }
+  spotCache.set(k,r);return r;
+}
 const plotIndex=(x,y)=>PLOTS.findIndex(p=>p[0]===x&&p[1]===y);
-const TOWN={tile,objAt,TREES,ROCKS,GRASS,SAND};
 // 사냥터: 서쪽 길(0,11)로 드나드는 깊은 숲. 나무와 바위는 풍경이고, 개울 가운데 얕은 여울로 건넌다
 const WILD=(function(){
   const tile=[],objAt=[],TREES=[],ROCKS=[],GRASS=[];
@@ -1772,9 +1937,10 @@ function arrive(){
 }
 function grab(i){const p=S.pickups.splice(i,1)[0],id=p.id==='branch'?'wood':p.id;gain(id,1);addXp(2);float('+1 '+ITEMS[id].n);sfx('pick')}
 const keys=[];
+const WALK=4.4; /* 걷는 빠르기(1초에 몇 칸). 처음에는 5.6이었는데 휴대폰에서 너무 휙휙 지나가서 낮췄다 */
 const KEYDIR={ArrowUp:[0,-1],KeyW:[0,-1],ArrowRight:[1,0],KeyD:[1,0],ArrowDown:[0,1],KeyS:[0,1],ArrowLeft:[-1,0],KeyA:[-1,0]};
 function updPlayer(dt){
-  if(P.t<1){P.t=Math.min(1,P.t+dt*5.6);if(P.t<1)return;P.fx=P.x;P.fy=P.y;arrive();if(busy())return}
+  if(P.t<1){P.t=Math.min(1,P.t+dt*WALK);if(P.t<1)return;P.fx=P.x;P.fy=P.y;arrive();if(busy())return}
   if(fishing||mg)return;
   const d=keys.length?KEYDIR[keys[keys.length-1]]:null;
   if(d){P.path=[];P.after=null;P.dir=d;if(canStep(P.x+d[0],P.y+d[1]))stepTo(P.x+d[0],P.y+d[1]);return}
@@ -1879,6 +2045,7 @@ function act(tg,x,y){
 }
 function interact(){
   if(busy())return;
+  if((mg||fishing)&&performance.now()<guardUntil)return; /* 막 시작한 놀이에 연달아 눌린 입력이 들어가지 않게 */
   if(mg){mgPress();return}
   if(fishing){reel();return}
   if(P.t<1)return;
@@ -1910,6 +2077,23 @@ function clickTile(x,y,low){
   if(tg.t==='soil'){if(Math.abs(x-P.x)+Math.abs(y-P.y)<=1&&(x!==P.x||y!==P.y)){P.dir=[x-P.x,y-P.y];act(tg,x,y)}else walkThen(x,y,()=>act(tg,x,y));return}
   if(tg.t==='npc')N[tg.id].hold=7;
   if(tg.t==='stock')tg.a.hold=7;
+  if(tg.t==='water'&&scene!=='palace'){
+    // 물은 한 번 눌러서는 낚싯대를 던지지 않는다(걷다가 물을 잘못 누르기 쉽다).
+    // 처음 누르면 물가로 가서 물을 바라보기만 하고, 바라보는 물을 한 번 더 누르면(또는 행동 버튼을 누르면) 던진다
+    const adj=Math.abs(x-P.x)+Math.abs(y-P.y)===1;
+    if(adj&&P.t>=1&&P.dir[0]===x-P.x&&P.dir[1]===y-P.y){act(tg,x,y);return}
+    const look=(wx,wy)=>{P.dir=[wx-P.x,wy-P.y];float('한 번 더 누르면 낚시',(wx+.5)*T,wy*T+6);tip('fish2','물가에서 바라보는 물을 한 번 더 누르거나 행동 버튼을 누르면 낚싯대를 던져요')};
+    if(adj){if(P.t>=1)look(x,y);return}
+    if(setPath((a,b)=>Math.abs(a-x)+Math.abs(b-y)===1&&!npcOn(a,b),()=>{if(Math.abs(x-P.x)+Math.abs(y-P.y)===1)look(x,y)}))return;
+    // 먼 물을 눌렀으면 가장 가까운 물가로 간다
+    let best=null,bd=1e9;
+    for(let ty=1;ty<H-1;ty++)for(let tx=1;tx<W-1;tx++){
+      if(!walkable(tx,ty))continue;
+      for(const [dx,dy] of DIRS){const q=tile[ty+dy][tx+dx];if(q===3||q===4){const d=(tx+dx-x)**2+(ty+dy-y)**2;if(d<bd){bd=d;best=[tx,ty,dx,dy]}}}
+    }
+    if(best){if(best[0]===P.x&&best[1]===P.y)look(P.x+best[2],P.y+best[3]);else walkThen(best[0],best[1],()=>look(P.x+best[2],P.y+best[3]))}
+    return;
+  }
   if(approach(x,y))return;
   if(tg.t==='water'){
     // 먼 물을 눌렀으면 가장 가까운 물가로 간다
@@ -4138,6 +4322,7 @@ function openHelp(){
   openModal('도움말',body=>{
     const ul=el('ul','help');
     for(const t of ['걷기: 방향키나 WASD, 또는 가고 싶은 곳을 눌러요.','행동: Space나 E, 또는 화면의 행동 버튼. 나무·바위·이웃·물·밭·문을 직접 눌러도 돼요.',
+      '휴대폰: 가고 싶은 곳을 누르면 걸어가요. 오른쪽 아래 행동 버튼은 바라보는 것에 행동해요. 물은 한 번 누르면 물가로 가서 바라보기만 하고, 한 번 더 눌러야 낚싯대를 던져요.',
       '과일나무: 행동을 연타해 흔들면 열매가 떨어져요. 빨리 흔들면 하나 더! 떨어진 열매는 지나가면서 주워요.',
       '소나무: 움직이는 눈금이 초록 칸에 올 때 행동. 노란 칸이면 완벽! 바위: 줄어드는 고리가 흰 원에 겹칠 때 행동.',
       '낚시: 물가에서 행동 → 느낌표가 뜨면 챔 → 잔잔할 때 연타로 당기고 물이 튀면 멈춰요. 비 오는 날 더 잘 물어요.',
@@ -4688,20 +4873,33 @@ window.addEventListener('keydown',e=>{
     return;
   }
   if(!$('modal').hidden)return;
-  // 예법 따라 하기 중에는 방향키가 걷기가 아니라 동작 입력이다
-  if(mg&&mg.kind==='rite'&&KEYDIR[e.code]){e.preventDefault();if(!e.repeat){const q=KEYDIR[e.code];ritePress(DIRS.findIndex(v=>v[0]===q[0]&&v[1]===q[1]))}return}
-  if(mg&&mg.kind==='scoop'&&KEYDIR[e.code]){e.preventDefault();if(!e.repeat){const q=KEYDIR[e.code];scoopPress(DIRS.findIndex(v=>v[0]===q[0]&&v[1]===q[1]))}return}
-  if(mg&&mg.kind==='catch'&&KEYDIR[e.code]){e.preventDefault();if(!e.repeat&&KEYDIR[e.code][0])catchMove(KEYDIR[e.code][0]);return}
-  if(mg&&mg.kind==='study'&&KEYDIR[e.code]){e.preventDefault();studyMove(KEYDIR[e.code][0],KEYDIR[e.code][1]);return}
-  if(mg&&mg.kind==='eye'&&KEYDIR[e.code]){e.preventDefault();if(!e.repeat&&KEYDIR[e.code][0])eyePick(KEYDIR[e.code][0]<0?0:1);return}
-  if(KEYDIR[e.code]){e.preventDefault();if(!keys.includes(e.code))keys.push(e.code);if(fishing){fishing=null;toast('낚시를 그만뒀어요')}if(mg)mgEnd();return}
+  if(KEYDIR[e.code]){e.preventDefault();dirDown(e.code,e.repeat);return}
   if(go){if(e.target&&e.target.tagName==='BUTTON'&&e.code!=='KeyE')return;e.preventDefault();if(!e.repeat)interact();return}
   if(e.code==='KeyB')openBag();
 });
+// 방향 입력 하나(방향키든 터치 방향판이든). 놀이 가운데 몇은 방향이 걷기가 아니라 동작 입력이다
+function dirDown(code,rep){
+  const q=KEYDIR[code],di=()=>DIRS.findIndex(v=>v[0]===q[0]&&v[1]===q[1]);
+  if(mg&&mg.kind==='rite'){if(!rep)ritePress(di());return}
+  if(mg&&mg.kind==='scoop'){if(!rep)scoopPress(di());return}
+  if(mg&&mg.kind==='catch'){if(!rep&&q[0])catchMove(q[0]);return}
+  if(mg&&mg.kind==='study'){studyMove(q[0],q[1]);return}
+  if(mg&&mg.kind==='eye'){if(!rep&&q[0])eyePick(q[0]<0?0:1);return}
+  if(!keys.includes(code))keys.push(code);if(fishing){fishing=null;toast('낚시를 그만뒀어요')}if(mg)mgEnd();
+}
 window.addEventListener('keyup',e=>{const i=keys.indexOf(e.code);if(i>=0)keys.splice(i,1)});
 window.addEventListener('blur',()=>{keys.length=0});
+// 잘못 눌린 터치 거르기. guardUntil: 놀이·낚시가 막 시작됐거나 막 끝난 직후에는 잠깐 입력을 받지 않는다(연달아 눌린 터치가 첫 박자를 헛치거나 엉뚱한 곳으로 걸어가지 않게).
+// cvPtr: 화면에 손가락 하나가 닿아 있는 동안 다른 손가락은 받지 않는다. lastTap: 같은 자리를 0.2초 안에 또 누른 것은 한 번으로 친다
+let guardUntil=0,wasPlay=false,cvPtr=null,cvPtrAt=0,lastTap={t:0,x:0,y:0};
+const cvUp=e=>{if(e.pointerId===cvPtr)cvPtr=null};
+cv.addEventListener('pointerup',cvUp);cv.addEventListener('pointercancel',cvUp);cv.addEventListener('pointerleave',cvUp);
 cv.addEventListener('pointerdown',e=>{
-  if(busy())return;
+  const t=performance.now();
+  if(cvPtr!==null&&e.pointerId!==cvPtr&&t-cvPtrAt<1500)return;
+  cvPtr=e.pointerId;cvPtrAt=t;
+  if(busy()||t<guardUntil)return;
+  if(!mg&&!fishing){if(t-lastTap.t<200&&Math.hypot(e.clientX-lastTap.x,e.clientY-lastTap.y)<24)return;lastTap={t,x:e.clientX,y:e.clientY}}
   const r=cv.getBoundingClientRect(),wx=(e.clientX-r.left)/zoom+cam.x,wy=(e.clientY-r.top)/zoom+cam.y;
   if(decoMode){decoClick(Math.floor(wx/T),Math.floor(wy/T));return}
   if(placing&&scene==='town'){placeClick(Math.floor(wx/T),Math.floor(wy/T));return}
@@ -4736,10 +4934,11 @@ function frame(ts){
   const dt=Math.min(.05,Math.max(0,(ts-last)/1000||0));last=ts;now+=dt;
   if(started&&S){
     if(!busy()){updTime(dt);updPlayer(dt);updNpcs(dt);updBeasts(dt);updHerd(dt);updKids(dt);updFishing(dt);updMg(dt)}
-    else if(P.t<1){P.t=Math.min(1,P.t+dt*5.6);if(P.t>=1){P.fx=P.x;P.fy=P.y}}
+    else if(P.t<1){P.t=Math.min(1,P.t+dt*WALK);if(P.t>=1){P.fx=P.x;P.fy=P.y}}
     for(const o of TREES)if(o.sh>0)o.sh-=dt;
     for(const o of ROCKS)if(o.sh>0)o.sh-=dt;
-    updPlay(dt);syncPresence();for(const k in PV){const v=PV[k];if(v.t<1)v.t=Math.min(1,v.t+dt*5.6)}
+    {const pl=!!(mg||fishing);if(pl!==wasPlay){wasPlay=pl;guardUntil=performance.now()+(pl?450:500)}}
+    updPlay(dt);syncPresence();for(const k in PV){const v=PV[k];if(v.t<1)v.t=Math.min(1,v.t+dt*WALK)}
     if(floats.length){for(const f of floats)f.t+=dt;floats=floats.filter(f=>f.t<1.3)}
     const ten=Math.floor(S.min/10);if(ten!==lastTen){lastTen=ten;hud()}
     saveT+=dt;if(saveT>8){saveT=0;if(dirty)saveLocal()}
