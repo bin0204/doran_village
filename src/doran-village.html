@@ -4139,7 +4139,8 @@ function openHelp(){
       '사냥: 들짐승은 가까이 가면 달아나요. 서너 칸 떨어져 일직선에 서서 행동 → 흔들리는 과녁이 짐승에 겹칠 때 한 번 더. 전리품은 지나가면서 주워요.',
       '계절: 7일마다 바뀌어요. 심을 수 있는 작물, 잡히는 물고기, 주울 것, 들짐승이 계절마다 달라요. 겨울엔 밭과 과일나무가 쉬어요.',
       '도감: 처음 얻은 것은 도감에 적혀요. 한 갈래를 다 채우면 상금을 받아요.',
-      '같이 하기: 공유 메뉴에서 친구를 초대하면, 같은 시간에 페이지를 연 친구가 마을에 나타나요. 친구를 눌러 인사·선물하고, 같이 하기 버튼으로 말을 걸어요. 마을은 각자 따로 키워요.',
+      canP2P()?'같이 하기: 같이 하기 버튼에서 방 이름을 정해 들어가고, 친구도 같은 방 이름으로 들어오면 서로의 마을에 나타나요. 방에 들어가면 나오는 초대 주소를 보내도 돼요. 친구를 눌러 인사·선물하고, 같이 하기 버튼으로 말을 걸어요. 마을은 각자 따로 키워요.'
+        :'같이 하기: 공유 메뉴에서 친구를 초대하면, 같은 시간에 페이지를 연 친구가 마을에 나타나요. 친구를 눌러 인사·선물하고, 같이 하기 버튼으로 말을 걸어요. 마을은 각자 따로 키워요.',
       '아이·가족: 배필에게 말을 걸어 "아이 이야기"를 나눠요(초가삼간 이상, 혼례 사흘 뒤). 미역 2개(바닷가)와 200냥으로 삼신상을 차리면 사흘 뒤 아침에 아기가 와요. 날마다 안아 주고 우유나 죽을 먹이면 정이 쌓여요. 이레째에는 돌잡이를 하는데, 잡은 물건(붓·활·엽전·실타래·떡)이 아이의 재주가 돼요. 돌이 지난 아이는 낮에 집 앞마당에서 놀고, 정이 깊을수록 아침에 자주 거들어 줘요. 아이는 둘까지예요.',
       '친구와 놀이: 친구 곁(네 칸 안)에서 일하면 경험치를 10% 더 받아요. 같이 하기 버튼의 몸짓(절하기·폴짝·손 흔들기·덩실덩실)을 친구와 같이 하면 마음이 통해요. 친구를 누르면 가위바위보와 술래잡기를 할 수 있어요. 술래는 셋을 센 뒤 친구 옆에서 행동해서 잡고, 잡힌 친구가 다음 술래예요. 술래잡기는 3분 뒤에 끝나요.',
       '집 직접 짓기: 모루에게 직접 짓겠다고 하면 값이 절반이에요. 집 문 앞에서 양쪽 눈금이 만날 때 못을 박아 세 단계를 지으면 바로 완성돼요.',
@@ -4253,7 +4254,7 @@ function begin(st){
   if(groundSeason!==season())buildGround();
   // 예전 저장에는 모습 정보가 없다: 한 번 옷장을 열어 고르게 한다
   if(!S.sex){S.sex='m';setTimeout(()=>{if(S&&!busy())openWardrobe()},1500)}
-  initRoom();
+  initRoom();initP2P();
   setTimeout(()=>{if(S&&!busy())tip('north','마을 북쪽(만물상 옆) 길 끝으로 가면 한양 궁궐에 들어갈 수 있어요. 아래 "신분"에서 스탯도 올려 보세요')},9000);
   spawnBeasts();setTimeout(()=>{if(S&&beasts.length)tip('hunt','마을 바깥쪽에 들짐승이 보여요. 서너 칸 떨어져 일직선에 서서 행동하면 사냥할 수 있어요')},3500);
   $('bSound').textContent=S.sound?'소리 켬':'소리 끔';hud();saveAll();cv.focus({preventScroll:true});
@@ -4299,12 +4300,82 @@ async function initRoom(){
     const r=await window.claude.use('room');if(!r)return;
     net=r;lastPres='';
     r.onPeers(onPeers,()=>{net=null;peers=[];rps=null;tag=null;$('hPeers').hidden=true});
-    r.on('gift',m=>{
-      const d=m.data;if(!d||m.isMe||!S||d.to!==myPeer||typeof d.item!=='string'||!ITEMS[d.item]||ITEMS[d.item].seed)return;
-      const from=peers.find(p=>p.peer===m.peer);gain(d.item,1);sfx('heart');
-      toast((from?peerName(from):'친구')+' 님이 '+jo(ITEMS[d.item].n,'을','를')+' 선물했어요');
-    },()=>{});
+    r.on('gift',onGift,()=>{});
   }catch(e){net=null}
+}
+function onGift(m){
+  const d=m.data;if(!d||m.isMe||!S||!myPeer||d.to!==myPeer||typeof d.item!=='string'||!Object.prototype.hasOwnProperty.call(ITEMS,d.item)||ITEMS[d.item].seed)return;
+  const from=peers.find(p=>p.peer===m.peer);gain(d.item,1);sfx('heart');
+  toast((from?peerName(from):'친구')+' 님이 '+jo(ITEMS[d.item].n,'을','를')+' 선물했어요');
+}
+
+// ───────── 방 이름으로 같이 하기 ─────────
+// claude.ai 아티팩트가 아닌 주소(GitHub 페이지 등)에서는 방 이름이 같은 사람끼리 브라우저가 직접 이어진다(WebRTC).
+// 서로를 찾을 때만 공개 연결 서버를 거치고, 위치·말·선물은 브라우저끼리 오간다. p2pRoom은 아티팩트의 room과 같은 모양이라 나머지 코드는 그대로 쓴다.
+// 방 이름을 아는 사람은 누구나 들어올 수 있으니 받은 값은 여기서도 형식부터 확인한다(상대 id는 객체 열쇠로 쓰이므로 특히)
+const P2P_LIB='https://cdn.jsdelivr.net/npm/trystero@0.26.0/+esm',P2P_APP='doran-village-p2p-v1',P2P_KEY='doran-village-room';
+const canP2P=()=>!(window.claude&&window.claude.use)&&!!window.RTCPeerConnection&&window.isSecureContext!==false;
+let p2pLib=null,p2pName='',p2pBusy=false,p2pWarn='',p2pWarnAt=-99,p2pAsked=false;
+const roomName=s=>{let t=cleanText(s);try{t=t.normalize('NFC')}catch(e){}return t.replace(/\s+/g,' ').trim().toLowerCase().slice(0,20)};
+const p2pSaved=()=>{try{return roomName(localStorage.getItem(P2P_KEY)||'')}catch(e){return ''}};
+const p2pSave=n=>{try{if(n)localStorage.setItem(P2P_KEY,n);else localStorage.removeItem(P2P_KEY)}catch(e){}};
+const p2pHash=()=>{const m=/[#&]room=([^&]*)/.exec(location.hash||'');if(!m)return '';try{return roomName(decodeURIComponent(m[1]))}catch(e){return ''}};
+const p2pLink=()=>location.href.split('#')[0]+'#room='+encodeURIComponent(p2pName);
+const p2pId=id=>typeof id==='string'&&/^[\w-]{8,64}$/.test(id)&&!(id in {});
+function p2pTrouble(msg){p2pWarn=msg;if(now-p2pWarnAt>30){p2pWarnAt=now;toast(msg)}}
+function p2pRoom(T,name){
+  const room=T.joinRoom({appId:P2P_APP,maxReceiveBytes:32768},name,{onJoinError:()=>p2pTrouble('친구와 바로 이어지지 못했어요. 회사나 학교 인터넷에서는 막혀 있을 수 있어요')});
+  const me=T.selfId,mine={},others=Object.create(null),giftAt=Object.create(null),hs=[],on=Object.create(null);
+  const pres=room.makeAction('pres'),gift=room.makeAction('gift');
+  const quiet=p=>Promise.resolve(p).catch(()=>{});
+  const fire=()=>{const l=[{peer:me,isMe:true,sameTab:true,kind:'viewer',presence:mine}];for(const id in others)l.push({peer:id,isMe:false,sameTab:false,kind:'viewer',presence:others[id]});for(const h of hs)h({peers:l})};
+  room.onPeerJoin=id=>{if(!p2pId(id))return;if(!(id in others))others[id]=null;p2pWarn='';if(mine.n)quiet(pres.send(mine,{target:id}));fire()};
+  room.onPeerLeave=id=>{if(!(id in others))return;delete others[id];delete giftAt[id];fire()};
+  pres.onMessage=(d,m)=>{const id=m&&m.peerId;if(!p2pId(id)||!d||typeof d!=='object'||Array.isArray(d))return;others[id]=d;fire()};
+  gift.onMessage=(d,m)=>{const id=m&&m.peerId,t=Date.now();if(!p2pId(id)||!(id in others)||t-(giftAt[id]||0)<1500)return;giftAt[id]=t;for(const h of on.gift||[])h({data:d,peer:id,isMe:false})};
+  return{p2p:true,
+    presence(p){Object.assign(mine,p);return quiet(pres.send(mine))},
+    onPeers(h){hs.push(h);fire()},on(t,h){(on[t]=on[t]||[]).push(h)},
+    emit(t,d){return t==='gift'&&d&&p2pId(d.to)&&others[d.to]?Promise.resolve(gift.send(d,{target:d.to})):Promise.reject(new Error('gone'))},
+    connected(){return true},leave(){try{quiet(room.leave())}catch(e){}}};
+}
+async function p2pJoin(name,quiet){
+  name=roomName(name);
+  if(!canP2P()||p2pBusy||name.length<3)return false;
+  if(net){if(p2pName===name)return true;p2pLeave(true)}
+  p2pBusy=true;p2pWarn='';
+  try{
+    if(!p2pLib)p2pLib=await import(P2P_LIB);
+    const r=p2pRoom(p2pLib,name);net=r;p2pName=name;lastPres='';p2pSave(name);
+    r.onPeers(onPeers);r.on('gift',onGift);
+    if(!quiet)toast('‘'+name+'’ 방에 들어왔어요. 친구가 같은 방 이름으로 들어오면 마을에 나타나요');
+    // 연결 서버 어디에도 닿지 못하면(막힌 인터넷) 알려 준다
+    setTimeout(()=>{
+      if(net!==r||!p2pLib.getRelaySockets)return;let ok=true;
+      try{ok=Object.values(p2pLib.getRelaySockets()).some(s=>s&&s.readyState===1)}catch(e){}
+      if(!ok)p2pTrouble('연결 서버에 닿지 못했어요. 회사나 학교 인터넷에서는 막혀 있을 수 있어요');
+    },9000);
+    return true;
+  }catch(e){net=null;p2pName='';toast('같이 하기를 준비하지 못했어요. 인터넷 연결을 확인해 주세요');return false}
+  finally{p2pBusy=false;peerChip()}
+}
+function p2pLeave(keep){
+  if(!net||!net.p2p)return;
+  net.leave();net=null;myPeer=null;peers=[];rps=null;tag=null;for(const k in PV)delete PV[k];
+  if(!keep){p2pName='';p2pWarn='';p2pSave('');toast('방에서 나왔어요')}
+  peerChip();
+}
+// 시작할 때: 초대 주소(#room=이름)로 왔으면 물어보고, 전에 들어가 있던 방이면 바로 다시 들어간다
+function initP2P(){
+  if(!canP2P()||net||p2pAsked)return;p2pAsked=true;
+  const h=p2pHash(),s=p2pSaved();
+  if(h.length>=3&&h!==s){
+    const ask=()=>{
+      if(!started||net)return;if(busy()){setTimeout(ask,800);return}
+      dialog({who:'같이 하기',role:'초대',text:'‘'+h+'’ 방에 초대받았어요. 들어가면 같은 방에 있는 친구가 내 마을에 나타나요.',choices:[['들어가기',()=>{p2pJoin(h)}],['혼자 하기',null]]});
+    };
+    setTimeout(ask,1500);
+  }else if(s.length>=3)p2pJoin(s,true).then(ok=>{if(ok)toast('‘'+s+'’ 방에 다시 들어왔어요')});
 }
 function speak(t){mySay=cleanText(t).slice(0,30);if(!mySay)return;mySayT=Date.now();mySayAt=now}
 function peerMenu(p){
@@ -4333,8 +4404,8 @@ function playXp(n){
   const g=Math.min(n,60-S.playXp);if(g<=0)return;S.playXp+=g;addXp(g);float('+'+g+' 경험',null,P.y*T-96);
 }
 function peerChip(){
-  const h=$('hPeers');h.hidden=!peers.length;if(!peers.length)return;
-  const t=tagOn()?'술래잡기 · 술래: '+tagName():'함께 '+(peers.length+1)+'명'+(buddy()?' · 덤 10%':'');
+  const h=$('hPeers'),wait=!peers.length&&!!net&&!!net.p2p;h.hidden=!peers.length&&!wait;if(h.hidden)return;
+  const t=wait?'방 ‘'+p2pName+'’ · 친구 기다리는 중':tagOn()?'술래잡기 · 술래: '+tagName():'함께 '+(peers.length+1)+'명'+(buddy()?' · 덤 10%':'');
   if(h.textContent!==t)h.textContent=t;
 }
 // 몸짓: 발끝(x,y)을 축으로 캐릭터 그림을 움직인다
@@ -4481,7 +4552,7 @@ function peerGift(p,nm){
         closeModal();if(!net||!net.connected()){toast('지금은 연결이 끊겨 있어요');return}
         gain(k,-1);
         net.emit('gift',{to:p.peer,item:k}).then(()=>{toast(nm+' 님에게 '+jo(ITEMS[k].n,'을','를')+' 건넸어요');speak('선물이야!')},
-          ()=>{gain(k,1);toast('선물을 보내지 못했어요. 공유할 때 기여자 이상 권한을 받은 사람만 보낼 수 있어요')});
+          ()=>{gain(k,1);toast(net&&net.p2p?'선물을 보내지 못했어요. 친구가 방에서 나갔을 수 있어요':'선물을 보내지 못했어요. 공유할 때 기여자 이상 권한을 받은 사람만 보낼 수 있어요')});
       };
       g.appendChild(b);
     }
@@ -4490,8 +4561,28 @@ function peerGift(p,nm){
 }
 function openSay(){
   openModal('같이 하기',body=>{
-    body.appendChild(el('p','note',!window.claude?'이 주소에서는 혼자 하기만 돼요. 친구가 마을에 나타나는 같이 하기는 claude.ai 아티팩트로 열었을 때 쓸 수 있어요. 아래 말은 내 머리 위에만 떠요.':!net?'지금은 혼자 하는 중이에요. 이 페이지의 공유 메뉴에서 친구를 초대하면, 친구가 페이지를 열었을 때 내 마을에 캐릭터로 나타나요.'
-      :peers.length?'지금 함께: '+peers.map(peerName).join(', ')+' · 친구 캐릭터를 누르면 인사·선물·가위바위보·술래잡기를 할 수 있어요. 친구 곁(네 칸 안)에서 일하면 경험치를 10% 더 받아요.':'아직 들어온 친구가 없어요. 공유 메뉴에서 초대한 친구가 페이지를 열면 마을에 나타나요.'));
+    const p2=canP2P(),inRoom=p2&&net&&net.p2p,inCss='font:inherit;padding:7px 10px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);width:100%;display:block;margin:4px 0 8px';
+    const withs='지금 함께: '+peers.map(peerName).join(', ')+' · 친구 캐릭터를 누르면 인사·선물·가위바위보·술래잡기를 할 수 있어요. 친구 곁(네 칸 안)에서 일하면 경험치를 10% 더 받아요.';
+    body.appendChild(el('p','note',p2?(!inRoom?'방 이름을 정해서 들어가고, 친구도 같은 방 이름으로 들어오면 서로의 마을에 캐릭터로 나타나요. 마을은 각자 따로 키워요.'
+        :peers.length?'방 ‘'+p2pName+'’ · '+withs:'방 ‘'+p2pName+'’에 들어와 있어요. 친구가 같은 방 이름으로 들어오면 마을에 나타나요. 아래 초대 주소를 보내면 바로 들어올 수 있어요.'+(p2pWarn?' ('+p2pWarn+')':''))
+      :!window.claude?'이 브라우저에서는 같이 하기를 쓸 수 없어요. 아래 말은 내 머리 위에만 떠요.':!net?'지금은 혼자 하는 중이에요. 이 페이지의 공유 메뉴에서 친구를 초대하면, 친구가 페이지를 열었을 때 내 마을에 캐릭터로 나타나요.'
+      :peers.length?withs:'아직 들어온 친구가 없어요. 공유 메뉴에서 초대한 친구가 페이지를 열면 마을에 나타나요.'));
+    // 아티팩트 밖에서는 방 이름으로 만난다
+    if(p2&&!inRoom){
+      const ri=el('input');ri.type='text';ri.maxLength=20;ri.autocomplete='off';ri.placeholder='방 이름 (세 글자 넘게)';ri.value=p2pHash()||p2pSaved();ri.style.cssText=inCss;
+      const go=()=>{const n=roomName(ri.value);if(n.length<3){toast('방 이름은 세 글자 넘게 지어 주세요');return}closeModal();p2pJoin(n)};
+      ri.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter')go()};body.appendChild(ri);
+      const jb=el('button','btn pri','방 들어가기');jb.type='button';jb.onclick=go;body.appendChild(jb);
+      const cv2=el('p','note','방 이름을 아는 사람은 누구나 들어올 수 있으니 흔하지 않은 이름으로 지어 주세요. 서로를 찾을 때만 바깥의 공개 연결 서버를 거치고, 그 뒤로는 브라우저끼리 바로 이어져요.');cv2.style.marginTop='8px';body.appendChild(cv2);
+    }else if(inRoom){
+      const li=el('input');li.type='text';li.readOnly=true;li.value=p2pLink();li.style.cssText=inCss;li.onfocus=()=>li.select();li.onkeydown=e=>e.stopPropagation();body.appendChild(li);
+      const rb=el('div','tabs');rb.style.flexWrap='wrap';
+      const cb=el('button','btn','초대 주소 복사');cb.type='button';
+      cb.onclick=()=>{const done=()=>toast('초대 주소를 복사했어요. 친구에게 보내 주세요'),fall=()=>{li.focus();li.select();toast('주소를 골라 두었어요. 복사해서 친구에게 보내 주세요')};
+        try{navigator.clipboard.writeText(li.value).then(done,fall)}catch(e){fall()}};
+      const lb=el('button','btn','방 나가기');lb.type='button';lb.onclick=()=>{closeModal();p2pLeave()};
+      rb.appendChild(cb);rb.appendChild(lb);body.appendChild(rb);
+    }
     const g=el('div','tabs');g.style.flexWrap='wrap';
     for(const t of ['안녕!','같이 낚시하자','이리 와 봐','고마워!','잘 가~']){const b=el('button','btn',t);b.type='button';b.onclick=()=>{speak(t);closeModal()};g.appendChild(b)}
     body.appendChild(g);
