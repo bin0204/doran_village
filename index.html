@@ -4318,10 +4318,13 @@ function onGift(m){
 }
 
 // ───────── 방 이름으로 같이 하기 ─────────
-// claude.ai 아티팩트가 아닌 주소(GitHub 페이지 등)에서는 방 이름이 같은 사람끼리 브라우저가 직접 이어진다(WebRTC).
-// 서로를 찾을 때만 공개 연결 서버를 거치고, 위치·말·선물은 브라우저끼리 오간다. p2pRoom은 아티팩트의 room과 같은 모양이라 나머지 코드는 그대로 쓴다.
-// 방 이름을 아는 사람은 누구나 들어올 수 있으니 받은 값은 여기서도 형식부터 확인한다(상대 id는 객체 열쇠로 쓰이므로 특히)
-const P2P_LIB='https://cdn.jsdelivr.net/npm/trystero@0.26.0/+esm',P2P_APP='doran-village-p2p-v1',P2P_KEY='doran-village-room';
+// claude.ai 아티팩트가 아닌 주소(GitHub 페이지 등)에서는 방 이름이 같은 사람끼리 공개 연결 서버(Nostr 중계 서버, wss 443)를 거쳐 소식을 주고받는다.
+// 브라우저끼리 직접 잇는 방식(WebRTC)은 회사망·통신사 조합에 따라 이어지지 않아서 쓰지 않는다. 웹소켓만 열리면 어디서든 된다.
+// 소식은 방 이름에서 만든 열쇠로 잠가(AES-GCM) 잠깐 머무는 글(ephemeral event, 서버가 쌓아 두지 않는다)로 올린다. 올릴 때 필요한 서명만 라이브러리를 쓴다.
+// p2pRoom은 아티팩트의 room과 같은 모양이라 나머지 코드는 그대로 쓴다. 받은 값은 여기서도 형식부터 확인한다(상대 id는 객체 열쇠로 쓰이므로 특히)
+const P2P_LIB='https://cdn.jsdelivr.net/npm/@noble/secp256k1@3.2.0/+esm',P2P_APP='doran-village-p2p-v1',P2P_KEY='doran-village-room';
+const P2P_RELAYS='0x-nostr-relay.fly.dev cdn.satellite.earth nos.lol nostr.chaima.info nostr.christiansass.de nostr.rblb.it nostr.red5d.dev nostr.robosats.org nostr.stakey.net nostrcity-club.fly.dev relay-dev.gulugulu.moe relay.aarpia.com relay.agentry.com relay.bitmacro.cloud relay.bullishbounty.com relay.degmods.com relay.flashapp.me relay.grigic.org relay.hackshed.dev relay.kaleidoswap.com relay.layer.systems relay.nostr.blockhenge.com relay.nostr.dev.br relay.nostrmap.net relay.novospes.com relay.piazza.today relay.routstr.com testr.nymble.world'.split(' ');
+const P2P_GAP=250,P2P_BEAT=10000,P2P_GONE=25000,P2P_MAX=12; /* 내 소식을 올리는 가장 짧은 틈, 살아 있다는 알림 간격, 이만큼 소식이 없으면 나간 것으로 봄, 한 방의 최대 인원 */
 const canP2P=()=>!(window.claude&&window.claude.use)&&!!window.RTCPeerConnection&&window.isSecureContext!==false;
 let p2pLib=null,p2pName='',p2pBusy=false,p2pWarn='',p2pWarnAt=-99,p2pAsked=false;
 const roomName=s=>{let t=cleanText(s);try{t=t.normalize('NFC')}catch(e){}return t.replace(/\s+/g,' ').trim().toLowerCase().slice(0,20)};
@@ -4331,21 +4334,87 @@ const p2pHash=()=>{const m=/[#&]room=([^&]*)/.exec(location.hash||'');if(!m)retu
 const p2pLink=()=>location.href.split('#')[0]+'#room='+encodeURIComponent(p2pName);
 const p2pId=id=>typeof id==='string'&&/^[\w-]{8,64}$/.test(id)&&!(id in {});
 function p2pTrouble(msg){p2pWarn=msg;if(now-p2pWarnAt>30){p2pWarnAt=now;toast(msg)}}
-function p2pRoom(T,name){
-  const room=T.joinRoom({appId:P2P_APP,maxReceiveBytes:32768},name,{onJoinError:()=>p2pTrouble('친구와 바로 이어지지 못했어요. 회사나 학교 인터넷에서는 막혀 있을 수 있어요')});
-  const me=T.selfId,mine={},others=Object.create(null),giftAt=Object.create(null),hs=[],on=Object.create(null);
-  const pres=room.makeAction('pres'),gift=room.makeAction('gift');
-  const quiet=p=>Promise.resolve(p).catch(()=>{});
-  const fire=()=>{const l=[{peer:me,isMe:true,sameTab:true,kind:'viewer',presence:mine}];for(const id in others)l.push({peer:id,isMe:false,sameTab:false,kind:'viewer',presence:others[id]});for(const h of hs)h({peers:l})};
-  room.onPeerJoin=id=>{if(!p2pId(id))return;if(!(id in others))others[id]=null;p2pWarn='';if(mine.n)quiet(pres.send(mine,{target:id}));fire()};
-  room.onPeerLeave=id=>{if(!(id in others))return;delete others[id];delete giftAt[id];fire()};
-  pres.onMessage=(d,m)=>{const id=m&&m.peerId;if(!p2pId(id)||!d||typeof d!=='object'||Array.isArray(d))return;others[id]=d;fire()};
-  gift.onMessage=(d,m)=>{const id=m&&m.peerId,t=Date.now();if(!p2pId(id)||!(id in others)||t-(giftAt[id]||0)<1500)return;giftAt[id]=t;for(const h of on.gift||[])h({data:d,peer:id,isMe:false})};
+const p2pHex=b=>Array.from(b,x=>x.toString(16).padStart(2,'0')).join('');
+const p2pSha=async s=>new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(s)));
+async function p2pRoom(lib,name){
+  const sch=lib.schnorr,kp=sch.keygen(),me=p2pHex(kp.publicKey);
+  const topic=p2pHex(await p2pSha(P2P_APP+'|topic|'+name)).slice(0,40),kind=20000+parseInt(topic.slice(0,6),16)%10000;
+  const key=await crypto.subtle.importKey('raw',await p2pSha(P2P_APP+'|key|'+name),'AES-GCM',false,['encrypt','decrypt']);
+  // 방마다 같은 차례로 고른 연결 서버 여덟 곳. 모두에게 귀를 열어 두고, 올릴 때는 그 가운데 몇 곳만 쓴다
+  const ord=[];for(const u of P2P_RELAYS)ord.push([p2pHex(await p2pSha(topic+u)),u]);ord.sort((a,b)=>a[0]<b[0]?-1:1);
+  const socks=ord.slice(0,8).map((q,i)=>({i,url:'wss://'+q[1],ws:null,bad:0,retry:3000,timer:0}));
+  const mine={},others=Object.create(null),giftAt=Object.create(null),hs=[],on=Object.create(null),seen=new Set(),ids=[];
+  let closed=false,q=0,pub=[],pt=0,ptimer=0,gt=0,bye='',tx=0,rx=0;
+  const live=s=>!!s.ws&&s.ws.readyState===1,openOnes=()=>socks.filter(live),mask=()=>openOnes().reduce((m,s)=>m|1<<s.i,0);
+  const fire=()=>{const l=[{peer:me,isMe:true,sameTab:true,kind:'viewer',presence:mine}];for(const id in others)l.push({peer:id,isMe:false,sameTab:false,kind:'viewer',presence:others[id].p});for(const h of hs)h({peers:l})};
+  // 올릴 곳: 방에 있는 모두가 듣고 있는 서버만으로 가장 적게 고르고, 하나가 말썽이어도 닿도록 둘까지 채운다
+  const pick=()=>{
+    const t=Date.now(),op=openOnes(),ok=op.filter(s=>s.bad<t),use=ok.length?ok:op,set=[];let left=[];
+    for(const id in others)if(others[id].on)left.push(others[id].on);
+    while(left.length){let best=null,bn=0;for(const s of use){if(set.includes(s))continue;const n=left.filter(m=>m>>s.i&1).length;if(n>bn){bn=n;best=s}}if(!best)break;set.push(best);left=left.filter(m=>!(m>>best.i&1))}
+    for(const s of use){if(set.length>=2)break;if(!set.includes(s))set.push(s)}
+    pub=set;
+  };
+  const pack=async d=>{
+    const iv=crypto.getRandomValues(new Uint8Array(12)),ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,new TextEncoder().encode(JSON.stringify(d))));
+    const raw=new Uint8Array(12+ct.length);raw.set(iv);raw.set(ct,12);let bin='';for(let i=0;i<raw.length;i++)bin+=String.fromCharCode(raw[i]);
+    const ev={kind,tags:[['x',topic]],created_at:Math.floor(Date.now()/1000),content:btoa(bin),pubkey:me};
+    const idb=await p2pSha(JSON.stringify([0,ev.pubkey,ev.created_at,ev.kind,ev.tags,ev.content]));ev.id=p2pHex(idb);ev.sig=p2pHex(await sch.signAsync(idb,kp.secretKey));
+    return JSON.stringify(['EVENT',ev]);
+  };
+  const post=(msg,all)=>{let tg=all?openOnes():pub.filter(live);if(!tg.length)tg=openOnes().slice(0,2);let n=0;for(const s of tg){try{s.ws.send(msg);n++}catch(e){}}return n>0};
+  const send=async(d,all)=>{if(closed)return false;try{const m=await pack(d);tx++;return!closed&&post(m,all)}catch(e){return false}};
+  // 인사: 열려 있는 모든 서버에 내가 있다는 것과 내가 듣는 서버 목록(on)을 알린다. 처음 보는 사람이 생겼을 때와 십 초마다
+  const greet=()=>{const t=Date.now();if(t-gt<1500)return;gt=t;pick();send({t:'h',q:++q,on:mask(),p:mine.n?mine:null},true);pack({t:'b'}).then(m=>{bye=m},()=>{})};
+  const handle=(id,d)=>{
+    const t=Date.now();let r=others[id];
+    if(d.t==='b'){if(r){delete others[id];delete giftAt[id];pick();fire()}return}
+    if(d.t==='g'){if(!r||t-(giftAt[id]||0)<1500)return;giftAt[id]=t;for(const h of on.gift||[])h({data:{to:d.to,item:d.item},peer:id,isMe:false});return}
+    if(d.t!=='p'&&d.t!=='h')return;
+    if(!r){if(Object.keys(others).length>=P2P_MAX)return;r=others[id]={p:null,q:-1,at:t,on:0};p2pWarn='';gt=0;setTimeout(greet,60)}
+    r.at=t;if(typeof d.on==='number'&&r.on!==(d.on|0)){r.on=d.on|0;pick()}
+    const n=+d.q||0;if(n<=r.q)return;r.q=n;
+    if(d.p&&typeof d.p==='object'&&!Array.isArray(d.p)){r.p=d.p;fire()}
+  };
+  const recv=async(s,data)=>{
+    let m;try{m=JSON.parse(data)}catch(e){return}
+    if(!Array.isArray(m))return;
+    // 서버가 너무 잦다고 하거나 받지 않겠다고 하면 한동안 그 서버에는 올리지 않는다
+    if(m[0]==='OK'){if(m[2]===false&&typeof m[3]==='string'&&/^(rate-limited|blocked|restricted|auth-required|pow|invalid)/.test(m[3])){s.bad=Date.now()+(m[3].startsWith('rate')?30000:600000);pick()}return}
+    if(m[0]==='NOTICE'){if(/rate|slow|limit/i.test(String(m[1]))){s.bad=Date.now()+30000;pick()}return}
+    if(m[0]!=='EVENT')return;const ev=m[2];
+    if(!ev||typeof ev!=='object'||ev.kind!==kind||typeof ev.id!=='string'||typeof ev.content!=='string'||ev.content.length>4000||ev.pubkey===me||!p2pId(ev.pubkey)||!/^[0-9a-f]{64}$/.test(ev.pubkey))return;
+    if(seen.has(ev.id))return;seen.add(ev.id);ids.push(ev.id);if(ids.length>3000)seen.delete(ids.shift());
+    let d;try{const bin=atob(ev.content),raw=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)raw[i]=bin.charCodeAt(i);
+      d=JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:raw.subarray(0,12)},key,raw.subarray(12))))}catch(e){return}
+    if(!closed&&d&&typeof d==='object'){rx++;handle(ev.pubkey,d)}
+  };
+  const connect=s=>{
+    if(closed)return;let ws;try{ws=new WebSocket(s.url)}catch(e){return}
+    s.ws=ws;
+    ws.onopen=()=>{s.retry=3000;try{ws.send(JSON.stringify(['REQ','d'+topic.slice(0,10),{kinds:[kind],since:Math.floor(Date.now()/1000)-120,'#x':[topic]}]))}catch(e){}gt=0;greet()};
+    ws.onmessage=e=>{if(typeof e.data==='string')recv(s,e.data)};
+    ws.onerror=()=>{};
+    ws.onclose=()=>{if(s.ws===ws)s.ws=null;pick();if(!closed){s.timer=setTimeout(()=>connect(s),s.retry);s.retry=Math.min(60000,s.retry*2)}};
+  };
+  socks.forEach(connect);
+  const beat=setInterval(()=>{
+    const t=Date.now();let gone=false;
+    for(const id in others)if(t-others[id].at>P2P_GONE){delete others[id];delete giftAt[id];gone=true}
+    if(gone){pick();fire()}
+    gt=0;greet();
+  },P2P_BEAT);
+  // 창을 닫을 때는 미리 서명해 둔 작별 인사를 바로 보낸다 (서명은 기다려야 해서 그때 만들면 늦는다)
+  const onHide=()=>{if(bye)post(bye,true)};
+  window.addEventListener('pagehide',onHide);
   return{p2p:true,
-    presence(p){Object.assign(mine,p);return quiet(pres.send(mine))},
+    presence(p){Object.assign(mine,p);if(!ptimer)ptimer=setTimeout(()=>{ptimer=0;pt=Date.now();send({t:'p',q:++q,on:mask(),p:mine})},Math.max(0,P2P_GAP-(Date.now()-pt)));return Promise.resolve()},
     onPeers(h){hs.push(h);fire()},on(t,h){(on[t]=on[t]||[]).push(h)},
-    emit(t,d){return t==='gift'&&d&&p2pId(d.to)&&others[d.to]?Promise.resolve(gift.send(d,{target:d.to})):Promise.reject(new Error('gone'))},
-    connected(){return true},leave(){try{quiet(room.leave())}catch(e){}}};
+    emit(t,d){return t==='gift'&&d&&p2pId(d.to)&&others[d.to]?send({t:'g',q:++q,to:d.to,item:d.item},true).then(ok=>{if(!ok)throw new Error('gone')}):Promise.reject(new Error('gone'))},
+    connected(){return openOnes().length>0},
+    status(){const t=Date.now();return{open:openOnes().length,all:socks.length,peers:Object.keys(others).length,bad:socks.filter(s=>s.bad>t).length,pub:pub.map(s=>s.i),tx,rx}},
+    leave(){if(closed)return;if(bye)post(bye,true);closed=true;clearInterval(beat);clearTimeout(ptimer);window.removeEventListener('pagehide',onHide);
+      for(const s of socks){clearTimeout(s.timer);const w=s.ws;s.ws=null;if(w)setTimeout(()=>{try{w.close()}catch(e){}},300)}}};
 }
 async function p2pJoin(name,quiet){
   name=roomName(name);
@@ -4354,15 +4423,11 @@ async function p2pJoin(name,quiet){
   p2pBusy=true;p2pWarn='';
   try{
     if(!p2pLib)p2pLib=await import(P2P_LIB);
-    const r=p2pRoom(p2pLib,name);net=r;p2pName=name;lastPres='';p2pSave(name);
+    const r=await p2pRoom(p2pLib,name);net=r;p2pName=name;lastPres='';p2pSave(name);
     r.onPeers(onPeers);r.on('gift',onGift);
     if(!quiet)toast('‘'+name+'’ 방에 들어왔어요. 친구가 같은 방 이름으로 들어오면 마을에 나타나요');
     // 연결 서버 어디에도 닿지 못하면(막힌 인터넷) 알려 준다
-    setTimeout(()=>{
-      if(net!==r||!p2pLib.getRelaySockets)return;let ok=true;
-      try{ok=Object.values(p2pLib.getRelaySockets()).some(s=>s&&s.readyState===1)}catch(e){}
-      if(!ok)p2pTrouble('연결 서버에 닿지 못했어요. 회사나 학교 인터넷에서는 막혀 있을 수 있어요');
-    },9000);
+    setTimeout(()=>{if(net===r&&!r.connected())p2pTrouble('연결 서버에 닿지 못했어요. 인터넷 연결을 확인해 주세요')},9000);
     return true;
   }catch(e){net=null;p2pName='';toast('같이 하기를 준비하지 못했어요. 인터넷 연결을 확인해 주세요');return false}
   finally{p2pBusy=false;peerChip()}
@@ -4581,7 +4646,7 @@ function openSay(){
       const go=()=>{const n=roomName(ri.value);if(n.length<3){toast('방 이름은 세 글자 넘게 지어 주세요');return}closeModal();p2pJoin(n)};
       ri.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter')go()};body.appendChild(ri);
       const jb=el('button','btn pri','방 들어가기');jb.type='button';jb.onclick=go;body.appendChild(jb);
-      const cv2=el('p','note','방 이름을 아는 사람은 누구나 들어올 수 있으니 흔하지 않은 이름으로 지어 주세요. 서로를 찾을 때만 바깥의 공개 연결 서버를 거치고, 그 뒤로는 브라우저끼리 바로 이어져요.');cv2.style.marginTop='8px';body.appendChild(cv2);
+      const cv2=el('p','note','방 이름을 아는 사람은 누구나 들어올 수 있으니 흔하지 않은 이름으로 지어 주세요. 소식은 방 이름으로 잠근 채 바깥의 공개 연결 서버를 거쳐 오가요.');cv2.style.marginTop='8px';body.appendChild(cv2);
     }else if(inRoom){
       const li=el('input');li.type='text';li.readOnly=true;li.value=p2pLink();li.style.cssText=inCss;li.onfocus=()=>li.select();li.onkeydown=e=>e.stopPropagation();body.appendChild(li);
       const rb=el('div','tabs');rb.style.flexWrap='wrap';
@@ -4590,6 +4655,9 @@ function openSay(){
         try{navigator.clipboard.writeText(li.value).then(done,fall)}catch(e){fall()}};
       const lb=el('button','btn','방 나가기');lb.type='button';lb.onclick=()=>{closeModal();p2pLeave()};
       rb.appendChild(cb);rb.appendChild(lb);body.appendChild(rb);
+      // 연결 상태: 친구가 안 보일 때 어디가 문제인지 가늠할 수 있게
+      const st=net.status(),sp=el('p','note',st.open?'연결 서버 '+st.all+'곳 가운데 '+st.open+'곳에 닿았어요 · 방에 나 말고 '+st.peers+'명.'+(st.peers?'':' 친구가 안 보이면 방 이름이 같은지, 친구가 게임 화면을 켜 두었는지 확인해 주세요.'):'연결 서버에 아직 닿지 못했어요. 잠시 뒤에 다시 열어 보세요.');
+      sp.style.marginTop='8px';body.appendChild(sp);
     }
     const g=el('div','tabs');g.style.flexWrap='wrap';
     for(const t of ['안녕!','같이 낚시하자','이리 와 봐','고마워!','잘 가~']){const b=el('button','btn',t);b.type='button';b.onclick=()=>{speak(t);closeModal()};g.appendChild(b)}
