@@ -4277,22 +4277,26 @@ const cntOn=()=>!(window.claude&&window.claude.use)&&/^https?:$/.test(location.p
 function countMe(){
   if(!cntOn())return;
   let seen={};try{seen=JSON.parse(localStorage.getItem(CNT_KEY)||'{}')||{}}catch(e){}
-  const day=cntDay(),hit=k=>{try{fetch(CNT_URL+'/hit/'+CNT_NS+'/'+k,{credentials:'omit',cache:'no-store'}).catch(()=>{})}catch(e){}};
-  if(!seen.all){seen.all=1;hit('all')}
-  if(seen.day!==day){seen.day=day;hit(day)}
-  try{localStorage.setItem(CNT_KEY,JSON.stringify(seen))}catch(e){}
+  // 숫자 세는 곳이 느릴 때가 있다. 올린 것이 확인된 뒤에만 '세었다'고 적어 두어, 실패하면 다음에 다시 올린다
+  const day=cntDay(),save=()=>{try{localStorage.setItem(CNT_KEY,JSON.stringify(seen))}catch(e){}};
+  const hit=k=>{try{return fetch(CNT_URL+'/hit/'+CNT_NS+'/'+k,{credentials:'omit',cache:'no-store',keepalive:true}).then(r=>r.ok,()=>false)}catch(e){return Promise.resolve(false)}};
+  if(!seen.all)hit('all').then(ok=>{if(ok){seen.all=1;save()}});
+  if(seen.day!==day)hit(day).then(ok=>{if(ok){seen.day=day;save()}});
 }
 function openStats(){
-  const get=k=>fetch(CNT_URL+'/get/'+CNT_NS+'/'+k,{credentials:'omit',cache:'no-store'}).then(r=>r.ok?r.json():{value:0}).then(j=>(j&&j.value)|0).catch(()=>null);
+  // 하나씩 차례로 물어본다(한꺼번에 물으면 느려지거나 빠뜨린다). 없는 날은 0, 대답이 없으면 ?
+  const get=k=>{const c=new AbortController(),tm=setTimeout(()=>c.abort(),12000);
+    return fetch(CNT_URL+'/get/'+CNT_NS+'/'+k,{credentials:'omit',cache:'no-store',signal:c.signal}).then(r=>r.ok?r.json().then(j=>(j&&j.value)|0):r.status===404?0:null).catch(()=>null).finally(()=>clearTimeout(tm))};
   openModal('하는 사람 수',body=>{
-    const p=el('p','note','세는 중이에요…');body.appendChild(p);
-    const days=[0,1,2,3,4,5,6].map(cntDay);
-    Promise.all([get('all')].concat(days.map(get))).then(v=>{
-      if(v[0]===null){p.textContent='숫자를 가져오지 못했어요. 인터넷 연결을 확인하거나 잠시 뒤에 다시 열어 주세요.';return}
-      p.textContent='지금까지 이 주소에서 게임을 시작한 브라우저는 '+v[0]+'곳이에요.';
-      days.forEach((d,i)=>row(body,el('span','badge',String(v[i+1]|0)),(i?i+'일 전':'오늘')+' · '+(+d.slice(5,7))+'월 '+(+d.slice(7))+'일',['그날 게임을 켠 브라우저 '+(v[i+1]|0)+'곳'],[]));
-      body.appendChild(el('p','note','사람이 아니라 브라우저를 세요. 같은 사람이 폰과 PC로 하면 둘로 세고, 시크릿 창은 열 때마다 새로 세요. 지금 같은 방에 있는 사람 수는 "같이 하기" 창에 나와요.'));
-    });
+    const p=el('p','note','세는 중이에요… 숫자 세는 곳이 느려서 몇 초 걸릴 수 있어요.');body.appendChild(p);
+    const days=[0,1,2,3,4,5,6].map(cntDay),cells=[];
+    days.forEach((d,i)=>{const b=el('span','badge','…');cells.push(b);row(body,b,(i?i+'일 전':'오늘')+' · '+(+d.slice(5,7))+'월 '+(+d.slice(7))+'일',['그날 게임을 켠 브라우저 수'],[])});
+    body.appendChild(el('p','note','사람이 아니라 브라우저를 세요. 같은 사람이 폰과 PC로 하면 둘로 세고, 시크릿 창은 열 때마다 새로 세요. ?는 대답을 못 받은 것이니 잠시 뒤에 다시 열어 보세요. 지금 같은 방에 있는 사람 수는 "같이 하기" 창에 나와요.'));
+    (async()=>{
+      const all=await get('all');if(!p.isConnected)return;
+      p.textContent=all===null?'모두 합친 숫자는 대답을 못 받았어요. 잠시 뒤에 다시 열어 주세요.':'지금까지 이 주소에서 게임을 시작한 브라우저는 '+all+'곳이에요.';
+      for(let i=0;i<days.length;i++){const v=await get(days[i]);if(!cells[i].isConnected)return;cells[i].textContent=v===null?'?':String(v)}
+    })();
   });
 }
 function talk(id){
