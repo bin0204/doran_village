@@ -202,6 +202,7 @@ ul.help{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
     <button class="btn" id="bGear" type="button">장비</button>
     <button class="btn" id="bSay" type="button">같이 하기</button>
     <button class="btn" id="bDeco" type="button" hidden>꾸미기</button>
+    <button class="btn" id="bYard" type="button" hidden>가꾸기</button>
     <button class="btn" id="bPlace" type="button" hidden>우리 놓기</button>
     <button class="btn sp" id="bSave" type="button">저장</button>
     <button class="btn" id="bPad" type="button" hidden>조작키 켬</button>
@@ -234,6 +235,7 @@ const ITEMS={
   sweetfish:{n:'은어',p:45}, catfish:{n:'메기',p:60}, salmon:{n:'연어',p:85}, smelt:{n:'빙어',p:30},
   meat:{n:'고기',p:40}, hide:{n:'가죽',p:60}, feather:{n:'꿩 깃털',p:35}, antler:{n:'사슴뿔',p:150},
   tigerskin:{n:'호피',p:500}, ginseng:{n:'산삼',p:300},
+  foxfur:{n:'여우 털',p:120}, fang:{n:'늑대 이빨',p:90}, bearhide:{n:'곰 가죽',p:260}, tusk:{n:'큰 엄니',p:700},
   iron:{n:'쇳돌',p:35}, egg:{n:'달걀',p:35}, milk:{n:'우유',p:110}, feed:{n:'먹이',p:3,nodex:1},
   yeot:{n:'엿',p:8,nodex:1}, goose:{n:'나무 기러기 한 쌍',p:60,nodex:1}, miyeok:{n:'미역',p:18,nodex:1},
   // 콩과 집에서 짓는 음식(dish), 장독대에서 익히는 먹거리(jar=독 안에 보이는 색)
@@ -259,21 +261,29 @@ const CROPS={bean:{days:3,xp:10,s:[1,2]},turnip:{days:2,xp:8,s:[0,2]},carrot:{da
 const seasonNames=a=>a.map(i=>SEASONS[i]).join('·');
 // 계절마다 하나씩 더 잡히는 물고기: [이름, 바다인가, 경험치]
 const SFISH=[['sweetfish',false,10],['catfish',false,12],['salmon',true,12],['smelt',false,6]];
-// 들짐승: hp=맞혀야 하는 횟수, s=나오는 계절
-const BEASTS={rabbit:{n:'토끼',hp:1,loot:['meat'],s:[0,1,2]},pheasant:{n:'꿩',hp:1,loot:['feather','meat'],s:[2,3]},
-  boar:{n:'멧돼지',hp:2,loot:['meat','hide'],s:[1,2,3]},deer:{n:'사슴',hp:1,loot:['antler','hide'],s:[0,1,2,3]},
-  tiger:{n:'범',hp:3,loot:['tigerskin','meat'],s:[0,1,2,3]}};
+// 들짐승: hp=맞혀야 하는 횟수, s=나오는 계절, xp=잡았을 때 경험치, arms=무예 수련(없으면 2)
+// aim=[과녁이 흔들리는 빠르기, 가로 폭, 세로 폭, 세로 박자]: 짐승마다 겨누는 손맛이 다르다. look=겨누고 머뭇거릴 수 있는 시간(없으면 4.5초)
+// shy=몇 칸 안에 들면 달아나나(없으면 2), run=달아나는 빠르기. 사나운 짐승: bite=덮쳤을 때 잃는 기력, hunt=쫓아오는 거리, sp=쫓는 빠르기,
+// mild=건드리거나 두 칸 안에 들기 전에는 덤비지 않는다. deep=깊은 산에만 산다. big=크게 그린다.
+// lv=잡기에 알맞은 레벨. 깊은 산의 짐승은 내 레벨이 그만큼 되어야 나온다(숲의 짐승은 레벨과 상관없이 나온다)
+const BEASTS={rabbit:{n:'토끼',lv:1,hp:1,loot:['meat'],s:[0,1,2],xp:8,aim:[2.9,19,8,2.3]},pheasant:{n:'꿩',lv:1,hp:1,loot:['feather','meat'],s:[2,3],xp:8,aim:[2.6,21,8,1.4]},
+  boar:{n:'멧돼지',lv:3,hp:2,loot:['meat','hide'],s:[1,2,3],xp:14,aim:[2.3,24,6,1.7]},deer:{n:'사슴',lv:2,hp:1,loot:['antler','hide'],s:[0,1,2,3],xp:20,aim:[2.7,22,7,1.7]},
+  tiger:{n:'범',lv:5,hp:3,loot:['tigerskin','meat'],s:[0,1,2,3],xp:40,arms:6,aim:[2.6,22,7,1.7],bite:18,hunt:6,sp:2.7},
+  fox:{n:'여우',lv:6,hp:1,loot:['foxfur'],s:[0,1,2,3],xp:16,shy:3,run:5.2,look:3.6,aim:[3.3,24,6,2.9],deep:1},
+  wolf:{n:'늑대',lv:6,hp:2,loot:['fang','hide'],s:[0,1,2,3],xp:18,arms:3,aim:[2.9,20,8,1.5],bite:8,hunt:5,sp:2.5,deep:1},
+  bear:{n:'곰',lv:9,hp:4,loot:['bearhide','meat'],s:[0,1,2],xp:34,arms:5,aim:[2,26,8,1.2],bite:22,hunt:4,sp:2.1,mild:1,deep:1},
+  kboar:{n:'대왕 멧돼지',lv:10,hp:5,loot:['tusk','meat','hide'],s:[0,1,2,3],xp:60,arms:8,aim:[2.4,26,8,1.9],bite:14,hunt:5,sp:2.6,mild:1,big:1,deep:1}};
 const DEX=[['물고기',['minnow','crucian','carp','scad','mackerel','snapper','sweetfish','catfish','salmon','smelt']],
   ['열매와 작물',['apple','persimmon','turnip','carrot','strawberry','watermelon','pumpkin']],
   ['모은 것',['flower','mushroom','chestnut','shell','wood','stone','bread','ginseng']],
-  ['사냥감',['meat','hide','feather','antler','tigerskin']],['살림',['iron','egg','milk']],
+  ['사냥감',['meat','hide','feather','antler','tigerskin','foxfur','fang','bearhide','tusk']],['살림',['iron','egg','milk']],
   ['수라간 음식',['d_egg','d_fish','d_kimchi','d_jeon','d_juk','d_meat','d_hwachae','d_tarak','d_sam']],
   ['아궁이와 장독대',['bean','h_bam','h_egg','d_jjigae','j_kimchi','j_jeot','j_cho','j_cheong','j_jang']],
   ['명절 음식',['f_guk','f_tteok','f_song','f_pat']],['동굴에서 캔 것',['silver','jade','gold']],['먼바다',['bangeo','mineo','muneo','abalone']]];
 const DEXHINT={carp:'민물의 대물',snapper:'바다의 대물',sweetfish:'봄 · 민물',catfish:'여름 · 민물',salmon:'가을 · 바다',smelt:'겨울 · 민물',
   scad:'바다',mackerel:'바다',minnow:'민물',crucian:'민물',strawberry:'봄 작물',watermelon:'여름 작물',pumpkin:'가을 작물',turnip:'봄·가을 작물',carrot:'봄~가을 작물',
   apple:'사과나무',persimmon:'감나무',chestnut:'가을에 주워요',flower:'풀밭',mushroom:'풀밭',shell:'바닷가',wood:'소나무',stone:'바위',bread:'솔이와 친해지면',
-  bangeo:'먼바다의 물고기 떼',mineo:'먼바다의 물고기 떼',muneo:'먼바다의 물고기 떼',abalone:'먼바다의 섬',silver:'동굴 6층부터',jade:'동굴 11층부터',gold:'동굴 16층부터',f_guk:'설날 잔치 (봄 1일)',f_tteok:'단오 잔치 (여름 4일)',f_song:'추석 잔치 (가을 4일)',f_pat:'동지 잔치 (겨울 4일)',bean:'여름·가을 작물',iron:'바위를 잘 맞혀 캐면',egg:'닭장의 닭',milk:'외양간의 소',tigerskin:'사냥터의 범',ginseng:'사냥터 깊은 숲',meat:'토끼·멧돼지',hide:'멧돼지·사슴',feather:'가을·겨울의 꿩',antler:'드물게 나오는 사슴'};
+  bangeo:'먼바다의 물고기 떼',mineo:'먼바다의 물고기 떼',muneo:'먼바다의 물고기 떼',abalone:'먼바다의 섬',silver:'동굴 6층부터',jade:'동굴 11층부터',gold:'동굴 16층부터',f_guk:'설날 잔치 (봄 1일)',f_tteok:'단오 잔치 (여름 4일)',f_song:'추석 잔치 (가을 4일)',f_pat:'동지 잔치 (겨울 4일)',bean:'여름·가을 작물',iron:'바위를 잘 맞혀 캐면',egg:'닭장의 닭',milk:'외양간의 소',tigerskin:'사냥터의 범',ginseng:'사냥터 깊은 숲',meat:'토끼·멧돼지',hide:'멧돼지·사슴',feather:'가을·겨울의 꿩',antler:'드물게 나오는 사슴',foxfur:'깊은 산의 여우',fang:'깊은 산의 늑대',bearhide:'깊은 산의 곰',tusk:'깊은 산의 대왕 멧돼지'};
 const FISH={fresh:[['minnow',50,5],['crucian',38,8],['carp',12,15]], sea:[['scad',50,6],['mackerel',36,9],['snapper',14,16]]};
 const FURN={
   chair:{n:'나무 의자',buy:80,c:1}, plant:{n:'화분',buy:100,c:2}, table:{n:'둥근 탁자',buy:150,c:2},
@@ -286,7 +296,9 @@ const FURN={
   // 모루에게 부탁해서 놓는다. 그 앞에서 행동하면 집에서도 음식을 지을 수 있다
   agungi:{n:'아궁이와 가마솥',c:3},
   // 반짝이는 곳을 파서만 얻는 가구 (RELICS)
-  r_lantern:{n:'청사초롱',c:7}, r_tigerpic:{n:'까치호랑이 그림',c:8}, r_celadon:{n:'청자 매병',c:8}, r_pearl:{n:'진주 조개',c:7}, r_crystal:{n:'수정 원석',c:8}
+  r_lantern:{n:'청사초롱',c:7}, r_tigerpic:{n:'까치호랑이 그림',c:8}, r_celadon:{n:'청자 매병',c:8}, r_pearl:{n:'진주 조개',c:7}, r_crystal:{n:'수정 원석',c:8},
+  // 진상으로 공을 쌓으면 임금이 내리는 가구 (ROYAL)
+  k_vase:{n:'궁중 꽃 항아리',c:8}, k_screen:{n:'일월오봉도 병풍',c:10}
 };
 // 옷: 저고리(top)·치마나 바지(bot)·고름(rib) 색과 쓰개(hat). 은하 만물상에서 사고 옷장에서 갈아입는다
 const OUTFITS={
@@ -319,7 +331,12 @@ const OUTFITS={
   r_flower:{n:'꽃놀이 한복',top:'#f6a3c4',bot:'#8fbf5f',rib:'#f7d24a',hat:'hwagwan',job:1},
   r_moon:{n:'달빛 도포',top:'#e6ecf7',bot:'#9aa8d0',rib:'#f7d24a',hat:'gat',job:1},
   r_sea:{n:'물빛 한복',top:'#7fd0e6',bot:'#f6f1e6',rib:'#3f6fb0',job:1},
-  r_gold:{n:'금박 예복',top:'#f7d24a',bot:'#7a3a7a',rib:'#c8392f',job:1}
+  r_gold:{n:'금박 예복',top:'#f7d24a',bot:'#7a3a7a',rib:'#c8392f',job:1},
+  // 진상으로 공을 쌓으면 임금이 내리는 옷 (ROYAL)
+  k_silk:{n:'하사받은 비단 도포',top:'#2e6a8a',bot:'#f3ead6',rib:'#f7d24a',hat:'gat',job:1},
+  // 나쁜 길에서 악명이 쌓이면 얻는 옷 (ROGUE)
+  rogue1:{n:'왈패 검은 차림',top:'#2a2a30',bot:'#3a3a40',rib:'#c8392f',hat:'cap',job:1},
+  rogue2:{n:'두목 털조끼 차림',top:'#4a3528',bot:'#2a2220',rib:'#f7d24a',hat:'cap',job:1}
 };
 // 옛말로 바꿔 보여 주기: 대사와 이름에 남아 있는 요즘 말을 조선 마을에 맞게 고친다
 const JZ=[['빵집','떡집'],['갓 구운 빵','갓 찐 떡'],['빵','떡'],['오븐','시루'],['타르트','화전'],['파이','정과'],['잡화점','만물상'],['로켓 발사대','하늘을 나는 수레'],['녹음기','소리 단지'],['기계','기구'],['텐트','움막']];
@@ -375,6 +392,7 @@ const WORKS={
 const DEEPFISH=[['mackerel',28,9],['snapper',22,16],['bangeo',22,18],['muneo',15,18],['mineo',13,22]];
 // 동굴: 사냥터 북동쪽 입구(CAVE_AT)로 들어간다. 층마다 바위가 깔려 있고, 내려가는 사다리는 어느 바위 밑에 숨어 있다.
 // 깊을수록 값진 광맥이 나온다(CAVE_ORE). 다섯 층마다(1·6·11·16) 다음에 바로 내려갈 수 있는 길이 열리고, CAVE_PRIZE는 그 층에 처음 닿았을 때의 상금
+const HUNT_AT=[4,9],DEEP_Y=11,DEEP_LV=6; /* 사냥터 들머리의 사냥 방 자리, 깊은 산으로 이어지는 길의 줄, 깊은 산에 들어갈 수 있는 레벨 */
 const CAVE_AT=[30,3],CAVE_MAX=20,CAVE_STOPS=[1,6,11,16],CAVE_PRIZE={5:300,10:800,15:1500,20:3000};
 const CAVE_ORE=f=>f<=5?[['iron',1]]:f<=10?[['iron',.6],['silver',1]]:f<=15?[['silver',.6],['jade',1]]:[['jade',.55],['gold',1]];
 const ORE_COL={iron:'#d98a4a',silver:'#f4f8fb',jade:'#5fbf7a',gold:'#f7d24a'};
@@ -810,6 +828,33 @@ const WILD=(function(){
     const a=o.k==='rock'?ROCKS:TREES;a.splice(a.indexOf(o),1);objAt[y][x]=null;
   }
   objAt[CAVE_AT[1]][CAVE_AT[0]]={t:'cave',x:CAVE_AT[0],y:CAVE_AT[1]};
+  // 깊은 산으로 가는 동쪽 길과 들머리의 사냥 방(榜): 그 자리의 풍경은 치우고 얹는다
+  const clear=(x,y)=>{const o=objAt[y][x];if(!o)return;const a=o.k==='rock'?ROCKS:TREES;a.splice(a.indexOf(o),1);objAt[y][x]=null};
+  for(let x=W-6;x<W;x++){clear(x,DEEP_Y);tile[DEEP_Y][x]=1}
+  clear(HUNT_AT[0],HUNT_AT[1]);clear(HUNT_AT[0],HUNT_AT[1]+1);objAt[HUNT_AT[1]][HUNT_AT[0]]={t:'hboard',x:HUNT_AT[0],y:HUNT_AT[1]};
+  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++)if(tile[y][x]===0&&!objAt[y][x])GRASS.push([x,y]);
+  return{tile,objAt,TREES,ROCKS,GRASS,SAND:[]};
+})();
+// 깊은 산: 사냥터 숲의 동쪽 길 끝에서 이어지는 더 깊은 산. 바위가 많고 골짜기 물이 남북으로 흐른다(두 군데 여울로 건넌다). 서쪽 길(0,DEEP_Y)로 숲에 돌아간다.
+// 사냥터와 같은 장면(scene 'wild')이고 구역(wz)만 다르다. 풍경에는 저장되는 상태가 없다
+const DEEP=(function(){
+  const tile=[],objAt=[],TREES=[],ROCKS=[],GRASS=[];
+  for(let y=0;y<H;y++){tile.push(new Array(W).fill(0));objAt.push(new Array(W).fill(null))}
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(x===0||y===0||x===W-1||y===H-1)tile[y][x]=6;
+  for(let y=1;y<H-1;y++){if(y===7||y===8||y===17||y===18)continue;const x=20+Math.round(Math.sin(y*.5)*2);tile[y][x]=3;tile[y][x+1]=3}
+  for(let y=19;y<=21;y++)for(let x=8;x<=11;x++)if(!((x===8&&y===19)||(x===11&&y===21)))tile[y][x]=3;
+  for(let x=0;x<=5;x++)tile[DEEP_Y][x]=1;
+  const rng=mulberry(2477),cells=[];
+  for(let y=2;y<H-2;y++)for(let x=2;x<W-2;x++)if(tile[y][x]===0&&!(x<8&&Math.abs(y-DEEP_Y)<=1))cells.push([x,y]);
+  for(let i=cells.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[cells[i],cells[j]]=[cells[j],cells[i]]}
+  const free=(x,y)=>{for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;const t=tile[y+dy][x+dx];if(t===3||t===6||objAt[y+dy][x+dx])return false}return true};
+  let nT=46,nR=34;
+  for(const [x,y] of cells){
+    if(!nT&&!nR)break;if(!free(x,y))continue;
+    const rock=nR>0&&(nT===0||rng()<.42),o={t:'deco',k:rock?'rock':'pine',x,y,sh:0,i:-1};
+    if(rock){ROCKS.push(o);nR--}else{TREES.push(o);nT--}
+    objAt[y][x]=o;
+  }
   for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++)if(tile[y][x]===0&&!objAt[y][x])GRASS.push([x,y]);
   return{tile,objAt,TREES,ROCKS,GRASS,SAND:[]};
 })();
@@ -895,6 +940,23 @@ function fixState(s){
   s.tips=s.tips||{};
   if(s.wild==null)s.wild=4;
   if(s.wildN==null)s.wildN=8;
+  // 깊은 산에 남은 짐승 수, 잡은 짐승 종류별 수(bag), 사냥 방에서 축하를 받은 이름(hrank), 오늘의 사냥감(hunt)과 대왕 멧돼지(boss)는 날마다 다시 정한다
+  if(s.deepN==null)s.deepN=9;
+  if(!s.bag||typeof s.bag!=='object'||Array.isArray(s.bag))s.bag={};
+  s.hrank=Math.max(0,Math.min(4,s.hrank|0));
+  if(s.hunt&&(typeof s.hunt!=='object'||!BEASTS[s.hunt.k]))s.hunt=null;
+  if(s.boss&&(typeof s.boss!=='object'||!Array.isArray(s.boss.trail)||(s.boss.on&&!Array.isArray(s.boss.at))))s.boss=null;
+  // 사냥 대회(cup, 으뜸한 횟수 cupWins), 진상으로 쌓은 공(merit)과 이번 철에 바친 것(trib), 받은 하사품(royal)
+  if(s.cup&&(typeof s.cup!=='object'||!Array.isArray(s.cup.riv)||s.cup.riv.length!==3))s.cup=null;
+  s.cupWins=Math.max(0,s.cupWins|0);s.merit=Math.max(0,s.merit|0);
+  if(!s.royal||typeof s.royal!=='object'||Array.isArray(s.royal))s.royal={};
+  if(s.trib&&(typeof s.trib!=='object'||!s.trib.got||typeof s.trib.got!=='object'))s.trib=null;
+  // 나쁜 길: 악명과 자리(rogue), 상한 집(ruin), 수배(wanted), 오늘 남긴 자국(pee)
+  if(s.rogue&&typeof s.rogue!=='object')s.rogue=null;
+  if(s.rogue){s.rogue.rank=clamp(s.rogue.rank|0,0,2);s.rogue.inf=Math.max(0,s.rogue.inf|0)}
+  if(!s.ruin||typeof s.ruin!=='object'||Array.isArray(s.ruin))s.ruin={};
+  for(const k in s.ruin)if(!BLD.some(b=>b.id===k)||!s.ruin[k]||!['broken','fire','burnt'].includes(s.ruin[k].k))delete s.ruin[k];
+  s.wanted=clamp(s.wanted|0,0,9);s.pee=Array.isArray(s.pee)?s.pee.filter(q=>Array.isArray(q)&&q.length===2).slice(0,6):[];
   // 밭은 정해진 칸이 아니라 내 땅 어디든 갈 수 있다. farm["x,y"]={c 작물,g 자란 날,w 물,e 빈 채로 지난 날}. 예전 저장의 밭은 그대로 옮긴다
   if(!s.farm){
     s.farm={};const n=HOUSES[(s.house||1)-1].plots;
@@ -941,6 +1003,12 @@ function fixState(s){
   // 내가 놓은 다리(bridges: 다리가 된 물 칸들)와 아직 안 놓은 다리 재목(kit)
   s.bridges=(Array.isArray(s.bridges)?s.bridges:[]).filter(q=>Array.isArray(q)&&q.length===2&&q[0]>0&&q[0]<W-1&&q[1]>0&&q[1]<H-1).slice(0,24).map(q=>[q[0]|0,q[1]|0]);
   s.kit=Math.max(0,Math.min(9,s.kit|0));
+  // 받은 편지(mail)와 오늘 이웃이 먼저 다가온 횟수(cameN)
+  s.mail=(Array.isArray(s.mail)?s.mail:[]).filter(m=>m&&typeof m==='object'&&typeof m.t==='string'&&typeof m.f==='string').slice(0,40);
+  for(const m of s.mail){m.d=m.d|0||1;if(m.it&&!(Array.isArray(m.it)&&ITEMS[m.it[0]]))m.it=null;m.c=Math.max(0,m.c|0)}
+  s.cameN=s.cameN|0;
+  // 마을에 가꿔 놓은 것(yard)
+  s.yard=(Array.isArray(s.yard)?s.yard:[]).filter(q=>q&&YARD[q.k]&&Number.isInteger(q.x)&&Number.isInteger(q.y)&&q.x>0&&q.x<W-1&&q.y>0&&q.y<H-1).slice(0,YARD_MAX);
   s.camp=s.camp?1:0; // 아직 집이 없어 짚자리에서 자는가 (새 마을만. 예전 저장에는 없으므로 0)
   if(s.diy&&(typeof s.diy!=='object'||!HOUSES[(s.diy.L|0)-1]))s.diy=null;
   // 장비(gear): own 가진 것, on 칸마다 걸친 것(w 무기·a 갑옷·h 쓰개·s 신발·t 장신구), show 걸친 모습을 캐릭터에 보일지
@@ -1025,8 +1093,8 @@ function train(k,n){
 const courtTitle=()=>{const C=S.court;return C.rank===0?(S.sex==='f'?'궁녀':'별감'):C.mate==='princess'?(C.rank===1?'부마':'국서'):(C.rank===1?'세자빈':'왕비')};
 // 내세우는 호칭: 간택된 뒤에는 왕실의 자리, 아니면 수라간의 자리, 그도 아니면 마을에서의 이름
 // 길마다의 자리 이름. 내세울 호칭은 신분 창에서 고르고, 고르지 않았으면 왕실(간택 뒤) → 수라간 → 상인 → 궁녀·별감 → 마을 이름 순서로 정한다
-const trackTitle=k=>k==='court'?(S.court?courtTitle():null):k==='cook'?(S.job?JOBS.cook.ranks[S.sex==='f'?'f':'m'][S.job.rank]:null):k==='merch'?(S.merch?TRADE.ranks[S.merch.rank]:null):TRACKS[k]&&S[k]?TRACKS[k].ranks[S[k].rank]:null;
-const rankName=()=>trackTitle(S.title)||(S.court&&S.court.rank>=1?courtTitle():null)||trackTitle('cook')||trackTitle('merch')||trackTitle('mil')||trackTitle('civ')||trackTitle('court')||TITLES[Math.min(S.level,TITLES.length)-1];
+const trackTitle=k=>k==='rogue'?(S.rogue?ROGUE.ranks[S.rogue.rank]:null):k==='court'?(S.court?courtTitle():null):k==='cook'?(S.job?JOBS.cook.ranks[S.sex==='f'?'f':'m'][S.job.rank]:null):k==='merch'?(S.merch?TRADE.ranks[S.merch.rank]:null):TRACKS[k]&&S[k]?TRACKS[k].ranks[S[k].rank]:null;
+const rankName=()=>trackTitle(S.title)||(S.court&&S.court.rank>=1?courtTitle():null)||trackTitle('cook')||trackTitle('merch')||trackTitle('mil')||trackTitle('civ')||trackTitle('court')||trackTitle('rogue')||TITLES[Math.min(S.level,TITLES.length)-1];
 // 파는 값: 은하와 친하면 10%, 수완 1마다 2%, 상인의 자리가 오를 때마다 5% 더 받는다
 const sellPrice=id=>Math.ceil(ITEMS[id].p*(perk('eunha')?1.1:1)*(1+sv('trade')*.02)*(1+(S.merch?S.merch.rank*.05:0))*(CROPS[id]&&workDone('mill')?1.15:1)*(1+gearFx('sell')));
 const comfort=()=>S.placed.reduce((a,f)=>a+FURN[f.id].c,0);
@@ -1094,6 +1162,10 @@ function drawCore(c,id){
   case 'strawberry':c.fillStyle='#e0354a';c.beginPath();c.moveTo(0,9);c.bezierCurveTo(-12,1,-8,-7,0,-4);c.bezierCurveTo(8,-7,12,1,0,9);c.fill();circ(c,-3,0,.9,'#f7d98a');circ(c,3,0,.9,'#f7d98a');circ(c,0,4,.9,'#f7d98a');poly(c,[-5,-5,0,-9,5,-5,0,-3],'#4f9a3e');break;
   case 'pumpkin':ell(c,0,2,10,7.5,'#ef8a1f');ell(c,0,2,5,7.5,'#f6a23c');line(c,0,-5,0,9,'#d0700f',1);rr(c,-1.5,-9,3,5,1,'#5c7a2e');break;
   case 'tigerskin':poly(c,[-9,-7,-4,-5,4,-5,9,-7,7,0,10,7,4,5,-4,5,-10,7,-7,0],'#e8922e');for(const sx of [-5,-1,3])rr(c,sx,-4,2,8,1,'#2a2220');break;
+  case 'foxfur':c.fillStyle='#e8842e';c.beginPath();c.moveTo(-9,8);c.quadraticCurveTo(-12,-6,2,-9);c.quadraticCurveTo(12,-8,9,2);c.quadraticCurveTo(4,10,-9,8);c.fill();c.fillStyle='#fff7ea';c.beginPath();c.moveTo(3,-9);c.quadraticCurveTo(12,-8,9,1);c.quadraticCurveTo(5,-2,3,-9);c.fill();line(c,-6,5,0,-3,'#c9661c',1.5);break;
+  case 'fang':c.fillStyle='#fff7ea';c.beginPath();c.moveTo(-5,-9);c.quadraticCurveTo(7,-8,5,9);c.quadraticCurveTo(-2,2,-5,-9);c.fill();c.fillStyle='#e3d5bd';c.beginPath();c.moveTo(-5,-9);c.quadraticCurveTo(1,-9,3,-6);c.quadraticCurveTo(-2,-6,-5,-9);c.fill();circ(c,-3,-8,1.6,'#8a5a34');break;
+  case 'bearhide':poly(c,[-9,-7,-4,-5,4,-5,9,-7,7,0,10,7,4,5,-4,5,-10,7,-7,0],'#4a3528');poly(c,[-4,-2,4,-2,3,3,-3,3],'#6b4e3c');circ(c,-6,-6,1.8,'#3a2a20');circ(c,6,-6,1.8,'#3a2a20');break;
+  case 'tusk':c.strokeStyle='#e3d5bd';c.lineWidth=6;c.lineCap='round';c.beginPath();c.moveTo(-8,8);c.quadraticCurveTo(-9,-7,7,-8);c.stroke();c.strokeStyle='#fff7ea';c.lineWidth=3.5;c.beginPath();c.moveTo(-8,8);c.quadraticCurveTo(-9,-7,7,-8);c.stroke();c.lineCap='butt';circ(c,-8,8,3,'#8a5a34');break;
   case 'ginseng':c.strokeStyle='#e3cfa4';c.lineWidth=4;c.lineCap='round';c.beginPath();c.moveTo(0,-4);c.lineTo(0,3);c.lineTo(-5,9);c.moveTo(0,3);c.lineTo(5,9);c.moveTo(-6,1);c.lineTo(0,-1);c.lineTo(6,1);c.stroke();c.lineCap='butt';ell(c,-3,-8,3,2,'#5cab4a');ell(c,3,-8,3,2,'#5cab4a');circ(c,0,-10,1.8,'#d9412e');break;
   case 'watermelon':circ(c,0,1,9.5,'#3f9a4a');c.strokeStyle='#226b33';c.lineWidth=2;for(const k of [-5,0,5]){c.beginPath();c.ellipse(k,1,2.2,9,0,0,7);c.stroke()}circ(c,-4,-4,2,'rgba(255,255,255,.35)');break;
   case 'chestnut':c.fillStyle='#8a4f2a';c.beginPath();c.moveTo(0,-9);c.bezierCurveTo(11,-4,10,8,0,8);c.bezierCurveTo(-10,8,-11,-4,0,-9);c.fill();ell(c,0,5.5,6.5,2.6,'#d9b98a');circ(c,-3,-2,1.6,'rgba(255,255,255,.35)');break;
@@ -1157,6 +1229,10 @@ function furnArt(c,id,x,y,t){
   case 'g_parang':rr(c,3,-2,26,20,2,'#8a5a34');rr(c,5,0,22,16,1,'#cfeaf5');c.save();c.translate(15,8);fishI(c,'#3f7fc0','#dfe9f0',7);c.restore();break;
   case 'g_dami':{rr(c,13,12,6,14,2,'#7a8a94');ell(c,16,27,7,2.5,'#5a6870');const g=.6+.4*Math.sin(t*3);circ(c,16,7,9,'rgba(255,230,120,'+(.35*g)+')');circ(c,16,7,5.5,'#ffe27a');circ(c,14,5,1.5,'#fff');break}
   case 'r_lantern':{const g=.6+.4*Math.sin(t*2.4);line(c,16,-8,16,-1,'#6b4a2a',2);rr(c,12,-2,8,3,1,'#2e2a2a');circ(c,16,11,13,'rgba(255,210,120,'+(.22*g)+')');rr(c,9,1,14,9,4,'#c8392f');rr(c,9,10,14,10,4,'#3f6fb0');rr(c,13,5,6,11,2,'rgba(255,236,170,'+(.55+.35*g)+')');rr(c,12,20,8,3,1,'#2e2a2a');line(c,14,23,13,29,'#f7d24a',1.5);line(c,18,23,19,29,'#f7d24a',1.5);break}
+  case 'k_vase':ell(c,16,28,9,2.8,'rgba(0,0,0,.18)');ell(c,16,19,9,9.5,'#f6f1e6');rr(c,12.5,7,7,6,2,'#f6f1e6');ell(c,16,7.5,4.5,1.6,'#d9d2c2');c.strokeStyle='#3f6fb0';c.lineWidth=1.3;c.beginPath();c.arc(16,20,4.5,0,7);c.stroke();circ(c,16,20,1.5,'#3f6fb0');line(c,8.5,14.5,23.5,14.5,'#3f6fb0',1.2);
+    line(c,15,7,12,-3,'#4f9d52',1.5);line(c,17,7,20,-4,'#4f9d52',1.5);line(c,16,7,16,-6,'#4f9d52',1.5);circ(c,12,-4,3.4,'#f6a3c4');circ(c,20,-5,3.4,'#c8392f');circ(c,16,-8,3.6,'#fff7ea');circ(c,16,-8,1.3,'#f2a531');circ(c,12,-4,1.2,'#f7d24a');circ(c,20,-5,1.2,'#f7d24a');break;
+  case 'k_screen':for(let i=0;i<4;i++){const px=-1+i*8.5,py=-12+(i%2?2:0);rr(c,px,py,8.5,40,1,'#7a2f2a');rr(c,px+1.2,py+2,6.1,36,.5,'#1f3a6a');poly(c,[px+1.2,py+38,px+1.2,py+24,px+4.2,py+14+(i%2)*3,px+7.3,py+24,px+7.3,py+38],'#3f8a5a');poly(c,[px+3,py+18+(i%2)*3,px+4.2,py+14+(i%2)*3,px+5.4,py+18+(i%2)*3],'#f6f1e6');line(c,px+1.5,py+33,px+7,py+33,'#7fd0e6',1.4)}
+    circ(c,6,-5,2.6,'#c8392f');circ(c,27,-5,2.6,'#fff7ea');break;
   case 'r_tigerpic':rr(c,2,-6,28,27,2,'#6b4a2a');rr(c,4,-4,24,23,1,'#f3ead6');poly(c,[5,3,12,-3,16,3],'#5a7a4a');line(c,10,1,10,-3,'#3a2a22',1.5);circ(c,22,-1,2.2,'#2a2220');poly(c,[22,-1,26,-2,24,1],'#f6f1e6');ell(c,13,12,7,5,'#e0a13a');circ(c,19,9,4,'#e0a13a');c.fillStyle='#3a2a22';for(let i=0;i<3;i++)c.fillRect(8+i*3.5,8,1.5,7);circ(c,18,8,.9,'#2a2220');circ(c,21,8,.9,'#2a2220');poly(c,[16,5,17,3,18.5,5.5],'#e0a13a');poly(c,[20.5,5.5,22,3,23,5.5],'#e0a13a');break;
   case 'r_celadon':ell(c,16,28,8,2.6,'rgba(0,0,0,.18)');ell(c,16,17,8.5,11,'#8fc1b0');rr(c,12.5,1,7,7,2,'#8fc1b0');ell(c,16,1.5,4.5,1.6,'#6fa593');ell(c,12.5,13,2.2,5,'#c9e6dc');c.strokeStyle='#f6f1e6';c.lineWidth=1.2;c.beginPath();c.arc(17,18,3.5,0,7);c.stroke();circ(c,17,18,1.2,'#f6f1e6');break;
   case 'r_pearl':{ell(c,16,27,12,3,'rgba(0,0,0,.18)');c.fillStyle='#f1c9d6';c.beginPath();c.moveTo(4,20);c.quadraticCurveTo(16,-8,28,20);c.closePath();c.fill();c.strokeStyle='#d99ab0';c.lineWidth=1.2;for(const k of [-7,-3.5,0,3.5,7]){c.beginPath();c.moveTo(16,20);c.lineTo(16+k*1.4,6+Math.abs(k)*.9);c.stroke()}ell(c,16,23,12,5,'#f6dbe4');const s=.6+.4*Math.sin(t*3);circ(c,16,20,4.2,'#ffffff');circ(c,14.6,18.6,1.4,'rgba(200,225,255,'+s+')');break}
@@ -1293,7 +1369,7 @@ function lookIcon(outfit,sex){
 const iconCache={};
 function iconURL(kind,id){
   const k=kind+':'+id;if(iconCache[k])return iconCache[k];
-  const s=kind==='item'?itemSpr(id):kind==='gear'?spr('gi'+id,()=>bake(40,40,20,20,0,0,c=>gearArt(c,id))):kind==='furn'?spr('fi'+id,()=>bake(40,44,4,12,0,0,c=>furnArt(c,id,0,0,0))):kind==='stock'?stockSpr(id.replace('!',''),id.indexOf('!')>0):charSprite(NPCS[id],'front',0);
+  const s=kind==='item'?itemSpr(id):kind==='beast'?beastSpr(id):kind==='yard'?yardSpr(id,0):kind==='gear'?spr('gi'+id,()=>bake(40,40,20,20,0,0,c=>gearArt(c,id))):kind==='furn'?spr('fi'+id,()=>bake(40,44,4,12,0,0,c=>furnArt(c,id,0,0,0))):kind==='stock'?stockSpr(id.replace('!',''),id.indexOf('!')>0):charSprite(NPCS[id],'front',0);
   const n=Math.max(s.width,s.height),sc=Math.max(1,Math.floor(96/n)),cv=document.createElement('canvas');cv.width=cv.height=n*sc;
   const c=cv.getContext('2d');c.imageSmoothingEnabled=false;
   c.drawImage(s,Math.floor((n-s.width)/2)*sc,Math.floor((n-s.height)/2)*sc,s.width*sc,s.height*sc);
@@ -1338,7 +1414,8 @@ function buildGround(){
   const c=groundCv.getContext('2d'),sea=S?season():0;groundSeason=sea;c.scale(.5,.5);
   const dot=(x,y,w,h,f)=>{c.fillStyle=f;c.fillRect(Math.floor(x/2)*2,Math.floor(y/2)*2,w,h)};
   // 계절별 풀 색 [밝은 칸, 어두운 칸, 풀잎]과 숲 가장자리 색
-  const G=[['#8ccf6b','#86c965','#6db454'],['#72c25c','#6bbb56','#4f9f42'],['#d6c468','#cfbc60','#b39a40'],['#eef3f6','#e5ecf1','#c7d4dc']][sea];
+  const deepG=scene==='wild'&&wz; /* 깊은 산은 풀빛이 짙고 자갈이 깔려 있다 */
+  const G=(deepG?[['#74b866','#6eb160','#55994a'],['#5fa955','#59a24f','#42873b'],['#c2ad5e','#baa556','#9c8436'],['#e2e9ee','#d8e1e7','#b6c5cf']]:[['#8ccf6b','#86c965','#6db454'],['#72c25c','#6bbb56','#4f9f42'],['#d6c468','#cfbc60','#b39a40'],['#eef3f6','#e5ecf1','#c7d4dc']])[sea];
   const F=[['#357a42','#2f6e3b','#3a8348','#4a9a58'],['#2f7340','#296837','#347c44','#439252'],['#c2742e','#a9552a','#d18f38','#e3a94a'],['#3d6f55','#35634c','#dfe9ee','#f4f8fb']][sea];
   const land=(x,y)=>{if(x<0||y<0||x>=W||y>=H)return false;const t=tile[y][x];return t!==3&&t!==4&&t!==5};
   const isPath=(x,y)=>{const q=tile[y]&&tile[y][x];return q===1||q===5};
@@ -1347,6 +1424,7 @@ function buildGround(){
     if(t===0||t===1||t===6){
       c.fillStyle=(x+y)%2?G[0]:G[1];c.fillRect(px,py,T,T);
       if(t===0&&h<.5){const gx=px+4+h*36,gy=py+8+h2*14;dot(gx,gy,2,4,G[2]);dot(gx+4,gy+2,2,2,G[2])}
+      if(deepG&&t===0&&h>.72){const sx=px+6+h2*18,sy=py+10+(h-.72)*60;dot(sx,sy,4,2,'#9aa3a8');dot(sx+2,sy-2,2,2,'#c3cbcf');if(h>.9)dot(sx+8,sy+4,2,2,'#8a9399')}
       // 풀밭의 작은 들꽃(네 잎 꽃 모양 도트)과 클로버. 주울 수 있는 들꽃보다 훨씬 작다. 겨울에는 없고 가을에는 드물다
       if(t===0&&sea<3){
         const h3=hash(x*3+11,y*5+7);
@@ -1740,6 +1818,19 @@ function renderTown(c){
   glintsNow().forEach((q,i)=>list.push([q[1]-.4,()=>glintArt(c,q[0],q[1],i)]));
   if(inTown){
     for(const b of BLD)list.push([b.y+b.h-.5,()=>drawBld(c,b,night)]);list.push([BOARD[1],()=>drawBoard(c)]);list.push([FORGE_AT[1],()=>drawForge(c)]);
+    // 가꾼 것들: 꽃밭은 바닥에 깔리고, 울타리는 옆 울타리와 이어 그린다. 가꾸기 중에는 바라보는 칸에 테두리를 보여 준다
+    {const fen=(x,y)=>{const o=TOWN.objAt[y]&&TOWN.objAt[y][x];return o&&o.t==='yard'&&o.k==='fence'?1:0};
+      for(const q of S.yard){const m=q.k==='fence'?fen(q.x-1,q.y)|fen(q.x+1,q.y)<<1|fen(q.x,q.y-1)<<2|fen(q.x,q.y+1)<<3:0;list.push([YARD[q.k].walk?q.y-.46:q.y,()=>blit(c,yardSpr(q.k,m),q.x*T,q.y*T)])}
+      if(garden&&!mg){const gx=P.x+P.dir[0],gy=P.y+P.dir[1],ok=yardAt(gx,gy)||yardOK(gx,gy);list.push([gy-.47,()=>{c.setLineDash([5,4]);c.lineWidth=2;c.strokeStyle=ok?'rgba(255,240,150,.95)':'rgba(224,69,58,.8)';c.strokeRect(gx*T+2,gy*T+2,T-4,T-4);c.setLineDash([])}]);
+        labels.push(()=>label(c,(rx(P)+.5)*T,(ry(P)+.9)*T-62,'가꾸기: '+YARD[garden].n))}}
+    // 내 집 문 옆의 우편함: 새 편지가 있으면 붉은 깃발이 선다
+    {const hb=BLD.find(b=>b.id==='home');if(hb){const mx=(hb.door[0]+1)*T,my=hb.door[1]*T-6,fl=mailNew()>0;list.push([hb.door[1]-.2,()=>blit(c,spr('mailbox'+(fl?1:0),()=>bake(44,52,4,12,0,0,c2=>mailboxArt(c2,fl))),mx,my)]);
+      if(fl&&!mg&&Math.abs(hb.door[0]-rx(P))+Math.abs(hb.door[1]-ry(P))<4)labels.push(()=>label(c,mx+16,my-16,'새 편지'))}}
+    // 나쁜 길: 상한 집의 모습, 오늘 남긴 자국, 알림판의 낙서, 쫓아오는 포졸
+    for(const b of BLD)if(S.ruin[b.id])list.push([b.y+b.h-.45,()=>drawRuin(c,b)]);
+    for(const q of S.pee)list.push([q[1]-.48,()=>ell(c,q[0]*T+16,q[1]*T+5,7,3,'rgba(214,190,90,.5)')]);
+    if(S.scrib===S.day)list.push([BOARD[1]+.01,()=>{const x=BOARD[0]*T,y=BOARD[1]*T;c.strokeStyle='#2a2220';c.lineWidth=1.8;c.beginPath();c.moveTo(x+6,y+4);c.lineTo(x+11,y+13);c.lineTo(x+15,y+3);c.lineTo(x+21,y+13);c.lineTo(x+26,y+5);c.stroke()}]);
+    if(cop){const x=(rx(cop)+.5)*T,y=(ry(cop)+.9)*T;list.push([ry(cop)+.1,()=>drawChar(c,x,y,COP_LOOK,cop.dir,cop.t<1,now)]);labels.push(()=>bubble(c,x,y-56,'!','#e0453a'));labels.push(()=>label(c,x,y+9,'포졸'))}
     // 밭에 앉아 작물을 쪼는 까마귀와, 쫓겨서 날아가는 까마귀
     const crowS=()=>spr('crow',()=>bake(40,36,20,28,0,0,crowArt));
     for(const q of S.crows){const x=q[0]*T+16,y=q[1]*T+24;list.push([q[1]+.3,()=>{blit(c,shadowSpr(6),x,y);blit(c,crowS(),x,y+(Math.sin(now*7+q[0])>.4?2:0),q[0]%2===0)}])}
@@ -1786,7 +1877,18 @@ function renderTown(c){
     list.push([b.y+b.h-.5,()=>drawBld(c,b,night)]);
     if(!mg&&Math.abs(b.door[0]-rx(P))+Math.abs(b.door[1]-ry(P))<3.2)labels.push(()=>label(c,b.door[0]*T+16,b.door[1]*T-58,b.n));
   }
-  if(scene==='wild'){const X=CAVE_AT[0]*T,Y=CAVE_AT[1]*T;list.push([CAVE_AT[1],()=>blit(c,spr('cavemouth',()=>bake(60,56,12,20,0,0,caveArt)),X,Y)]);if(Math.abs(CAVE_AT[0]-rx(P))+Math.abs(CAVE_AT[1]-ry(P))<3.2)labels.push(()=>label(c,X+16,Y-26,'동굴 입구'))}
+  if(scene==='wild'&&!wz){const X=CAVE_AT[0]*T,Y=CAVE_AT[1]*T;list.push([CAVE_AT[1],()=>blit(c,spr('cavemouth',()=>bake(60,56,12,20,0,0,caveArt)),X,Y)]);if(Math.abs(CAVE_AT[0]-rx(P))+Math.abs(CAVE_AT[1]-ry(P))<3.2)labels.push(()=>label(c,X+16,Y-26,'동굴 입구'))
+    // 들머리의 사냥 방과 깊은 산 가는 길목
+    const hx=HUNT_AT[0]*T,hy=HUNT_AT[1]*T,news=huntNews();
+    list.push([HUNT_AT[1],()=>blit(c,spr('hboard'+(news?1:0),()=>bake(40,44,4,10,0,0,c2=>hboardArt(c2,news))),hx,hy)]);
+    if(news&&!mg)labels.push(()=>bubble(c,hx+16,hy-22,'!','#dd6a1c'));
+    if(!mg&&Math.abs(HUNT_AT[0]-rx(P))+Math.abs(HUNT_AT[1]-ry(P))<3.2)labels.push(()=>label(c,hx+16,hy-(news?40:14),'사냥 방'));
+    if(!mg&&W-1-rx(P)<5&&Math.abs(DEEP_Y-ry(P))<3)labels.push(()=>label(c,(W-2)*T+4,DEEP_Y*T-12,S.level<DEEP_LV?'깊은 산 (레벨 '+DEEP_LV+'부터)':'깊은 산 가는 길'))}
+  if(scene==='wild'&&wz){
+    if(!mg&&rx(P)<5&&Math.abs(DEEP_Y-ry(P))<3)labels.push(()=>label(c,1.5*T,DEEP_Y*T-12,'사냥터 숲으로'));
+    // 대왕 멧돼지가 나타난 날의 발자국
+    if(bossToday())S.boss.trail.forEach((q,i)=>list.push([q[1]-.45,()=>trackArt(c,q[0],q[1],i)]));
+  }
   if(scene==='cave'&&cave){
     const u=cave.up,d=cave.found?cave.hid:null;
     list.push([u[1],()=>blit(c,spr('ladderU',()=>bake(36,64,2,32,0,0,c2=>ladderArt(c2,false)),false),u[0]*T,u[1]*T)]);
@@ -1972,7 +2074,7 @@ function render(){
   if(a>.1&&m>=1050){
     c.translate(-cam.x,-cam.y);c.globalCompositeOperation='lighter';
     const glow=(x,y,r,al)=>{const g=c.createRadialGradient(x,y,2,x,y,r);g.addColorStop(0,'rgba(255,205,110,'+al+')');g.addColorStop(1,'rgba(255,205,110,0)');circ(c,x,y,r,g)};
-    if(town){if(scene==='town')for(const b of BLD)if(!(b.id==='home'&&S.house===1))glow((b.x+b.w/2)*T,(b.y+b.h)*T-28,58,.3);if(scene==='palace')for(const b of PBLD)if(b.id!=='pav')glow((b.x+b.w/2)*T,(b.y+b.h)*T-28,b.w*14,.3)}
+    if(town){if(scene==='town'){for(const b of BLD)if(!(b.id==='home'&&S.house===1))glow((b.x+b.w/2)*T,(b.y+b.h)*T-28,58,.3);for(const q of S.yard)if(q.k==='lamp')glow(q.x*T+16,q.y*T+8,54,.42)}if(scene==='palace')for(const b of PBLD)if(b.id!=='pav')glow((b.x+b.w/2)*T,(b.y+b.h)*T-28,b.w*14,.3)}
     else for(const f of S.placed)if(f.id==='lamp'||f.id==='g_dami'||f.id==='stove'||f.id==='agungi'||f.id==='r_lantern')glow(f.x*T+16,f.y*T+8,64,.38);
     if(town)critters(c,true);
     c.globalCompositeOperation='source-over';c.setTransform(k,0,0,k,0,0);
@@ -2019,7 +2121,7 @@ function float(txt,x,y){floats.push({txt:jz(txt),x:x!=null?x:(P.x+.5)*T,y:y!=nul
 function hud(){
   if(!S)return;
   if(started)syncRouteGear(); /* 길에서 자리가 올랐으면 그 자리의 장비를 받는다 */
-  $('hDay').textContent=SEASONS[season()]+' '+((S.day-1)%7+1)+'일 · '+(S.weather==='rain'?(season()===3?'눈':'비'):S.wx==='drought'?'가뭄':S.wx==='wind'?'바람':S.wx==='rainbow'?'무지개':'맑음')+(isMarket()?' · 장날':'')+(fest()?' · '+fest().n:'')+(scene==='cave'&&cave?' · 동굴 '+cave.floor+'층':'')+(scene==='sea'?' · 먼바다':'');
+  $('hDay').textContent=SEASONS[season()]+' '+((S.day-1)%7+1)+'일 · '+(S.weather==='rain'?(season()===3?'눈':'비'):S.wx==='drought'?'가뭄':S.wx==='wind'?'바람':S.wx==='rainbow'?'무지개':'맑음')+(isMarket()?' · 장날':'')+(fest()?' · '+fest().n:'')+(cupDay()?' · 사냥 대회':'')+(scene==='cave'&&cave?' · 동굴 '+cave.floor+'층':'')+(scene==='sea'?' · 먼바다':'')+(scene==='wild'&&wz?' · 깊은 산':'')+(mailNew()?' · 편지 '+mailNew():'');
   const m=Math.floor(S.min);$('hTime').textContent=String(Math.floor(m/60)).padStart(2,'0')+':'+String(Math.floor(m%60/10)*10).padStart(2,'0');
   $('hCoin').textContent=S.coins.toLocaleString('ko-KR')+'냥';
   $('hLv').textContent='Lv.'+S.level;$('hXp').style.width=Math.round(S.xp/needXp(S.level)*100)+'%';
@@ -2102,7 +2204,9 @@ function arrive(){
     let i;while((i=S.pickups.findIndex(p=>p.x===P.x&&p.y===P.y))>=0)grab(i);
     if(glintHere()>=0){float('반짝이는 곳! 행동으로 파내요');tip('glint','반짝이는 곳 위에서 행동을 세 번 누르면 묻힌 것을 파내요. 가끔 그곳에서만 나오는 보물이 나와요')}
     // 지도 끝의 길목을 밟으면 마을과 사냥터를 오간다
-    if(scene==='town'&&P.x===W-1&&P.y===EXIT_Y)enterWild();else if(scene==='wild'&&P.x===0)leaveWild();
+    if(scene==='town'&&P.x===W-1&&P.y===EXIT_Y)enterWild();else if(scene==='wild'&&P.x===0){if(wz)leaveDeep();else leaveWild()}
+    else if(scene==='wild'&&!wz&&P.x===W-1)enterDeep(); /* 숲의 동쪽 길 끝은 깊은 산 */
+    else if(scene==='wild'&&wz&&bossToday()&&S.boss.trail.some(q=>q[0]===P.x&&q[1]===P.y))float('큼직한 발자국이 '+(S.boss.at[0]>P.x+2?'동쪽':S.boss.at[1]<P.y?'북쪽':'남쪽')+'으로 이어져요');
     else if(scene==='town'&&P.y===0)enterPalace();else if(scene==='palace'&&P.y===H-1)leavePalace();
     else if(scene==='sea'&&P.y===0)leaveSea();
   }else{const e=roomEntry();if(P.x===e[0]&&P.y===e[1]+1)leaveHome()}
@@ -2111,10 +2215,16 @@ function grab(i){const p=S.pickups.splice(i,1)[0],id=p.id==='branch'?'wood':p.id
 const keys=[];
 const WALK=4.4; /* 걷는 빠르기(1초에 몇 칸). 처음에는 5.6이었는데 휴대폰에서 너무 휙휙 지나가서 낮췄다 */
 const KEYDIR={ArrowUp:[0,-1],KeyW:[0,-1],ArrowRight:[1,0],KeyD:[1,0],ArrowDown:[0,1],KeyS:[0,1],ArrowLeft:[-1,0],KeyA:[-1,0]};
+// 방금 누른 방향(tapDir): 한 걸음을 떼는 도중에 다른 방향을 짧게 눌렀다 떼면 그 입력이 사라져서 "눌렀는데 안 간다"가 됐다.
+// 누른 것을 잠깐 기억해 두었다가 그 걸음이 끝난 뒤 한 칸은 꼭 가게 한다 (누르고 있으면 계속 간다)
+let tapDir=null,tapT=0,padWait=false;
 function updPlayer(dt){
+  // 조작키를 눌렀는데 그 순간 막혀 있었으면(대화가 막 닫히는 중 등) 풀리자마자 받아 준다
+  if(padWait&&padCode&&!busy()&&!((mg||fishing)&&performance.now()<guardUntil)){padWait=false;dirDown(padCode,false)}
   if(P.t<1){P.t=Math.min(1,P.t+dt*WALK*(1+gearFx('spd')));if(P.t<1)return;P.fx=P.x;P.fy=P.y;arrive();if(busy())return}
   if(fishing||mg)return;
-  const d=keys.length?KEYDIR[keys[keys.length-1]]:null;
+  let d=keys.length?KEYDIR[keys[keys.length-1]]:null;
+  if(tapDir){if(performance.now()-tapT<450)d=KEYDIR[tapDir];tapDir=null}
   if(d){P.path=[];P.after=null;P.dir=d;if(canStep(P.x+d[0],P.y+d[1]))stepTo(P.x+d[0],P.y+d[1]);return}
   if(P.path.length){
     const [nx,ny]=P.path[0];P.dir=[Math.sign(nx-P.x),Math.sign(ny-P.y)];
@@ -2129,16 +2239,18 @@ function updPlayer(dt){
   if(P.after){const a=P.after;P.after=null;a()}
 }
 function updNpcs(dt){
-  if((scene!=='town'&&scene!=='palace')||!npcOut())return;
+  if((scene!=='town'&&scene!=='palace')||!npcOut()){comer=null;return}
+  updCome(dt);
   for(const id of NPC_IDS){
     if(!npcHere(id))continue;
     const n=N[id];
     if(n.emo){n.emo.t-=dt;if(n.emo.t<=0)n.emo=null}
-    if(n.t<1){n.t=Math.min(1,n.t+dt*2.4);if(n.t>=1){n.fx=n.x;n.fy=n.y}continue}
+    if(n.t<1){n.t=Math.min(1,n.t+dt*(comer&&comer.id===id?4.7:2.4));if(n.t>=1){n.fx=n.x;n.fy=n.y}continue} /* 나에게 다가오는 이웃은 종종걸음 */
     if(n.hold>0){n.hold-=dt;continue}
     n.wait-=dt;if(n.wait>0)continue;n.wait=rnd(1.2,4.5);
     const [dx,dy]=pick(DIRS),nx=n.x+dx,ny=n.y+dy,a=NPCS[id].anchor,rm=NPCS[id].roam||3;
-    if(Math.abs(nx-a[0])>rm||Math.abs(ny-a[1])>rm)continue;
+    // 제자리 둘레를 벗어나는 걸음은 딛지 않는다. 다만 (나에게 다가오느라) 이미 벗어나 있으면 돌아가는 쪽 걸음은 딛는다
+    if((Math.abs(nx-a[0])>rm||Math.abs(ny-a[1])>rm)&&Math.abs(nx-a[0])+Math.abs(ny-a[1])>=Math.abs(n.x-a[0])+Math.abs(n.y-a[1]))continue;
     if(!walkable(nx,ny)||npcOn(nx,ny)||beastOn(nx,ny)||herdOn(nx,ny)||(nx===P.x&&ny===P.y)||(scene==='town'&&S.farm[nx+','+ny])||isDoor(nx,ny))continue;
     n.dir=[dx,dy];n.fx=n.x;n.fy=n.y;n.x=nx;n.y=ny;n.t=0;
   }
@@ -2181,7 +2293,7 @@ function faceTarget(){
   return null;
 }
 // 갈 수 있는 칸: 내 땅의 빈 풀밭이고, 아직 밭이 아니며, 누가 서 있거나 주울 것이 놓여 있지 않다
-const tillable=(x,y)=>inFarm(x,y)&&!S.farm[x+','+y]&&!npcOn(x,y)&&!herdOn(x,y)&&!kidOn(x,y)&&!S.pickups.some(p=>p.x===x&&p.y===y);
+const tillable=(x,y)=>inFarm(x,y)&&!S.farm[x+','+y]&&!yardAt(x,y)&&!garden&&!npcOn(x,y)&&!herdOn(x,y)&&!kidOn(x,y)&&!S.pickups.some(p=>p.x===x&&p.y===y);
 const soilSides=(x,y)=>DIRS.reduce((a,d)=>a+(S.farm[(x+d[0])+','+(y+d[1])]?1:0),0);
 function act(tg,x,y){
   switch(tg.t){
@@ -2191,16 +2303,25 @@ function act(tg,x,y){
   case 'beast':startHunt(tg.b);break;
   case 'peer':peerMenu(tg.p);break;
   case 'cave':caveTalk();break;
+  case 'hboard':openHunt();break;
+  case 'yard':toast('내가 놓은 '+jo(YARD[tg.k].n,'이에요','예요')+'. 도구줄의 "가꾸기"에서 거둘 수 있어요');break;
   case 'crock':hitRock(tg);break;
   case 'ladder':ladderAct(tg);break;
   case 'deco':toast(tg.k==='rock'?'이끼 낀 큰 바위예요':'깊은 숲의 나무예요. 여기서는 사냥과 약초 찾기에 마음을 써요');break;
   case 'bld':if(tg.b.pal){palAct(tg.b);break}
     if(tg.b.id==='home'){
+      // 새 편지가 와 있으면 우편함부터 살핀다
+      if(mailNew()&&!tg.skipMail){const n=mailNew(),go=()=>act(Object.assign({},tg,{skipMail:1}),x,y);dialog({who:'우편함',text:'우편함에 깃발이 서 있어요. 새 편지가 '+n+'통 와 있어요.',choices:[['편지 읽기',openMail],[S.camp?'짚자리로':'집으로',go],['그만',null]]});break}
       if(S.camp)campTalk(); /* 아직 집이 없으면 짚자리 */
       else if(S.diy)dialog({who:'내 집',text:'내 손으로 짓는 중이에요. ('+S.diy.step+'/3 단계)',choices:[['이어서 짓기',startBuild],['들어가기',()=>enterHome()],['그만',null]]});
       else enterHome();
-    }else if(tg.b.id==='shop')openShop('buy');else toast(npcOut()?jo(NPCS[tg.b.id].name,'은','는')+' 밖에 나가 있어요':'쿨쿨… '+jo(NPCS[tg.b.id].name,'은','는')+' 자고 있어요');break;
-  case 'board':openQuests();break;
+    }else if(tg.b.id==='shop')openShop('buy');else{
+      const nm=NPCS[tg.b.id].name,say=npcOut()?jo(nm,'은','는')+' 밖에 나가 있어요':'쿨쿨… '+jo(nm,'은','는')+' 자고 있어요';
+      // 못된 짓 이야기를 들은 뒤에는 이웃집 문 앞에서 고를 수 있다
+      if(rogueKnown()&&bldOwner(tg.b))dialog({who:nm+'의 집',text:say+(S.ruin[tg.b.id]?'\n(집이 엉망이에요. 며칠 지나면 이웃이 고쳐 놓아요. 모루에게 삯을 주면 바로 고쳐요.)':''),choices:[['못된 짓',()=>mischief(tg.b)],['그냥 가기',null]]});
+      else toast(say);
+    }break;
+  case 'board':if(rogueKnown()&&isNight()&&S.scrib!==S.day)dialog({who:'알림판',text:'밤이라 둘레에 아무도 없어요.',choices:[['부탁 보기',openQuests],['낙서하기',startScrib],['그만',null]]});else openQuests();break;
   case 'water':
     // 다리 재목을 가지고 있고 여기에 놓을 수 있으면 먼저 물어본다
     if(S.kit>0&&!tg.sea&&bridgeSpan()){dialog({who:'개울가',text:'여기에 다리를 놓을까요? 물 '+bridgeSpan().length+'칸을 건너요. (남은 재목 '+S.kit+'벌)',choices:[['다리 놓기',startBridge],['낚시하기',()=>startFishing(x,y,tg.sea)],['그만',null]]});break}
@@ -2225,6 +2346,7 @@ function interact(){
   if(mg){mgPress();return}
   if(fishing){reel();return}
   if(P.t<1)return;
+  if(garden&&scene==='town'){gardenClick(P.x+P.dir[0],P.y+P.dir[1]);return} /* 가꾸기 중에는 바라보는 칸에 놓거나 거둔다 */
   if(glintHere()>=0){digPress();return} /* 반짝이는 곳 위에 서 있으면 파는 것이 먼저 */
   const f=faceTarget();if(f)act(f.tg,f.x,f.y);
 }
@@ -2320,6 +2442,8 @@ function dropFruit(m){
 }
 function mgPress(){
   const m=mg;if(!m)return;
+  if(m.kind==='kindle'){m.p=Math.min(1,m.p+.12);sfx('chop');if(m.p>=1){mg=null;finishArson(m.b)}return} /* 불씨 살리기: 연타 */
+  if(m.kind==='pee')return;
   if(m.kind==='forge'){forgeHit(m);return}
   if(m.kind==='milk'){milkPress(m);return}
   if(m.kind==='cook'){cookPress(m);return}
@@ -2443,6 +2567,8 @@ function mgEnd(){
     if(!m.fin)return;
     if(m.work){finishWork(m.work);return}
     if(m.bridge){finishBridge(m.bridge);return}
+    if(m.wreck){finishWreck(m.wreck);return}
+    if(m.scrib){finishScrib();return}
     if(m.pen){
       const p=S.pens[m.pen];if(!p)return;
       p.done=1;S.min=Math.min(1380,S.min+30);addXp(15);sfx('level');
@@ -2471,6 +2597,8 @@ function updMg(dt){
     drops=drops.filter(d=>d.t<1);
   }
   const m=mg;if(!m)return;
+  if(m.kind==='kindle'){m.t+=dt;m.p=Math.max(0,m.p-.32*dt);if(m.t>7){mg=null;toast('불씨가 꺼져 버렸어요')}return}
+  if(m.kind==='pee'){m.t+=dt;if(m.t>=2.2){mg=null;finishPee(m)}return}
   if(m.kind==='forge'){updForge(m,dt);return}
   if(m.kind==='milk'){updMilk(m,dt);return}
   if(m.kind==='cook'){updCook(m,dt);return}
@@ -2491,8 +2619,8 @@ function updMg(dt){
     return;
   }
   if(m.kind==='hunt'){
-    m.ph+=dt*(2.6+m.i*.9);m.t+=dt;
-    if(m.t>4.5){m.b.flee=3;mg=null;toast('머뭇거리는 사이 눈치채고 달아났어요')}
+    m.ph+=dt*aimSpeed(m);m.t+=dt;
+    if(m.t>(BEASTS[m.b.k].look||4.5)){m.b.flee=3;mg=null;huntStreak=0;toast(BEASTS[m.b.k].bite?'머뭇거리는 사이 틈을 놓쳤어요':'머뭇거리는 사이 눈치채고 달아났어요')}
   }else if(m.kind==='build')m.ph+=dt*(2.3+m.i*.4);
   else if(m.kind==='chop'){
     m.pos+=m.dir*(1.25+m.i*.45)*dt;if(m.pos>=1){m.pos=1;m.dir=-1}else if(m.pos<=0){m.pos=0;m.dir=1}
@@ -2502,8 +2630,13 @@ function updMg(dt){
 }
 function drawMg(c,labels){
   const m=mg;if(!m)return;
+  if(m.kind==='kindle'||m.kind==='pee'){
+    const bx=(rx(P)+.5)*T,by=(ry(P)+.9)*T-68,w=84,u=m.kind==='pee'?Math.min(1,m.t/2.2):m.p;
+    rr(c,bx-w/2-3,by-3,w+6,16,8,'rgba(20,40,20,.78)');rr(c,bx-w/2,by,w,10,5,'#f3ead6');if(u>.02)rr(c,bx-w/2,by,w*u,10,5,m.kind==='pee'?'#9fd0f0':u>.7?'#f08a2a':'#f7d24a');
+    labels.push(()=>label(c,bx,by-14,m.kind==='pee'?'쉬… (움직이면 그만둬요)':'행동을 연타해서 불씨를 살려요!'));return;
+  }
   if(m.kind==='hunt'){
-    const bx=rx(m.b)*T+16,by=ry(m.b)*T+14,x=bx+Math.sin(m.ph)*22,y=by+Math.sin(m.ph*1.7)*7,aim=aimR(),hot=Math.hypot(x-bx,y-by)<=aim;
+    const bx=rx(m.b)*T+16,by=ry(m.b)*T+14,off=aimOff(m),x=bx+off[0],y=by+off[1],aim=aimR(),hot=Math.hypot(x-bx,y-by)<=aim;
     c.strokeStyle=hot?'#f7c531':'#d9412e';c.lineWidth=2;c.beginPath();c.arc(x,y,aim+.5,0,7);
     c.moveTo(x-14,y);c.lineTo(x-5,y);c.moveTo(x+5,y);c.lineTo(x+14,y);c.moveTo(x,y-14);c.lineTo(x,y-5);c.moveTo(x,y+5);c.lineTo(x,y+14);c.stroke();
     labels.push(()=>label(c,bx,by-36,m.note||'과녁이 겹칠 때 행동!'));return;
@@ -2775,7 +2908,7 @@ let beasts=[];
 const beastOn=(x,y)=>scene!=='home'?beasts.find(b=>b.x===x&&b.y===y):undefined;
 function spawnBeasts(){
   beasts=[];if(!S||S.wild<=0)return;
-  const sea=season(),kinds=Object.keys(BEASTS).filter(k=>k!=='deer'&&BEASTS[k].s.includes(sea));
+  const sea=season(),kinds=Object.keys(BEASTS).filter(k=>k!=='deer'&&!BEASTS[k].deep&&BEASTS[k].s.includes(sea));
   const far=GRASS.filter(([x,y])=>Math.abs(x-SPAWN[0])+Math.abs(y-SPAWN[1])>7&&!BLD.some(b=>Math.abs(x-b.door[0])+Math.abs(y-b.door[1])<4));
   for(let i=0,g=0;i<S.wild&&g<300;g++){
     const [x,y]=pick(far);if(objAt[y][x]||beasts.some(b=>b.x===x&&b.y===y)||herd.some(a=>a.x===x&&a.y===y)||S.pickups.some(p=>p.x===x&&p.y===y))continue;
@@ -2811,8 +2944,62 @@ function enterWild(){
 }
 function leaveWild(quiet){
   if(scene!=='wild')return;
+  if(wz)leaveDeep(true); /* 깊은 산에서 곧장 나가게 되면 숲을 거친 셈으로 친다 */
   scene='town';useMap(TOWN);wildBeasts=beasts;beasts=townBeasts;S.wpick=S.pickups;S.pickups=S.pickTown||[];delete S.pickTown;
   buildGround();mg=null;fishing=null;drops=[];if(!quiet)warp(W-2,EXIT_Y,[-1,0]);syncPlace();
+}
+// ───────── 깊은 산 ─────────
+// 사냥터 숲의 동쪽 길 끝에서 들어간다(레벨 DEEP_LV부터). 여우·늑대 무리가 살고, 레벨이 오르면 무리가 커지고 곰과 대왕 멧돼지가 나타난다.
+// 장면은 그대로 'wild'이고 구역 wz만 1이 된다. 숲의 짐승과 주울 것은 wildBeasts·S.wpick에, 깊은 산의 것은 deepBeasts·S.dpick에 따로 둔다
+let wz=0,deepBeasts=null;
+const mkBeast=(k,x,y)=>({k,x,y,fx:x,fy:y,t:1,dir:[1,0],wait:rnd(1,4),hp:BEASTS[k].hp,flee:0,stun:0,calm:0,bite:0,mad:0});
+function deepPickups(){
+  const a=[],put=id=>{const [x,y]=pick(DEEP.GRASS);if(x>4&&!a.some(p=>p.x===x&&p.y===y))a.push({x,y,id})};
+  for(let i=0;i<3;i++)put('mushroom');for(let i=0;i<2;i++)put('branch');
+  if(season()===2)for(let i=0;i<2;i++)put('chestnut');
+  put('ginseng');if(Math.random()<.5)put('ginseng');
+  return a;
+}
+// 대왕 멧돼지: 닷새에 이틀꼴로 깊은 산에 나타난다. 그날은 들머리부터 그놈이 있는 곳까지 발자국이 이어진다. S.boss={day,on,at:[x,y],trail:[[x,y]…],dead}
+function rollBoss(){
+  if(S.boss&&S.boss.day===S.day)return S.boss;
+  const rng=mulberry((S.day*3571+townSeed*17+11)>>>0),B={day:S.day,on:rng()<.4?1:0,dead:0,at:null,trail:[]};
+  if(B.on){
+    const far=DEEP.GRASS.filter(q=>q[0]>=26),at=far[Math.floor(rng()*far.length)]||[30,12];B.at=at.slice();
+    // 발자국: 들머리에서 그 자리까지 일곱 걸음으로 나눠, 그 근처의 빈 풀밭에 하나씩 찍는다
+    for(let i=1;i<=7;i++){
+      const tx=Math.round(3+(at[0]-3)*i/8),ty=Math.round(DEEP_Y+(at[1]-DEEP_Y)*i/8);let best=null,bd=99;
+      for(const q of DEEP.GRASS){const d=Math.abs(q[0]-tx)+Math.abs(q[1]-ty)+rng()*.9;if(d<bd){bd=d;best=q}}
+      if(best&&!B.trail.some(q=>q[0]===best[0]&&q[1]===best[1]))B.trail.push(best.slice());
+    }
+  }
+  return S.boss=B;
+}
+const bossToday=()=>{const B=rollBoss();return!!B.on&&!B.dead&&S.level>=BEASTS.kboar.lv};
+function spawnDeep(){
+  if(deepBeasts){beasts=deepBeasts;return}
+  // 내 레벨에 맞춰 나온다: 처음에는 여우와 늑대 둘, 레벨 8부터 늑대가 셋, 9부터 곰 하나(겨울에는 겨울잠), 12부터 곰이 둘
+  beasts=[];const far=GRASS.filter(q=>q[0]>8),L=S.level,bear=BEASTS.bear.s.includes(season()),plan=['wolf','fox','wolf','deer','fox','boar','deer','fox','boar'];
+  if(L>=8)plan[8]='wolf';if(L>=BEASTS.bear.lv&&bear)plan[3]='bear';if(L>=12&&bear)plan[6]='bear';
+  const put=(k,near)=>{for(let g=0;g<200;g++){const q=near?[near.x+ri(-2,2),near.y+ri(-2,2)]:pick(far);if(q[0]<8||!walkable(q[0],q[1])||tile[q[1]][q[0]]===1||beasts.some(b=>b.x===q[0]&&b.y===q[1]))continue;const b=mkBeast(k,q[0],q[1]);beasts.push(b);return b}return null};
+  let pack=null;
+  for(let i=0;i<S.deepN;i++){const k=plan[i%plan.length],b=put(k,k==='wolf'?pack:null);if(k==='wolf'&&!pack)pack=b} /* 늑대는 첫 마리 곁에 모여 무리를 이룬다 */
+  if(bossToday()){const B=S.boss,b=mkBeast('kboar',B.at[0],B.at[1]);if(!beasts.some(q=>q.x===b.x&&q.y===b.y))beasts.push(b)}
+  deepBeasts=beasts;
+}
+function enterDeep(){
+  if(scene!=='wild'||wz)return;
+  if(S.level<DEEP_LV){toast('이 너머는 늑대와 곰이 사는 깊은 산이에요. 레벨 '+DEEP_LV+'부터 들어갈 수 있어요 (지금 레벨 '+S.level+')');hear('deep',true);warp(W-2,DEEP_Y,[-1,0]);return}
+  wildBeasts=beasts;S.wpick=S.pickups;
+  wz=1;useMap(DEEP);S.pickups=S.dpick||deepPickups();S.away='deep';spawnDeep();miniRef=null;buildGround();mg=null;fishing=null;drops=[];warp(1,DEEP_Y,[1,0]);syncPlace();hud();
+  hear('deep',true);S.seenDeep=1;
+  toast(bossToday()?'깊은 산에 들어왔어요. 땅에 큼직한 발자국이 찍혀 있어요…':'깊은 산에 들어왔어요. 서쪽 길로 나가면 사냥터 숲이에요');
+  tip('deep','늑대는 무리 지어 쫓아오고, 곰은 건드리면 덤벼요. 여우는 멀리서도 눈치채고 달아나요. 사나운 짐승은 다가오기 전에 맞혀요');
+}
+function leaveDeep(quiet){
+  if(scene!=='wild'||!wz)return;
+  deepBeasts=beasts;S.dpick=S.pickups;wz=0;useMap(WILD);beasts=wildBeasts||[];S.pickups=S.wpick||[];S.away='wild';
+  miniRef=null;buildGround();mg=null;fishing=null;drops=[];if(!quiet)warp(W-2,DEEP_Y,[-1,0]);syncPlace();hud();
 }
 // 궁궐 드나들기. 궁궐에 있는 동안 마을의 주울 것과 들짐승은 치워 두었다가 돌아올 때 되돌린다
 function enterPalace(){
@@ -2834,7 +3021,8 @@ function palAct(b){
     if(S.pavDay===S.day){toast('후원 정자예요. 연못 바람이 시원해요');return}
     S.pavDay=S.day;S.en=Math.min(maxEn(),S.en+15);S.min=Math.min(1380,S.min+20);hud();touch();sfx('heart');toast('정자에 앉아 잠시 쉬었어요 · 기력 +15');return;
   }
-  toast(b.id==='hall'?'정전이에요. 임금께서 나랏일을 보시는 곳이라 함부로 들 수 없어요':'중궁전이에요. 중전마마께서 지내시는 곳이에요');
+  if(b.id==='hall'){openTribute();return} /* 정전 앞의 승지에게 진상을 올린다 */
+  toast('중궁전이에요. 중전마마께서 지내시는 곳이에요');
 }
 // ───────── 수라간 ─────────
 const fishCount=()=>Object.keys(FISHLOOK).reduce((a,k)=>a+have(k),0);
@@ -3110,7 +3298,7 @@ function ladderAct(o){
   enterCave(cave.floor+1);
 }
 // 같이 하기에서 서로 보이는 곳의 번호: 동굴은 층마다 다른 번호를 쓴다
-const sceneNo=()=>scene==='cave'&&cave?100+cave.floor:SCENE_NO[scene]||0;
+const sceneNo=()=>scene==='cave'&&cave?100+cave.floor:scene==='wild'&&wz?6:SCENE_NO[scene]||0; /* 깊은 산은 6 */
 // ───────── 명절 ─────────
 const festOf=day=>day>1?FESTS.find(f=>f.s===seasonOf(day)&&f.d===(day-1)%7+1)||null:null; // 첫날(1일째)은 설날로 치지 않는다
 const fest=()=>S?festOf(S.day):null;
@@ -3577,6 +3765,10 @@ function openStatus(){
     if(S.lore.pal&&!S.seenPal)note('마을 북쪽 길 끝으로 올라가면 한양 궁궐이라고 들었어요.');
     if(S.camp)note('집: 아직 집이 없어 짚자리에서 자요.'+(S.diy?' 움막을 짓는 중이에요 ('+S.diy.step+'/3 단계). 짚자리 앞에서 이어서 지어요.':S.lore.hut?' 나무 '+HUT_WOOD+'개를 모아 모루에게 가면 움막을 지어 준다고 들었어요. (가진 나무 '+have('wood')+'개)':''));
     if(S.lore.bridge||S.kit>0)note('다리: 나무 '+BRIDGE_WOOD+'개와 '+won(BRIDGE_COST)+'을 모아 모루에게 가면 다리 재목을 준다고 들었어요. 개울가에 서서 물을 바라보고 행동하면 놓을 수 있어요.'+(S.kit?' (가진 재목 '+S.kit+'벌)':'')+(S.bridges.length?' (놓은 다리 '+S.bridges.length+'칸)':''));
+    if(S.lore.hunt)note('사냥 방: 사냥터 들머리의 방에 날마다 사냥감이 하나씩 붙고, 다 잡으면 삯을 준다고 들었어요. 지금 이름은 【'+HRANK[huntRank()][1]+'】 (잡은 짐승 '+(S.kills|0)+'마리)');
+    if(S.lore.deep)note('깊은 산: 사냥터 숲의 동쪽 길 끝 너머에 여우와 늑대, 곰이 사는 깊은 산이 있다고 들었어요. 레벨 '+DEEP_LV+'부터 들어갈 수 있어요.'+(S.level>=DEEP_LV?'':' (지금 레벨 '+S.level+')'));
+    if(S.lore.cup)note('사냥 대회: 임금이 열흘에 한 번 사냥 대회를 연다고 들었어요. 그날 궁궐 궐문의 무진에게 이름을 올리고 짐승을 잡아 점수를 겨뤄요. '+(cupDay()?'오늘이 대회 날이에요!':'다음 대회는 '+(cupIn()===1?'내일':cupIn()+'일 뒤')+'예요.')+(S.cupWins?' (으뜸 '+S.cupWins+'번)':''));
+    if(S.lore.trib)note('진상: 궁궐 정전 앞에서 철마다 궁에서 찾는 물건을 바치면 공이 쌓이고, 공이 차면 임금이 귀한 물건을 내린다고 들었어요. (쌓은 공 '+S.merit+')');
     if(S.lore.gear)note('장비: 모루에게 재료를 가져가면 몸에 걸칠 장비를 지어 주고, 짐승을 잡거나 낚시·나무 베기·바위 캐기 같은 일을 하다 보면 가끔 나온다고 들었어요. 아래 "장비"에서 걸쳐요. (모은 장비 '+Object.keys(S.gear.own).length+'/'+Object.keys(GEAR).length+')');
     if(!ROUTES.some(heard)&&!S.lore.pal&&!S.lore.gl&&!S.lore.gear&&!S.camp)note('아직 들은 이야기가 없어요. 이웃에게 자주 말을 걸어 보세요. 가까워질수록 마을 안팎의 일을 들려줘요.');
     if(S.lore.gl)note('반짝이는 곳: 그 위에 서서 행동을 세 번 하면 묻힌 것을 파낼 수 있다고 들었어요. 사냥터 깊은 숲과 먼바다 섬, 동굴 바닥에는 더 귀한 것이 묻혀 있대요. (찾은 보물 '+Object.keys(S.relics).length+'/'+Object.keys(RELICS).length+')');
@@ -3612,7 +3804,10 @@ function openStatus(){
       body.appendChild(el('p','note',D.n+': 【'+D.ranks[A.rank]+'】 · '+D.work+' '+A.done+'번'+(A.rank?' · 날마다 녹봉 '+D.stipend[A.rank]+'냥':'')));
       body.appendChild(el('p','note',q&&!told(k,A.rank+1)?'다음 자리로 가는 길은 '+NPCS[D.npc].name+'에게 물어봐요.':q?NPCS[D.npc].name+'에게 들은 다음 자리의 조건: '+STATS[D.stat].n+' '+q.stat+' (지금 '+sv(D.stat)+') · '+D.work+' '+q.done+'번 (지금 '+A.done+'번) · '+q.ex[0]+' '+q.ex[1]+' (지금 '+q.ex[2]()+') · '+NPCS[q.npc].name+' ♥'+q.h+' (지금 ♥'+hearts(q.npc)+') · 다 갖추면 '+NPCS[D.npc].name+'에게 '+jo(D.test[A.rank+1],'을','를')+' 청해요':'이 길에서 가장 높은 자리에 올랐어요.'));
     }
-    const mine=['court','cook','merch','mil','civ'].filter(k=>trackTitle(k));
+    // 나쁜 길
+    if(S.rogue){const R=S.rogue,nx=ROGUE.need[R.rank+1];body.appendChild(el('p','note','나쁜 길: 【'+ROGUE.ranks[R.rank]+'】 · 악명 '+R.inf+(nx?' · 다음 자리 【'+ROGUE.ranks[R.rank+1]+'】까지 악명 '+(nx-R.inf):' · 이 길에서 가장 높은 자리예요')+(ROGUE.rent[R.rank]?' · 날마다 자릿세 '+ROGUE.rent[R.rank]+'냥':'')+(S.wanted?' · 수배 '+S.wanted:'')+(S.jail?' · 옥살이 '+S.jail+'번':'')))}
+    else if(S.lore.rogue)note('못된 짓: 이웃집 문 앞에서 못된 짓을 하고 달아나는 이들이 있다고 들었어요. 포졸에게 잡히면 옥에 갇힌대요.');
+    const mine=['court','cook','merch','mil','civ','rogue'].filter(k=>trackTitle(k));
     if(mine.length>1){
       body.appendChild(el('p','sub','내세울 호칭'));
       const t=el('div','tabs');t.style.flexWrap='wrap';
@@ -3624,16 +3819,19 @@ function openStatus(){
 function updBeasts(dt){
   if(scene==='home')return;
   for(const b of beasts){
-    const tiger=b.k==='tiger';
-    if(b.t<1){b.t=Math.min(1,b.t+dt*(b.flee>0?4.2:tiger?2.7:1.6));if(b.t>=1){b.fx=b.x;b.fy=b.y}continue}
+    const D=BEASTS[b.k];
+    if(b.t<1){b.t=Math.min(1,b.t+dt*(b.flee>0?(D.run||4.2):D.bite&&(!D.mild||b.mad)?D.sp:1.6));if(b.t>=1){b.fx=b.x;b.fy=b.y}continue}
     if(b.stun>0){b.stun-=dt;continue}
     if(mg&&mg.kind==='hunt'&&mg.b===b)continue;
     if(b.flee>0)b.flee-=dt;if(b.calm>0)b.calm-=dt;
     const dist=Math.abs(b.x-P.x)+Math.abs(b.y-P.y);
-    // 범은 달아나지 않고 다가와 덮친다. 다른 짐승은 두 칸 안으로 다가가면 달아난다
-    if(tiger){if(b.bite>0)b.bite-=dt;if(dist===1&&b.bite<=0&&b.flee<=0){b.bite=2.5;const hurt=Math.max(2,Math.round((relic('c_claw')?9:18)*(1-Math.min(.75,gearFx('guard')))));S.en=Math.max(0,S.en-hurt);hud();sfx('err');toast('범이 덮쳤어요! 기력이 '+hurt+' 줄었어요')}}
-    else if(dist<=(relic('c_bell')?1:2))b.flee=Math.max(b.flee,1.2);
-    const chase=tiger&&b.flee<=0&&dist>1&&dist<=6;
+    // 곰과 대왕 멧돼지는 건드리거나 두 칸 안에 들면 성이 나서 덤빈다
+    if(D.mild&&!b.mad&&dist<=2&&b.flee<=0){b.mad=1;sfx('err');toast(jo(D.n,'이','가')+' 성이 났어요! 덤벼들기 전에 물러서요')}
+    const fierce=!!D.bite&&(!D.mild||b.mad);
+    // 사나운 짐승(범·늑대, 성난 곰과 대왕 멧돼지)은 달아나지 않고 다가와 덮친다. 순한 짐승은 가까이 다가가면 달아난다
+    if(fierce){if(b.bite>0)b.bite-=dt;if(dist===1&&b.bite<=0&&b.flee<=0){b.bite=2.5;const hurt=Math.max(2,Math.round(D.bite*(relic('c_claw')?.5:1)*(1-Math.min(.75,gearFx('guard')))));S.en=Math.max(0,S.en-hurt);huntStreak=0;hud();sfx('err');toast(jo(D.n,'이','가')+' 덮쳤어요! 기력이 '+hurt+' 줄었어요')}}
+    else if(!D.bite&&dist<=Math.max(1,(D.shy||2)-(relic('c_bell')?1:0)))b.flee=Math.max(b.flee,1.2);
+    const chase=fierce&&b.flee<=0&&dist>1&&dist<=D.hunt;
     if(b.flee<=0&&!chase){b.wait-=dt;if(b.wait>0||b.calm>0)continue;b.wait=rnd(1.5,5)}
     // 길과 다리는 넘지 않는다
     const opts=DIRS.filter(([dx,dy])=>{const x=b.x+dx,y=b.y+dy;return walkable(x,y)&&tile[y][x]!==1&&tile[y][x]!==5&&!npcOn(x,y)&&!beastOn(x,y)&&!herdOn(x,y)&&!(x===P.x&&y===P.y)});
@@ -3653,22 +3851,32 @@ function beastInLine(){
   return null;
 }
 // 과녁 크기: 활을 벼리거나 무예가 높거나 무진과 친하면 커진다
-const aimR=()=>8.5+tl('bow')*1.2+sv('arms')*.15+(perk('mujin')?1.5:0)+(relic('c_feather')?1.5:0)+gearFx('aim');
+const aimR=()=>8.5+tl('bow')*1.2+sv('arms')*.15+(perk('mujin')?1.5:0)+(relic('c_feather')?1.5:0)+gearFx('aim')+Math.min(huntRank(),S.hrank|0)*.3; /* 사냥꾼의 이름(방에서 축하를 받은 데까지)마다 조금씩 */
 function startHunt(b){
   if(!useEn(2))return;
   mg={kind:'hunt',b,o:b,ph:rnd(0,6),t:0,i:0,cool:0,note:''};P.path=[];P.after=null;
   tip('aim','흔들리는 과녁이 짐승에 겹칠 때 행동! 빗나가면 달아나요');
+  if(BEASTS[b.k].deep)tip('aim2','짐승마다 과녁이 흔들리는 모양이 달라요. 여우는 빠르게 떨리고, 곰은 느리지만 크게 흔들려요');
 }
+// 과녁이 짐승에서 벗어난 만큼: 짐승마다 가로·세로 폭과 박자가 다르다. 빠르기는 맞힐 때마다 조금씩 오른다(세 번까지)
+const aimOff=m=>{const a=BEASTS[m.b.k].aim;return[Math.sin(m.ph)*a[1],Math.sin(m.ph*a[3])*a[2]]};
+const aimSpeed=m=>BEASTS[m.b.k].aim[0]+Math.min(3,m.i)*.8;
+let huntStreak=0; /* 놓치지 않고 이어서 잡은 수 (저장하지 않는다) */
 function shoot(m){
-  const b=m.b;sfx('cast');
-  if(Math.hypot(Math.sin(m.ph)*22,Math.sin(m.ph*1.7)*7)>aimR()){b.flee=3;mg=null;sfx('err');toast('빗나갔어요! '+jo(BEASTS[b.k].n,'이','가')+' 달아나요');return}
+  const b=m.b,D=BEASTS[b.k],o=aimOff(m);sfx('cast');
+  if(Math.hypot(o[0],o[1])>aimR()){b.flee=3;if(D.mild)b.mad=1;mg=null;huntStreak=0;sfx('err');toast('빗나갔어요! '+jo(D.n,'이','가')+(D.bite?' 놀라 물러났어요. 곧 다시 와요':' 달아나요'));return}
   b.hp-=1+gearFx('dmg');sfx('chop');
-  if(b.hp>0){b.stun=2.4;m.i++;m.t=0;m.cool=.45;m.note='명중! 한 번 더!';return}
+  if(b.hp>0){b.stun=2.4;b.mad=1;m.i++;m.t=0;m.cool=.45;m.note='명중! 한 번 더! (남은 기운 '+Math.ceil(b.hp/(1+gearFx('dmg')))+')';return}
   beasts.splice(beasts.indexOf(b),1);mg=null;
-  if(scene==='wild')S.wildN=Math.max(0,S.wildN-1);else S.wild=Math.max(0,S.wild-1);
-  float(BEASTS[b.k].n+' 사냥 성공!',b.x*T+16,b.y*T-10);addXp(b.k==='tiger'?40:b.k==='deer'?20:b.k==='boar'?14:8);sfx('level');
+  if(b.k==='kboar'){if(S.boss)S.boss.dead=1}
+  else if(scene==='wild'){if(wz)S.deepN=Math.max(0,S.deepN-1);else S.wildN=Math.max(0,S.wildN-1)}else S.wild=Math.max(0,S.wild-1);
+  // 놓치지 않고 이어서 잡으면 경험치가 한 마리마다 10%씩(50%까지) 더 붙는다
+  huntStreak++;const more=Math.min(.5,(huntStreak-1)*.1);
+  float(D.n+' 사냥 성공!'+(huntStreak>1?' 연속 '+huntStreak+'마리':''),b.x*T+16,b.y*T-10);addXp(Math.round(D.xp*(1+more)));sfx('level');
   if(b.k==='tiger')toast('범을 잡았어요! 마을에 소문이 자자하겠어요');
-  train('arms',b.k==='tiger'?6:2);S.kills=(S.kills|0)+1;if(b.k==='tiger')S.tigers=(S.tigers|0)+1;
+  if(b.k==='kboar')toast('대왕 멧돼지를 잡았어요! 온 산이 조용해졌어요');
+  train('arms',D.arms||2);S.kills=(S.kills|0)+1;if(b.k==='tiger')S.tigers=(S.tigers|0)+1;
+  S.bag[b.k]=(S.bag[b.k]|0)+1;huntCount(b.k);cupCount(b.k);
   const spots=[[b.x,b.y]];
   for(const [dx,dy] of DIRS){const x=b.x+dx,y=b.y+dy;if(walkable(x,y)&&!(x===P.x&&y===P.y)&&!S.pickups.some(p=>p.x===x&&p.y===y))spots.push([x,y])}
   BEASTS[b.k].loot.forEach((id,j)=>{const s=spots[j%spots.length];drops.push({id,x:s[0],y:s[1],sx:b.x*T+16,sy:b.y*T+4,t:0})});
@@ -3687,13 +3895,25 @@ function huntClick(b){
 }
 function drawBeast(c,b){
   const mv=b.t<1,gx=(rx(b)+.5)*T,gy=(ry(b)+.9)*T,y=gy-(mv?Math.abs(Math.sin(now*14))*3:0);
-  blit(c,shadowSpr(b.k==='rabbit'||b.k==='pheasant'?7:11),gx,gy);
-  blit(c,spr('b'+b.k,()=>bake(52,48,26,42,0,0,c2=>beastArt(c2,b.k))),gx,y,b.dir[0]<0);
+  blit(c,shadowSpr(b.k==='rabbit'||b.k==='pheasant'?7:b.k==='kboar'||b.k==='bear'?15:11),gx,gy);
+  blit(c,beastSpr(b.k),gx,y,b.dir[0]<0);
   if(b.stun>0)for(let i=0;i<3;i++)star(c,gx+Math.cos(now*6+i*2.1)*9,y-26+Math.sin(now*6+i*2.1)*3,2.6,'#f7d24a');
+  else if(b.mad&&BEASTS[b.k].mild){const X=gx+(b.dir[0]<0?-12:12),Y=y-(BEASTS[b.k].big?40:34)+Math.sin(now*9)*1.5;c.fillStyle='#d9412e';c.fillRect(X-1,Y-6,3,7);c.fillRect(X-1,Y+3,3,3)} /* 성난 짐승 머리 위의 느낌표 */
 }
+const beastSpr=k=>spr('b'+k,()=>bake(64,60,32,52,0,0,c2=>beastArt(c2,k)));
 function beastArt(c,k){
   c.save();
   switch(k){
+  case 'fox':for(const lx of [-7,5])rr(c,lx,-6,2.6,6,1,'#b9551c');ell(c,-1,-9,10,5.5,'#e8842e');ell(c,0,-7,6,2.6,'#fff1dc');
+    c.fillStyle='#e8842e';c.beginPath();c.moveTo(-9,-9);c.quadraticCurveTo(-22,-12,-19,-22);c.quadraticCurveTo(-12,-18,-8,-12);c.fill();circ(c,-19.5,-20,3.2,'#fff7ea');
+    circ(c,10,-12,5.5,'#e8842e');poly(c,[6,-16,7,-23,10,-17],'#b9551c');poly(c,[11,-17,14,-23,15,-15],'#b9551c');poly(c,[12,-12,19,-9.5,12,-8],'#fff1dc');circ(c,18.5,-9.6,1.2,'#1f1612');circ(c,11,-13,1,'#1f1612');break;
+  case 'wolf':for(const lx of [-9,-5,5,9])rr(c,lx-1,-8,2.6,8,1,'#6a7178');ell(c,0,-12,12,6.5,'#8a9399');ell(c,0,-9,7,2.8,'#cfd6dc');
+    c.fillStyle='#6a7178';c.beginPath();c.moveTo(-11,-13);c.quadraticCurveTo(-21,-12,-20,-4);c.quadraticCurveTo(-15,-8,-10,-9);c.fill();
+    circ(c,11,-16,6,'#8a9399');poly(c,[6,-20,7,-27,11,-21],'#6a7178');poly(c,[12,-21,15,-27,16,-19],'#6a7178');poly(c,[12,-16,21,-13,12,-11],'#cfd6dc');circ(c,20.4,-13.2,1.3,'#1f1612');circ(c,12,-17,1.1,'#f7d24a');break;
+  case 'bear':for(const lx of [-11,-5,5,10])rr(c,lx-1.5,-8,4.5,8,1.5,'#3a2a20');ell(c,-1,-15,16,11,'#5a4030');ell(c,-3,-19,9,5,'#6b4e3c');
+    circ(c,14,-19,8,'#5a4030');circ(c,9,-26,2.8,'#3a2a20');circ(c,18,-26,2.8,'#3a2a20');ell(c,18.5,-16.5,4.2,3.4,'#c9a886');circ(c,21,-17.5,1.4,'#1f1612');circ(c,15,-20.5,1.2,'#1f1612');circ(c,-17,-15,2.6,'#3a2a20');break;
+  case 'kboar':c.scale(1.5,1.5);rr(c,-9,-5,3,5,1,'#2a1f19');rr(c,5,-5,3,5,1,'#2a1f19');ell(c,-1,-11,12,8,'#4a342a');for(const sx of [-8,-4,0])poly(c,[sx,-18,sx+2,-23,sx+4,-18],'#2a1f19');ell(c,-3,-15,7,3,'#3a2820');circ(c,10,-9,5.5,'#40291f');ell(c,14.5,-8,2.6,2.2,'#8a6a58');
+    poly(c,[10.5,-5.5,14,-12,15,-6],'#fff7ea');poly(c,[13,-5.5,16.5,-10,16.5,-5],'#f3ead6');circ(c,10,-11,1.1,'#d9412e');poly(c,[6,-15,9,-18,10,-14],'#3a2820');break;
   case 'tiger':rr(c,-11,-6,3.5,6,1,'#c9741f');rr(c,6,-6,3.5,6,1,'#c9741f');ell(c,-1,-12,14,8,'#e8922e');for(const sx of [-9,-4,1])rr(c,sx,-19,2.5,9,1,'#2a2220');ell(c,-1,-7,9,3,'#f6e3c4');
     circ(c,12,-13,7,'#e8922e');poly(c,[7,-19,9,-24,11,-18],'#e8922e');poly(c,[13,-19,16,-24,17,-17],'#e8922e');ell(c,15,-10,3.5,3,'#f6e3c4');circ(c,12,-14,1.2,'#1f1612');circ(c,17,-11,1,'#1f1612');
     c.strokeStyle='#e8922e';c.lineWidth=3;c.beginPath();c.moveTo(-14,-13);c.quadraticCurveTo(-22,-14,-20,-23);c.stroke();break;
@@ -3704,6 +3924,452 @@ function beastArt(c,k){
     c.strokeStyle='#e3cfa4';c.lineWidth=1.6;c.beginPath();c.moveTo(9,-29);c.lineTo(7,-37);c.moveTo(8,-33);c.lineTo(4,-35);c.moveTo(11,-29);c.lineTo(14,-36);c.moveTo(12.5,-33);c.lineTo(16,-33);c.stroke();break;
   }
   c.restore();
+}
+// ───────── 사냥 방(榜)과 사냥꾼의 이름 ─────────
+// 사냥터 들머리(HUNT_AT)에 사냥꾼들이 소식을 붙여 두는 방이 있다. 날마다 내 레벨에 맞는 사냥감 하나가 붙고(S.hunt), 다 잡으면 삯을 받는다.
+// 잡은 짐승 수(S.kills)에 따라 사냥꾼의 이름이 오르고, 이름마다 과녁이 조금씩 커진다(aimR). 잡은 짐승은 종류마다 S.bag에 센다
+const HRANK=[[0,'풋내기 사냥꾼',0],[5,'초보 사냥꾼',150],[20,'솜씨 좋은 사냥꾼',400],[50,'이름난 사냥꾼',1000],[100,'명포수',2500]]; /* [잡은 수, 이름, 축하 삯] */
+const huntRank=()=>{const k=S?S.kills|0:0;let r=0;for(let i=0;i<HRANK.length;i++)if(k>=HRANK[i][0])r=i;return r};
+function rollHunt(){
+  if(S.hunt&&S.hunt.day===S.day&&BEASTS[S.hunt.k])return S.hunt;
+  // 숲의 토끼·멧돼지·사슴은 철을 가리지 않고, 꿩은 가을과 겨울에만 나온다. 깊은 산의 짐승은 그곳에 들어갈 수 있을 때만 붙는다
+  const sea=season(),pool=[['rabbit',3],['deer',1],['boar',2],['pheasant',2],['fox',2],['wolf',2],['bear',1]].filter(q=>{const D=BEASTS[q[0]];return S.level>=D.lv&&(D.deep?S.level>=DEEP_LV&&D.s.includes(sea):q[0]!=='pheasant'||sea>=2)});
+  const rng=mulberry((S.day*4409+townSeed*13+7)>>>0),q=pool[Math.floor(rng()*pool.length)]||['rabbit',3];
+  return S.hunt={day:S.day,k:q[0],n:q[1],got:0,pay:Math.round(BEASTS[q[0]].xp*q[1]*.9)*10+60,paid:0};
+}
+function huntCount(k){
+  const h=rollHunt();
+  if(h.k===k&&h.got<h.n){h.got++;if(h.got>=h.n)setTimeout(()=>{if(S)toast('오늘의 사냥감을 다 잡았어요! 사냥터 들머리의 사냥 방에서 삯을 받아요')},1300)}
+  if(HRANK.some(r=>r[0]>0&&r[0]===(S.kills|0)))setTimeout(()=>{if(S)toast('사냥꾼들 사이에 이름이 났어요. 사냥터 들머리의 사냥 방에 가 봐요')},2400);
+}
+// 방에 새로 볼 것이 있는가(오늘 방을 아직 안 봤거나, 받을 삯이나 축하가 있다)
+const huntNews=()=>{const h=S.hunt&&S.hunt.day===S.day?S.hunt:null;return!h||(h.got>=h.n&&!h.paid)||huntRank()>(S.hrank|0)};
+function claimRank(){
+  const r=huntRank();let coin=0,gear=null;
+  for(let i=(S.hrank|0)+1;i<=r;i++){coin+=HRANK[i][2];if(i===3&&!S.gear.own.t_hunter)gear='t_hunter'}
+  S.hrank=r;if(coin)addCoins(coin);if(gear)gearGet(gear);sfx('level');saveAll();
+  dialog({who:'사냥 방',role:'【'+HRANK[r][1]+'】',text:'사냥꾼들이 새 이름을 방에 적어 줬어요.\n이제 【'+HRANK[r][1]+'】라고 불려요. 손이 익어 과녁이 조금 더 커졌어요.\n(축하 삯 '+(gear?won(coin)+'과 '+jo(GEAR[gear].n,'을','를'):won(coin)+'을')+' 받았어요.)',choices:[['고마워요',openHunt]]});
+}
+function openHunt(){
+  const h=rollHunt();hear('hunt',true);
+  openModal('사냥 방',body=>{
+    body.appendChild(el('p','note','사냥꾼들이 소식을 적어 두는 방이에요. 날마다 내 레벨에 맞는 사냥감이 하나 붙고, 다 잡아 오면 삯을 줘요.'));
+    body.appendChild(el('p','sub','오늘의 사냥감'));
+    const D=BEASTS[h.k],done=h.got>=h.n;
+    row(body,icon('beast',h.k),D.n+' '+h.n+'마리',[h.paid?'삯을 받았어요. 내일 새 사냥감이 붙어요':'잡은 것 '+h.got+'/'+h.n+' · 삯 '+won(h.pay),(D.deep?'깊은 산':'사냥터 숲')+'에 살아요 · 알맞은 레벨 '+D.lv],
+      h.paid?[]:[['삯 받기',()=>{if(h.paid||h.got<h.n)return;h.paid=1;addCoins(h.pay);addXp(20);train('arms',2);sfx('coin');toast('사냥 삯 '+won(h.pay)+'을 받았어요');saveAll();openHunt()},!done]]);
+    const r=huntRank(),nx=HRANK[r+1],k=S.kills|0;
+    body.appendChild(el('p','sub','내 사냥 이름'));
+    row(body,el('span','badge',String(r+1)),'【'+HRANK[r][1]+'】',['잡은 짐승 '+k+'마리'+(r?' · 과녁 +'+(r*.3).toFixed(1):''),nx?'다음 이름 【'+nx[1]+'】까지 '+(nx[0]-k)+'마리':'사냥꾼으로서 가장 높은 이름이에요'],(S.hrank|0)<r?[['축하 받기',claimRank]]:[]);
+    body.appendChild(el('p','sub','산 소식'));
+    const say=t=>body.appendChild(el('p','note',t));
+    if(S.level<DEEP_LV)say('숲의 동쪽 길 끝 너머는 깊은 산이에요. 여우와 늑대가 살고, 레벨 '+DEEP_LV+'부터 들어갈 수 있어요. (지금 레벨 '+S.level+')');
+    else{
+      say('숲의 동쪽 길 끝으로 가면 깊은 산이에요. 늑대는 무리 지어 쫓아오니 다가오기 전에 맞혀요.');
+      if(S.level<BEASTS.bear.lv)say('곰은 레벨 '+BEASTS.bear.lv+'은 되어야 마주친대요. 건드리지 않으면 덤비지 않아요.');
+      if(S.level<BEASTS.kboar.lv)say('산 깊은 곳에 대왕 멧돼지가 산대요. 레벨 '+BEASTS.kboar.lv+'은 되어야 그 발자국을 알아본대요.');
+      else say(bossToday()?'오늘 깊은 산에 대왕 멧돼지의 발자국이 보인대요! 발자국을 따라가 봐요.':S.boss&&S.boss.on&&S.boss.dead?'오늘 대왕 멧돼지를 잡았어요. 온 산이 조용해요.':'오늘은 대왕 멧돼지의 발자국이 보이지 않아요. 며칠에 한 번씩 나타나요.');
+    }
+    say('놓치지 않고 이어서 잡으면 경험치가 한 마리마다 10%씩 더 붙어요. (50%까지)');
+    if(S.lore.pal||S.seenPal)say(cupDay()?(S.cup&&S.cup.day===S.day&&S.cup.on?(S.cup.done?'오늘 사냥 대회는 마감했어요.':'사냥 대회에 나가는 중이에요. 지금 '+S.cup.score+'점. 궁궐 궐문의 무진에게 돌아가 마감해요.'):'오늘은 임금의 사냥 대회 날이에요! 궁궐 궐문의 무진에게 이름을 올려야 점수가 쌓여요.'):'임금의 사냥 대회는 '+(cupIn()===1?'내일':cupIn()+'일 뒤')+'예요. 대회 날 궁궐 궐문의 무진에게 이름을 올려요.');
+    // 짐승마다 알맞은 레벨과 사는 곳, 지금까지 잡은 수. 아직 못 본 깊은 산의 짐승은 그림자로만 보인다
+    body.appendChild(el('p','sub','짐승과 알맞은 레벨'));
+    const g=el('div','grid');
+    for(const id in BEASTS){
+      const B=BEASTS[id],n=S.bag[id]|0,seen=n>0||!B.deep||(S.seenDeep&&S.level>=B.lv),c=el('div','cell'+(seen?'':' unk'));
+      c.appendChild(icon('beast',id));c.appendChild(el('b',null,seen?B.n:'???'));c.appendChild(el('small',null,'레벨 '+B.lv+' · '+(B.deep?'깊은 산':'숲')));c.appendChild(el('small',null,n?'잡은 수 '+n:'아직 못 잡음'));g.appendChild(c);
+    }
+    body.appendChild(g);
+  });
+}
+function hboardArt(c,news){
+  rr(c,5,8,3,22,1,'#6b4a2a');rr(c,24,8,3,22,1,'#6b4a2a');rr(c,2,-2,28,20,3,'#8a6a45');rr(c,4,0,24,16,2,'#d9b98a');
+  rr(c,7,2,18,11,1,news?'#ffe27a':'#fff7ea');line(c,10,5,22,5,'#8a5a34',1.2);line(c,10,8,19,8,'#8a5a34',1.2);
+  c.strokeStyle='#7a5230';c.lineWidth=2.5;c.beginPath();c.arc(16,4,11,Math.PI*1.2,Math.PI*1.8);c.stroke();line(c,7,-2.5,25,-2.5,'#f3ead6',1); /* 위에 걸어 둔 활 */
+}
+// 대왕 멧돼지의 발자국: 갈라진 발굽 자국 두 개
+function trackArt(c,x,y,i){
+  const X=x*T+16,Y=y*T+18;c.globalAlpha=.5;
+  for(const [dx,dy] of i%2?[[-6,4],[5,-3]]:[[-6,-3],[5,4]]){ell(c,X+dx-2.2,Y+dy,2.2,3.6,'#3a2a20');ell(c,X+dx+2.2,Y+dy,2.2,3.6,'#3a2a20')}
+  c.globalAlpha=1;
+}
+// ───────── 마을 바깥 꾸미기(가꾸기) ─────────
+// 도구줄의 "가꾸기"로 마을 풀밭에 꽃밭·울타리·장명등을 놓는다. 고른 것을 들고 놓을 칸을 누르면(또는 바라보는 칸에 행동) 재료를 써서 놓고, 놓인 것을 누르면 거둔다.
+// 꽃밭은 밟고 지나가고, 울타리와 장명등은 길을 막는다(지도 objAt에 {t:'yard'}로 얹는다). 길·문 앞·밭·좌판과 잔치 마당·터 둘레에는 못 놓는다. S.yard=[{x,y,k}]
+const YARD={f1:{n:'분홍 꽃밭',need:{flower:1},walk:1,col:'#f6a3c4'},f2:{n:'노랑 꽃밭',need:{flower:1},walk:1,col:'#ffe27a'},f3:{n:'흰 꽃밭',need:{flower:1},walk:1,col:'#ffffff'},
+  fence:{n:'나무 울타리',need:{wood:1},back:{wood:1}},lamp:{n:'장명등',need:{wood:2},cost:40,back:{wood:2}}};
+const YARD_MAX=140;
+let garden=null; /* 가꾸기 중이면 손에 든 것의 종류 */
+const yardAt=(x,y)=>S.yard.find(q=>q.x===x&&q.y===y);
+function yardOK(x,y){
+  if(scene!=='town'||x<1||y<1||x>=W-1||y>=H-1||TOWN.tile[y][x]!==0||TOWN.objAt[y][x]||S.farm[x+','+y]||yardAt(x,y))return false;
+  if((x===P.x&&y===P.y)||npcOn(x,y)||herdOn(x,y)||beastOn(x,y))return false;
+  const near=(a,b,r)=>Math.abs(a-x)<=r&&Math.abs(b-y)<=r;
+  if(BLD.some(b=>near(b.door[0],b.door[1],1))||STALLS.some(s=>near(s.x,s.y,1))||near(FEST_AT[0],FEST_AT[1],2)||near(BOARD[0],BOARD[1],1)||near(FORGE_AT[0],FORGE_AT[1],1)||near(SPAWN[0],SPAWN[1],0))return false;
+  for(const k in WORKS)if(near(WORKS[k].x,WORKS[k].y,2))return false;
+  return true;
+}
+// 저장된 것을 지도에 얹는다(막는 것만). 그 자리에 다른 것이 생겼으면 버린다
+function applyYard(){
+  const oa=TOWN.objAt;
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(oa[y][x]&&oa[y][x].t==='yard')oa[y][x]=null;
+  S.yard=S.yard.filter(q=>YARD[q.k]&&TOWN.tile[q.y]&&TOWN.tile[q.y][q.x]===0&&!oa[q.y][q.x]&&!S.farm[q.x+','+q.y]);
+  for(const q of S.yard)if(!YARD[q.k].walk)oa[q.y][q.x]={t:'yard',k:q.k,x:q.x,y:q.y};
+}
+function gardenClick(x,y){
+  if(!garden||scene!=='town')return;
+  const cur=yardAt(x,y);
+  if(cur){
+    const Y=YARD[cur.k];S.yard.splice(S.yard.indexOf(cur),1);if(!Y.walk)TOWN.objAt[y][x]=null;if(Y.back)for(const k in Y.back)gain(k,Y.back[k]);
+    sfx('pick');float(Y.n+' 거둠',x*T+16,y*T);touch();return;
+  }
+  const Y=YARD[garden];
+  if(Math.abs(x-P.x)+Math.abs(y-P.y)>6){float('가까이 가서 놓아요',x*T+16,y*T);return}
+  if(!yardOK(x,y)){float('여기는 놓을 수 없어요',x*T+16,y*T);sfx('err');return}
+  if(S.yard.length>=YARD_MAX){toast('더는 놓을 수 없어요. 놓인 것을 거둔 뒤에 놓아요');return}
+  if(!hasNeed(Y.need)||(Y.cost&&S.coins<Y.cost)){toast(Y.n+'에는 '+Object.keys(Y.need).map(k=>ITEMS[k].n+' '+Y.need[k]+'개').join(', ')+(Y.cost?'와 '+won(Y.cost):'')+'이 들어요');sfx('err');return}
+  takeNeed(Y.need);if(Y.cost)addCoins(-Y.cost);
+  S.yard.push({x,y,k:garden});if(!Y.walk)TOWN.objAt[y][x]={t:'yard',k:garden,x,y};
+  sfx('chop');addXp(1);touch();
+}
+function openYard(){
+  openModal('가꾸기',body=>{
+    body.appendChild(el('p','note','마을 풀밭을 내 손으로 가꿔요. 놓을 것을 고른 뒤 가까운 풀밭 칸을 누르면(또는 바라보고 행동하면) 놓여요. 놓인 것을 누르면 거둬요. 길과 문 앞, 밭, 장터 마당에는 놓을 수 없어요.'));
+    body.appendChild(el('p','sub','놓은 것 '+S.yard.length+'/'+YARD_MAX));
+    for(const k in YARD){
+      const Y=YARD[k],i=el('img','ic');i.src=iconURL('yard',k);i.alt='';
+      row(body,i,Y.n,[Object.keys(Y.need).map(q=>ITEMS[q].n+' '+Y.need[q]+'개 (가진 것 '+have(q)+')').join(' · ')+(Y.cost?' · '+won(Y.cost):''),Y.walk?'밟고 지나갈 수 있어요':k==='lamp'?'밤에 불이 켜져요 · 길을 막아요':'이어 놓으면 서로 붙어요 · 길을 막아요'],
+        [['고르기',()=>{garden=k;closeModal();syncPlace();toast('가꾸기: '+jo(Y.n,'을','를')+' 들었어요. 놓을 칸을 눌러요. 끝내려면 "가꾸기 끝"')}]]);
+    }
+  });
+}
+const yardSpr=(k,m)=>spr('yd'+k+m+(YARD[k].walk&&groundSeason===3?'w':''),()=>bake(40,48,4,12,0,0,c2=>yardArt(c2,k,{l:m&1,r:m&2,u:m&4,d:m&8})));
+function yardArt(c,k,nb){
+  if(YARD[k].walk){
+    // 꽃밭: 작은 꽃 다섯 송이. 겨울에는 눈을 인 마른 줄기만 남는다
+    const win=groundSeason===3,col=YARD[k].col;
+    for(const [fx,fy] of [[7,9],[18,6],[25,14],[10,21],[21,24]]){
+      rr(c,fx-1,fy+2,2,6,1,win?'#9a8a6a':'#4f9d52');
+      if(win){circ(c,fx,fy+1,2,'#f4f8fb');continue}
+      circ(c,fx-3,fy+6,2,'#6fbf6a');for(let i=0;i<4;i++){const a=i*1.5708+.6;circ(c,fx+Math.cos(a)*2.6,fy+Math.sin(a)*2.6,2.3,col)}circ(c,fx,fy,1.6,'#f2a531');
+    }
+  }else if(k==='fence'){
+    const rail=(x0,x1)=>{rr(c,x0,11,x1-x0,3.5,1,'#c98f58');rr(c,x0,19,x1-x0,3.5,1,'#c98f58')};
+    if(nb.u)rr(c,14.5,-8,3,16,1,'#c98f58');if(nb.d)rr(c,14.5,24,3,10,1,'#c98f58');
+    if(nb.l)rail(-2,14);if(nb.r)rail(18,34);if(!nb.l&&!nb.r&&!nb.u&&!nb.d){rail(4,14);rail(18,28)}
+    rr(c,13,6,6,23,2,'#8a5a34');rr(c,13,6,6,4,2,'#b98a5a');
+  }else{
+    // 장명등: 돌 받침과 기둥, 불집, 지붕
+    ell(c,16,29,9,3,'rgba(0,0,0,.18)');rr(c,10,24,12,5,1.5,'#9aa3a8');rr(c,13.5,12,5,13,1,'#b3bbc0');rr(c,9.5,3,13,10,2,'#c3cbcf');rr(c,12.5,5,7,6,1,'#f7d98a');poly(c,[6,4,16,-5,26,4],'#8a9399');circ(c,16,-6,2,'#8a9399');
+  }
+}
+// ───────── 이웃이 먼저 다가와 말 걸기 ─────────
+// 마을에서 가까이(세~일곱 칸) 있던 이웃이 가끔 느낌표를 띄우고 나에게 걸어온다. 곁에 닿으면 말을 건다: 때가 된 소문, 작은 선물, 안부, (못된 짓을 했으면) 꾸중.
+// 한 이웃은 하루에 한 번, 모두 합쳐 하루 세 번까지. 내가 계속 걸어가 버리면 조금 따라오다 그만둔다. comer={id,t 남은 시간,k 무슨 이야기}
+const COME={
+  moru:{gift:['wood',2,'{name}, 마침 잘 만났네. 다듬다 남은 나무토막일세. 가져다 쓰게.'],chat:['{name}! 지나가는 게 보여서 불렀네. 요새 통 얼굴 보기가 힘들구먼.','어이, 거기! 손이 거칠어진 걸 보니 일을 열심히 하는구먼. 보기 좋네.','{name}, 집은 불편한 데 없나? 삐걱거리는 데 있으면 말하게.'],scold:'{name}, 자네 요즘 소문이 안 좋더구먼. 남의 집에 손대는 건 사람 할 짓이 아닐세.'},
+  sol:{gift:['bread',1,'{name} 님! 방금 구운 거예요. 식기 전에 드리려고 뛰어왔어요!'],chat:['{name} 님! 멀리서 보이길래 인사하러 왔어요. 오늘도 좋은 하루 보내요!','저기요, {name} 님! 빵 굽는 냄새 맡았어요? 헤헤, 자랑하고 싶어서요.','{name} 님, 밥은 먹고 다녀요? 얼굴이 좀 핼쑥해 보여서요.'],scold:'{name} 님… 요즘 마을에 나쁜 소문이 돌아요. 아니죠? 아니라고 해 줘요…'},
+  parang:{gift:['crucian',1,'어이, {name}! 오늘 많이 잡혔어. 한 마리 가져가.'],chat:['{name}! 어디 가? 물가 쪽이면 같이 가자고 하려고 했지.','야, 너 요즘 통 낚시터에 안 보이더라. 물고기들이 섭섭해해.','{name}, 오늘 바람이 좋아. 이런 날은 찌가 잘 보여.'],scold:'{name}, 너지? 다 알아. …왜 그랬어. 실망이야.'},
+  dami:{gift:['mushroom',1,'{name}! 이거 봐! 연구하다 남은 버섯이야. 특별히 줄게!'],chat:['{name}! 잠깐만! 나 방금 엄청난 걸 발명할 뻔했어! …뻔했어.','조수 1호! 어디 가? 나도 데려가! …아, 나 숙제해야 하지.','{name}! 있잖아, 개미가 줄지어 가는 거 봤어? 내가 세어 봤는데 백 마리 넘어!'],scold:'{name}! 나쁜 짓 하면 포졸 아저씨가 잡아간댔어! 나는 다 봤어!'},
+  eunha:{gift:['yeot',1,'{name} 씨, 잠깐만요. 가게에 엿이 새로 들어와서요. 하나 맛보세요.'],chat:['{name} 씨! 지나가시길래요. 좋은 물건 보이면 가게로 가져와요.','어머, {name} 씨. 오늘 옷차림이 참 고와요. 눈에 확 띄던걸요.','{name} 씨, 요즘 뭘 모으고 있어요? 필요한 게 있으면 구해 볼게요.'],scold:'{name} 씨… 요즘 마을 사람들이 {name} 씨 얘기를 해요. 좋은 얘기는 아니에요.'},
+  hun:{gift:['chestnut',2,'어험, {name}. 서당 뒤뜰에서 주운 밤이니라. 글 읽다 출출할 때 먹거라.'],chat:['{name}, 게 섰거라. …아니, 그냥 얼굴이 보여 불렀느니라. 공부는 하고 있는고?','어험. 젊은이가 바삐 다니는 것은 좋은 일이니라. 다만 쉴 때는 쉬거라.','{name}, 오늘 하늘빛이 좋구나. 이런 날은 글이 잘 읽히느니라.'],scold:'{name}, 네 이놈! 요즘 행실이 어찌 그 모양이냐. 사람은 배운 대로 살아야 하느니라.'}
+};
+const FOLK=NPC_IDS.filter(id=>NPCS[id].at!=='palace'); /* 마을에 사는 사람들(서당 훈장도 든다) */
+let comer=null,comeCool=45;
+const comeDist=id=>Math.abs(N[id].x-P.x)+Math.abs(N[id].y-P.y);
+function comeTopic(id){
+  if(rumorOf(id))return'rumor';
+  if(S.rogue&&(S.wanted>0||S.ruin[id]))return'scold';
+  return hearts(id)>=1&&Math.random()<.45?'gift':'chat';
+}
+function updCome(dt){
+  if(scene!=='town'||!npcOut()){comer=null;return}
+  if(!comer){
+    comeCool-=dt;if(comeCool>0||mg||fishing||cop||placing||(S.cameN|0)>=3)return;comeCool=rnd(50,110);
+    const c=FOLK.filter(id=>COME[id]&&npcHere(id)&&!S.npcs[id].came&&N[id].t>=1&&comeDist(id)>=3&&comeDist(id)<=7);
+    if(!c.length){comeCool=15;return}
+    const id=pick(c);comer={id,t:10,k:comeTopic(id)};N[id].emo={k:'!',t:10};sfx('talk');return;
+  }
+  const n=N[comer.id],d=comeDist(comer.id);comer.t-=dt;n.hold=1;
+  if(comer.t<=0||d>11){n.emo=null;comer=null;return}
+  if(n.t<1)return;
+  if(d<=1){if(d===1&&P.t>=1&&!mg&&!fishing){const c=comer;comer=null;n.emo=null;n.dir=[Math.sign(P.x-n.x),Math.sign(P.y-n.y)];comeTalk(c)}return}
+  const p=findPath(n.x,n.y,(a,b)=>Math.abs(a-P.x)+Math.abs(b-P.y)===1,true);
+  if(p&&p.length){const [nx,ny]=p[0];if(canStep(nx,ny)&&!(nx===P.x&&ny===P.y)){n.dir=[Math.sign(nx-n.x),Math.sign(ny-n.y)];n.fx=n.x;n.fy=n.y;n.x=nx;n.y=ny;n.t=0}}
+}
+function comeTalk(c){
+  const id=c.id,d=NPCS[id],st=S.npcs[id],C=COME[id];let text,k=c.k;
+  st.came=true;S.cameN=(S.cameN|0)+1;sfx('talk');
+  if(k==='rumor'){const ru=rumorOf(id);if(ru){text=ru[3];hear(ru[0])}else k='chat'}
+  if(k==='scold'){text=C.scold;N[id].emo={k:'!',t:2.5}}
+  else if(k==='gift'){const g=C.gift;gain(g[0],g[1]);text=g[2]+'\n('+ITEMS[g[0]].n+' '+g[1]+'개를 받았어요.)';addFriend(id,6);N[id].emo={k:'♥',t:2.5}}
+  else if(k==='chat'){text=pick(C.chat);addFriend(id,5)}
+  if(!st.talk){st.talk=true;addXp(2);train('grace',1)}
+  touch();
+  dialog({npc:id,who:d.name,role:d.role+' · ♥'+hearts(id)+' · 먼저 다가왔어요',text,choices:[[k==='scold'?'…':'고마워요',null],['이야기 더 하기',()=>talk(id)]]});
+}
+// ───────── 편지와 우편함 ─────────
+// 아침마다 가끔 편지가 온다: 가까운 이웃(♥2부터)의 안부와 작은 선물, 이레마다 고향 어머니의 편지, 사냥 대회의 결과, 못된 짓을 당한 이웃의 꾸중.
+// 집 문 옆의 우편함에 깃발이 서고, 문 앞에서 행동하거나 "이웃" 창에서 읽는다. 딸려 온 물건은 편지를 읽으며 받는다.
+// S.mail=[{f:보낸 이(이웃 id나 'mom'), d:보낸 날, t:글, it:[물건,수] 또는 없음, c:엽전, got:받았나, r:읽었나}] 새 것이 앞
+const MAIL_MAX=24,MAIL_FROM={mom:'고향의 어머니'};
+const MAIL_TXT={
+  moru:[['wood',3,'{name}에게.\n자네 생각이 나서 몇 자 적네. 좋은 재목이 들어와 조금 보내니 요긴하게 쓰게. 몸 성히 지내게.\n— 모루'],['stone',2,'{name}에게.\n담 쌓다 남은 돌이 있어 보내네. 젊을 때 부지런히 모아 두게. 다 쓸 데가 있다네.\n— 모루']],
+  sol:[['bread',2,'{name} 님께.\n새 빵을 구웠는데 제일 먼저 맛보여 드리고 싶었어요. 맛이 어떤지 꼭 알려 줘요!\n— 솔이'],['apple',3,'{name} 님께.\n마당 사과가 잘 익어서 조금 보내요. 바쁘더라도 끼니는 거르지 말아요.\n— 솔이']],
+  parang:[['crucian',2,'{name}.\n글은 서툴러서 짧게 쓴다. 오늘 잡은 것 보낸다. 다음엔 같이 가자.\n— 파랑'],['shell',3,'{name}.\n바닷가에서 예쁜 게 보이길래 주웠어. 너 주려고. 별 뜻은 없어.\n— 파랑']],
+  dami:[['mushroom',2,'{name}에게!\n대발명가 다미다! 연구 재료가 남아서 조수 1호에게 보낸다! 아껴 써라!\n— 다미'],['chestnut',3,'{name}에게!\n밤으로 대포를 만들려다 혼났어. 남은 밤은 네가 먹어.\n— 다미']],
+  eunha:[['yeot',2,'{name} 씨께.\n늘 가게를 찾아 주셔서 고마워요. 작은 정성이에요. 달콤한 하루 보내세요.\n— 은하'],['flower',3,'{name} 씨께.\n창가에 두던 꽃이 예쁘게 피어서 조금 나눠요. 집 안이 환해질 거예요.\n— 은하']],
+  hun:[['chestnut',2,'{name} 보거라.\n글은 마음의 밭을 가는 일이니라. 밤 몇 알 보내니 글 읽다 출출할 때 먹거라.\n— 훈장'],['persimmon',2,'{name} 보거라.\n서당 감이 익었느니라. 배움에 게으르지 말고 몸도 잘 돌보거라.\n— 훈장']]
+};
+const MOM_TXT=[['yeot',2,'우리 {name} 보아라.\n먼 길 떠나 잘 닿았는지 걱정이 되어 몇 자 적는다. 집은 구했느냐. 끼니 거르지 말고, 이웃들과 사이좋게 지내거라. 엿을 조금 싸 보낸다.\n— 어미가'],
+  ['bread',2,'우리 {name} 보아라.\n네가 떠난 뒤로 집이 휑하구나. 그래도 네가 잘 지낸다니 마음이 놓인다. 일도 좋지만 쉬어 가며 하거라.\n— 어미가'],
+  ['h_bam',2,'우리 {name} 보아라.\n장에 갔다가 네 생각이 나서 군밤을 샀단다. 따뜻할 때 먹이지 못해 아쉽구나. 아프지 말거라.\n— 어미가'],
+  ['apple',3,'우리 {name} 보아라.\n요즘 꿈에 네가 자주 보인다. 좋은 일이 있으려나 보다. 마당 사과를 보낸다. 이웃들과 나눠 먹거라.\n— 어미가'],
+  ['ginseng',1,'우리 {name} 보아라.\n네 소식을 전해 듣고 얼마나 기뻤는지 모른다. 귀한 것을 구해 보낸다. 힘에 부칠 때 달여 먹거라.\n— 어미가']];
+function sendMail(f,t,it,c){
+  S.mail.unshift({f,d:S.day,t,it:it&&ITEMS[it[0]]?it:null,c:c|0,got:0,r:0});
+  for(let i=S.mail.length-1;i>=0&&S.mail.length>MAIL_MAX;i--){const m=S.mail[i];if(m.r&&(m.got||(!m.it&&!m.c)))S.mail.splice(i,1)}
+  if(S.mail.length>MAIL_MAX+8)S.mail.length=MAIL_MAX+8;
+}
+const mailNew=()=>S.mail.reduce((a,m)=>a+(m.r?0:1),0);
+// 아침에 오는 편지 (nextDay에서 부른다). 온 편지 수를 돌려준다
+function morningMail(){
+  let n=0;
+  if(S.day%7===2){const k=Math.floor(S.day/7)%MOM_TXT.length,m=MOM_TXT[k];sendMail('mom',m[2],[m[0],m[1]]);n++}
+  const pals=FOLK.filter(id=>MAIL_TXT[id]&&hearts(id)>=2&&!S.ruin[id]);
+  if(pals.length&&Math.random()<Math.min(.5,.14*pals.length)){const id=pick(pals),m=pick(MAIL_TXT[id]);sendMail(id,m[2],[m[0],m[1]]);n++}
+  return n;
+}
+const mailWho=f=>NPCS[f]?NPCS[f].name:MAIL_FROM[f]||'누군가';
+const dayName=d=>SEASONS[seasonOf(d)]+' '+((d-1)%7+1)+'일';
+function openMail(){
+  openModal('편지함',body=>{
+    if(!S.mail.length){body.appendChild(el('p','note','아직 온 편지가 없어요. 이웃과 가까워지면 가끔 편지와 작은 선물을 보내 줘요.'));return}
+    body.appendChild(el('p','note','받은 편지예요. 딸려 온 물건은 "받기"를 눌러 가방에 넣어요.'));
+    for(const m of S.mail){
+      const card=el('div','row');card.style.cssText='flex-direction:column;align-items:stretch;gap:6px;padding:10px 12px'+(m.r?'':';border-color:var(--accent)');
+      const head=el('div');head.style.cssText='display:flex;align-items:center;gap:8px';
+      head.appendChild(NPCS[m.f]?icon('npc',m.f):el('span','badge','편'));
+      const hg=el('div','grow');hg.appendChild(el('b',null,mailWho(m.f)+(m.r?'':' · 새 편지')));hg.appendChild(el('small',null,dayName(m.d)+'에 온 편지'));head.appendChild(hg);card.appendChild(head);
+      const p=el('p',null,m.t.replace(/\{name\}/g,S.name));p.style.cssText='margin:0;white-space:pre-line;font-size:14px;line-height:1.55';card.appendChild(p);
+      if(m.it||m.c){
+        const what=(m.it?ITEMS[m.it[0]].n+' '+m.it[1]+'개':'')+(m.it&&m.c?' · ':'')+(m.c?won(m.c):'');
+        const a=el('div','acts');a.style.cssText='display:flex;align-items:center;gap:8px;justify-content:flex-end';
+        if(m.it)a.appendChild(icon('item',m.it[0]));a.appendChild(el('small',null,m.got?'받았어요: '+what:'딸려 온 것: '+what));
+        if(!m.got){const b=el('button','btn','받기');b.type='button';b.onclick=()=>{if(m.got)return;m.got=1;if(m.it)gain(m.it[0],m.it[1]);if(m.c)addCoins(m.c);sfx('pick');touch();openMail()};a.appendChild(b)}
+        card.appendChild(a);
+      }
+      body.appendChild(card);
+    }
+    for(const m of S.mail)m.r=1;touch();hud();
+  });
+}
+function mailboxArt(c,flag){
+  rr(c,14,10,4,20,1,'#8a5a34');rr(c,6,0,20,13,3,'#c98f58');rr(c,6,0,20,5,[3,3,0,0],'#a87a48');rr(c,9,6,14,1.6,.8,'#5e3f24');
+  if(flag){rr(c,26,-8,2,14,1,'#6b4526');poly(c,[28,-8,36,-5,28,-2],'#d9412e')}else rr(c,26,3,2,8,1,'#6b4526');
+}
+// ───────── 나쁜 길: 왈패 ─────────
+// 내 마을 이웃(NPC)의 집 문 앞에서 못된 짓을 한다. 같이 하는 친구의 마을이나 저장과는 상관없다. 다미에게 소문을 들은 뒤부터 문 앞에서 고를 수 있다.
+// 문짝 부수기(못질 놀이), 불 지르기(연타로 불씨 살리기), 담벼락에 실례(가만히 서 있기), 밤의 알림판 낙서(못질 놀이).
+// 할 때마다 악명(S.rogue.inf)이 쌓여 자리가 오르고 이웃과 멀어지며, 수배(S.wanted)가 붙어 포졸(cop)이 쫓아온다. 잡히면 벌금을 물고 옥에서 하룻밤을 보낸다.
+// 상한 집은 며칠 뒤 저절로 고쳐지고, 모루에게 삯을 주면 바로 고친다. S.ruin[집]={k:'broken'|'fire'|'burnt',until:날}, S.pee=[[x,y]] 오늘 남긴 자국, S.scrib=낙서한 날
+const ROGUE={ranks:['건달','왈패','두목'],need:[0,15,45],rent:[0,80,200],fit:[null,'rogue1','rogue2']};
+const rogueKnown=()=>!!(S.rogue||S.lore.rogue);
+const bldOwner=b=>b&&NPCS[b.id]&&NPCS[b.id].at!=='palace'?b.id:null;
+function rogueAdd(n){
+  const first=!S.rogue;if(first)S.rogue={rank:0,inf:0};
+  const R=S.rogue;R.inf+=n;hear('rogue',true);let up=false;
+  while(R.rank<2&&R.inf>=ROGUE.need[R.rank+1]){R.rank++;up=true;const f=ROGUE.fit[R.rank];if(f&&!S.owned.includes(f))S.owned.push(f)}
+  if(first)setTimeout(()=>{if(S)toast('마을에서 【건달】이라고 수군거려요. 아래 "신분"에 적혔어요')},1700);
+  else if(up)setTimeout(()=>{if(S){sfx('level');toast('악명이 높아져 이제 【'+ROGUE.ranks[R.rank]+'】라 불려요. '+jo(OUTFITS[ROGUE.fit[R.rank]].n,'을','를')+' 얻었어요 (옷장)')}},1700);
+  touch();hud();
+}
+// 집주인(owner)과 온 마을의 마음이 멀어진다. 가까이 있던 이웃은 깜짝 놀란다
+function scold(owner,mine,others){
+  for(const id of FOLK){const n=id===owner?mine:others;if(n)addFriend(id,-n)}
+  if(scene==='town'&&npcOut())for(const id of FOLK){const q=N[id];if(Math.abs(q.x-P.x)+Math.abs(q.y-P.y)<=6)q.emo={k:'!',t:3}}
+  // 집이 상한 이웃은 꾸짖는 편지를 보낸다
+  if(owner&&mine>=80)sendMail(owner,'{name}에게.\n내 집을 그렇게 만든 사람이 누구인지 이웃들이 다 보았다고 합니다. 할 말을 잃었습니다. 집이 고쳐지기 전에는 얼굴 보기 어렵겠습니다.\n— '+NPCS[owner].name);
+}
+function mischief(b){
+  const who=bldOwner(b),R=S.ruin[b.id],ch=[];if(!who)return;
+  if(!R){ch.push(['문짝 부수기',()=>startWreck(b)]);ch.push(['불 지르기',()=>startArson(b)])}
+  ch.push(['담벼락에 실례하기',()=>startPee(b)]);ch.push(['그만두기',null]);
+  dialog({who:'못된 짓',role:NPCS[who].name+'의 집',text:(R?'이 집은 이미 엉망이에요. 고쳐질 때까지는 더 손댈 데가 없어요.\n':'')+'남이 볼세라 주위를 살펴요. 못된 짓을 하면 이웃들과 멀어지고 포졸이 달려와요.'+(S.wanted?'\n(지금 수배 '+S.wanted+')':''),choices:ch});
+}
+function startWreck(b){
+  if(S.ruin[b.id]||!useEn(6))return;
+  mg={kind:'build',o:{x:P.x,y:P.y,sh:0},i:0,n:5,ph:0,cool:0,note:'',fin:false,wreck:b.id};P.path=[];P.after=null;
+}
+function finishWreck(id){
+  const who=bldOwner(BLD.find(b=>b.id===id)),loot=ri(40,120);
+  S.ruin[id]={k:'broken',until:S.day+3};addCoins(loot);S.wanted=Math.min(9,(S.wanted|0)+2);S.min=Math.min(1380,S.min+20);sfx('chop');
+  scold(who,80,10);rogueAdd(4);saveAll();toast('문짝이 떨어져 나갔어요! 집 안에서 '+won(loot)+'을 들고 나왔어요');callCop();
+}
+function startArson(b){
+  if(S.ruin[b.id])return;
+  if(have('wood')<2){toast('불쏘시개로 쓸 나무가 2개 있어야 해요');return}
+  if(!useEn(6))return;
+  mg={kind:'kindle',b:b.id,o:{x:P.x,y:P.y,sh:0},p:0,t:0,cool:0,note:''};P.path=[];P.after=null;
+}
+function finishArson(id){
+  const who=bldOwner(BLD.find(b=>b.id===id));
+  gain('wood',-2);S.ruin[id]={k:'fire',until:S.day+4};S.wanted=Math.min(9,(S.wanted|0)+3);S.min=Math.min(1380,S.min+20);sfx('err');
+  scold(who,150,20);rogueAdd(7);saveAll();toast('지붕에 불이 붙었어요! 이웃들이 놀라 뛰쳐나와요');callCop();
+}
+function startPee(b){
+  if(S.pee.length>=3){toast('오늘은 더 나올 것이 없어요');return}
+  mg={kind:'pee',b:b.id,o:{x:P.x,y:P.y,sh:0},t:0,cool:0,note:''};P.dir=[0,-1];P.path=[];P.after=null;
+}
+function finishPee(m){
+  const seen=npcOut()&&FOLK.some(id=>Math.abs(N[id].x-P.x)+Math.abs(N[id].y-P.y)<=5);
+  S.pee.push([P.x,P.y]);rogueAdd(1);
+  if(seen){S.wanted=Math.min(9,(S.wanted|0)+1);scold(bldOwner(BLD.find(b=>b.id===m.b)),25,8);sfx('err');toast('이웃이 보고 말았어요! 얼굴이 화끈거려요');callCop()}
+  else{sfx('pick');toast('후련해요… 아무도 못 봤어요')}
+  saveAll();
+}
+function startScrib(){
+  if(S.scrib===S.day||!useEn(4))return;
+  mg={kind:'build',o:{x:P.x,y:P.y,sh:0},i:0,n:3,ph:0,cool:0,note:'',fin:false,scrib:1};P.path=[];P.after=null;
+}
+function finishScrib(){
+  S.scrib=S.day;S.wanted=Math.min(9,(S.wanted|0)+1);scold(null,0,6);rogueAdd(2);sfx('chop');saveAll();
+  toast('알림판에 "메롱"이라고 큼직하게 새겨 놨어요');callCop();
+}
+function repairTalk(){
+  const ids=Object.keys(S.ruin),n=ids.length,cost=120*n,wood=6*n,say=(text,choices)=>dialog({npc:'moru',who:NPCS.moru.name,text,choices});
+  if(!n){say('상한 집은 없네.');return}
+  say('마을 집이 '+n+'채나 상했더구먼. 누가 그랬는지는 묻지 않겠네. 고치려면 '+won(cost)+'과 나무 '+wood+'개가 드네.\n(가진 것: '+won(S.coins)+', 나무 '+have('wood')+'개)',S.coins>=cost&&have('wood')>=wood?[['고쳐 주세요',()=>{
+    addCoins(-cost);gain('wood',-wood);for(const id of ids){const who=bldOwner(BLD.find(q=>q.id===id));if(who)addFriend(who,45)}
+    S.ruin={};addFriend('moru',8);sfx('level');saveAll();say('말끔히 고쳐 놨네. 집주인들 마음도 조금은 풀렸을 걸세. 다음부터는 그러지 말게.');
+  }],['다음에요',null]]:[['알겠어요',null]]);
+}
+// 포졸: 못된 짓을 하면 마을 길 어딘가에서 나타나 쫓아온다. 나보다 조금 느려서 달아나면 따돌릴 수 있고, 집 안이나 마을 밖으로 나가면 놓친다
+let cop=null,jailNight=false;
+const COP_LOOK={skin:'#e8c09a',hair:'#2e2a2a',shirt:'#2e4a8a',bot:'#3a3a40',rib:'#c8392f',sex:'m',hat:'jeonrip'};
+function callCop(){
+  if(cop||scene!=='town'||(S.wanted|0)<1)return;
+  const road=[];for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++)if(TOWN.tile[y][x]===1&&canStep(x,y)){const d=Math.abs(x-P.x)+Math.abs(y-P.y);if(d>=8&&d<=14)road.push([x,y])}
+  if(!road.length)return;const q=pick(road);
+  cop={x:q[0],y:q[1],fx:q[0],fy:q[1],t:1,dir:[0,1],life:14+S.wanted*2};
+  setTimeout(()=>{if(cop)toast('"게 섰거라!" 포졸이 달려와요. 잡히기 전에 달아나요 (집 안이나 마을 밖으로 숨어요)')},1000);
+}
+function updCop(dt){
+  if(!cop)return;
+  if(scene!=='town'){cop=null;toast('포졸을 따돌렸어요. 수배는 하루에 하나씩 풀려요');return}
+  cop.life-=dt;if(cop.life<=0){cop=null;toast('포졸이 씩씩거리며 돌아갔어요');return}
+  if(cop.t<1){cop.t=Math.min(1,cop.t+dt*3.5);if(cop.t>=1){cop.fx=cop.x;cop.fy=cop.y}return}
+  if(Math.abs(cop.x-P.x)+Math.abs(cop.y-P.y)<=1){copCatch();return}
+  const p=findPath(cop.x,cop.y,(a,b)=>Math.abs(a-P.x)+Math.abs(b-P.y)<=1,false);
+  if(p&&p.length){const [nx,ny]=p[0];if(walkable(nx,ny)&&!(nx===P.x&&ny===P.y)){cop.dir=[Math.sign(nx-cop.x),Math.sign(ny-cop.y)];cop.fx=cop.x;cop.fy=cop.y;cop.x=nx;cop.y=ny;cop.t=0}}
+}
+function copCatch(){
+  const fine=Math.min(S.coins,60*Math.max(1,S.wanted|0));cop=null;mg=null;fishing=null;P.path=[];P.after=null;
+  addCoins(-fine);S.wanted=0;S.jail=(S.jail|0)+1;jailNight=true;sfx('err');
+  dialog({who:'포졸',text:'"네 이놈! 마을을 어지럽힌 죄를 알렷다!"\n(붙잡혔어요. 벌금 '+won(fine)+'을 물고 옥에서 하룻밤을 보내요.)',choices:[['잘못했어요',()=>sleep(true)]]});
+}
+function drawRuin(c,b){
+  const R=S.ruin[b.id];if(!R)return;
+  const x0=b.x*T,by=(b.y+b.h)*T,dx=b.door[0]*T+16;
+  if(R.k==='broken'){
+    rr(c,dx-9,by-25,18,25,2,'#1c1512');poly(c,[dx+6,by-24,dx+19,by-18,dx+16,by+3,dx+3,by-2],'#8a5a34');line(c,dx+8,by-20,dx+15,by-2,'#6b4526',1.5);
+    line(c,dx-11,by-20,dx+9,by-8,'#b98a5a',3);line(c,dx-10,by-6,dx+10,by-18,'#a87a48',3);
+    rr(c,dx-18,by+3,6,3,1,'#8a5a34');rr(c,dx+12,by+6,5,2.5,1,'#a87a48');rr(c,dx-6,by+7,4,2,1,'#6b4526');
+    c.strokeStyle='rgba(40,30,25,.7)';c.lineWidth=1.3;c.beginPath();c.moveTo(dx-22,by-30);c.lineTo(dx-18,by-22);c.lineTo(dx-23,by-15);c.moveTo(dx+24,by-34);c.lineTo(dx+21,by-26);c.lineTo(dx+26,by-20);c.stroke();
+    return;
+  }
+  // 그을음과 연기. 불이 붙은 날에는 불길이 일렁인다
+  c.fillStyle='rgba(25,20,18,'+(R.k==='fire'?.32:.48)+')';
+  for(let i=0;i<b.w*2;i++){c.beginPath();c.ellipse(x0+8+i*16+hash(i,b.x)*6,by-14-hash(b.y,i)*46,10+hash(i,7)*6,7+hash(i,3)*5,0,0,7);c.fill()}
+  if(R.k==='fire')for(let i=0;i<b.w*2+1;i++){
+    const fx=x0+4+i*15,h=14+Math.sin(now*7+i*1.9)*5+hash(i,b.y)*8,fy=by-8-hash(i,b.x+3)*52;
+    poly(c,[fx-6,fy,fx-2,fy-h*.6,fx,fy-h,fx+3,fy-h*.55,fx+6,fy],'#f08a2a');poly(c,[fx-3,fy,fx,fy-h*.6,fx+3,fy],'#f7d24a');
+  }
+  for(let i=0;i<3;i++){const u=(now*.35+i/3)%1,sx=x0+b.w*T*(.25+i*.25)+Math.sin(now*1.3+i)*4,sy=b.y*T-20-u*38;c.globalAlpha=(1-u)*(R.k==='fire'?.55:.3);circ(c,sx,sy,5+u*7,'#5a5a60');c.globalAlpha=1}
+}
+// ───────── 임금의 사냥 대회 ─────────
+// 열흘에 한 번(3·13·23…일, 명절과 겹치면 쉰다) 궁궐에서 연다. 그날 궐문의 무진에게 이름을 올리면 잡는 짐승마다 점수가 쌓인다(어디서 잡든).
+// 무진에게 돌아가 마감하면(안 가면 다음 날 아침에 저절로) 맞수 셋과 견주어 등수가 정해지고 상을 받는다. 맞수들의 점수는 내 레벨에 맞춰진다.
+// S.cup={day,on,score,n 잡은 수,riv 맞수들의 마지막 점수,done,rank}
+const cupOn=d=>d>=3&&d%10===3&&!festOf(d);
+const cupDay=()=>!!S&&cupOn(S.day);
+const cupIn=()=>{for(let i=1;i<=30;i++)if(cupOn(S.day+i))return i;return 0};
+const CUP_PTS={rabbit:1,pheasant:2,deer:3,boar:3,fox:5,wolf:6,tiger:10,bear:12,kboar:25};
+const CUP_RIVALS=['내금위 한결','포수 덕만','산지기 봉이'];
+const cupLive=()=>{const p=Math.max(0,Math.min(1,(S.min-360)/720));return S.cup.riv.map(v=>Math.round(v*p))}; /* 맞수들의 지금 점수: 아침 여섯 시부터 저녁 여섯 시까지 고르게 오른다 */
+function cupJoin(){
+  const L=S.level,base=L<DEEP_LV?8+L*2:22+L*3,rng=mulberry((S.day*6131+townSeed*29+3)>>>0);
+  S.cup={day:S.day,on:1,score:0,n:0,done:0,rank:0,riv:[1.15,.85,.55].map(m=>Math.max(2,Math.round(base*m*(.85+rng()*.3))))};
+  hear('cup',true);sfx('level');saveAll();
+}
+function cupCount(k){
+  const c=S.cup;if(!c||c.day!==S.day||!c.on||c.done)return;
+  const p=CUP_PTS[k]||1;c.score+=p;c.n++;setTimeout(()=>{if(S)float('사냥 대회 +'+p+'점 (모두 '+c.score+'점)')},700);
+}
+// 마감: 등수를 매기고 상을 준다. 결과를 한 줄 글로 돌려준다. auto는 다음 날 아침에 저절로 셈하는 경우(소리와 저장은 아침 일에 맡긴다)
+function cupSettle(auto){
+  const c=S.cup;if(!c||!c.on||c.done)return'';
+  const rank=1+c.riv.filter(v=>v>c.score).length,L=S.level,coin=[600+L*40,300+L*20,150+L*10,50][rank-1],merit=[3,2,1,0][rank-1];
+  c.done=1;c.rank=rank;addCoins(coin);addXp([60,40,25,10][rank-1]);S.merit+=merit;addFriend('mujin',rank<=3?12:4);train('arms',rank<=3?4:1);
+  if(rank===1)S.cupWins=(S.cupWins|0)+1;
+  let gear=null;if(rank===1&&!S.gear.own.w_royal)gear='w_royal';else if(rank<=3&&!S.gear.own.h_cup)gear='h_cup';
+  if(gear)gearGet(gear);if(!auto){sfx(rank<=3?'level':'coin');saveAll()}
+  return(rank===1?'으뜸':rank+'등')+' · '+c.score+'점 · 상: '+won(coin)+(merit?', 공 '+merit:'')+(gear?', '+GEAR[gear].n:'');
+}
+function cupTalk(){
+  const d=NPCS.mujin,say=(text,choices)=>dialog({npc:'mujin',who:d.name,text,choices}),c=S.cup&&S.cup.day===S.day?S.cup:null;
+  hear('cup',true);
+  if(!cupDay()){const n=cupIn();say('전하께서 열흘에 한 번 사냥 대회를 여시오. 그날 잡은 짐승으로 솜씨를 겨루는 자리요.\n(다음 대회는 '+(n===1?'내일':n+'일 뒤')+'예요. 대회 날 아침에 와서 이름을 올려요.'+(S.cupWins?' 지금까지 으뜸 '+S.cupWins+'번.':'')+')');return}
+  if(!c){
+    if(S.min>=1080){say('오늘 대회는 이미 해가 기울었소. 다음에는 아침 일찍 오시오.');return}
+    say('오늘이 바로 전하의 사냥 대회 날이오. 이름을 올리면 잡는 짐승마다 점수를 매기오. 센 짐승일수록 점수가 높소.\n(토끼 1 · 꿩 2 · 사슴과 멧돼지 3 · 여우 5 · 늑대 6 · 범 10 · 곰 12 · 대왕 멧돼지 25)',[['이름 올리기',()=>{cupJoin();say('이름을 올렸소. 맞수는 '+CUP_RIVALS.join(', ')+', 이렇게 셋이오. 다 잡았거든 내게 돌아와 마감하시오. 오지 않으면 내일 아침에 셈해 알려 주겠소.\n(사냥터로 가서 짐승을 잡아요. 잡을 때마다 점수가 올라요.)')}],['다음에요',null]]);return;
+  }
+  if(c.done){say('오늘 대회는 끝났소. 그대는 '+(c.rank===1?'으뜸':c.rank+'등')+'이었소. 다음 대회에서 또 봅시다.');return}
+  const live=cupLive();
+  say('지금까지 그대는 '+c.score+'점이오. ('+c.n+'마리)\n(맞수들의 지금 점수: '+CUP_RIVALS.map((n,i)=>n+' '+live[i]+'점').join(' · ')+'. 저녁 여섯 시까지 계속 오르고, 마감하면 그들의 마지막 점수와 견줘요.)',[['마감하기',()=>{
+    const res=cupSettle();
+    say((c.rank===1?'으뜸이오! 전하께서 크게 기뻐하셨소.':c.rank<=3?'훌륭했소. 셋째 안에 들었구려.':'아쉽게 됐소. 다음에는 더 잡아 보시오.')+'\n('+res+')\n(맞수들: '+CUP_RIVALS.map((n,i)=>n+' '+c.riv[i]+'점').join(' · ')+')');
+  }],['더 잡고 올게요',null]]);
+}
+// ───────── 진상과 하사품 ─────────
+// 궁궐 정전 앞에서 철마다 궁에서 찾는 물건을 바치면 공(S.merit)이 쌓이고, 공이 차면 임금이 내리는 물건(ROYAL)을 받는다. 공은 써서 없어지지 않는다.
+// TRIB[철]=[물건, 한 개에 공, 그 철에 받는 수]. 한 가지는 그 철에 정해진 수까지만 받는다. S.trib={k:철 번호, got:{물건:바친 수}}, S.royal={받은 하사품:1}
+const TRIB=[
+  [['strawberry',1,6],['sweetfish',1,4],['carp',2,3],['ginseng',3,2]],
+  [['watermelon',1,6],['catfish',1,4],['abalone',2,3],['antler',2,3]],
+  [['pumpkin',1,6],['chestnut',1,5],['salmon',1,4],['tigerskin',5,2]],
+  [['smelt',1,5],['feather',1,5],['foxfur',2,3],['silver',2,3]]];
+const TRIB_ANY=[['tusk',6,1],['gold',3,2]]; /* 철을 가리지 않고 받는 귀한 것 */
+const ROYAL=[[8,'furn','k_vase'],[20,'fit','k_silk'],[40,'gear','t_okdae'],[65,'furn','k_screen'],[100,'gear','a_royal']]; /* [쌓아야 하는 공, 종류, 무엇] */
+const tribKey=()=>Math.floor((S.day-1)/7);
+function tribNow(){if(!S.trib||S.trib.k!==tribKey())S.trib={k:tribKey(),got:{}};return S.trib}
+function openTribute(){
+  const t=tribNow(),sea=season();hear('trib',true);
+  openModal('진상과 하사품',body=>{
+    body.appendChild(el('p','note','정전 앞의 승지가 진상을 받아요. 철마다 궁에서 찾는 물건을 바치면 공이 쌓이고, 공이 차면 임금께서 귀한 물건을 내리세요. 공은 써서 없어지지 않아요. 사냥 대회에서 셋째 안에 들어도 공이 쌓여요.'));
+    body.appendChild(el('p','sub','쌓은 공 '+S.merit));
+    body.appendChild(el('p','sub',SEASONS[sea]+'에 궁에서 찾는 것'));
+    for(const [id,p,lim] of TRIB[sea].concat(TRIB_ANY)){
+      if(!ITEMS[id])continue;const n=t.got[id]|0;
+      row(body,icon('item',id),ITEMS[id].n,['한 개에 공 '+p+' · 이번 철에 바친 것 '+n+'/'+lim,'가진 것 '+have(id)+'개'+(DEXHINT[id]?' · '+DEXHINT[id]:'')],
+        n<lim?[['바치기',()=>{if(have(id)<1||(t.got[id]|0)>=lim)return;gain(id,-1);t.got[id]=(t.got[id]|0)+1;S.merit+=p;addXp(6+p*4);addFriend('king',2);sfx('coin');touch();openTribute()},have(id)<1]]:[]);
+    }
+    body.appendChild(el('p','sub','하사품'));
+    for(const [need,kind,id] of ROYAL){
+      const got=!!S.royal[id],name=kind==='furn'?FURN[id].n:kind==='fit'?OUTFITS[id].n:GEAR[id].n,ic=kind==='furn'?icon('furn',id):kind==='fit'?lookIcon(id,S.sex||'m'):gearBadge(id);
+      const r=row(body,ic,name,[got?'받았어요':'공이 '+need+'만큼 쌓이면 받아요 (지금 '+S.merit+')',kind==='furn'?'집 안에 놓는 가구':kind==='fit'?'옷장에서 입는 옷':'몸에 걸치는 장비'],got?[]:[['받기',()=>royalTake(id),S.merit<need]]);
+      if(kind==='gear')gearTap(r,id,openTribute,true);
+    }
+  });
+}
+function royalTake(id){
+  const R=ROYAL.find(q=>q[2]===id);if(!R||S.royal[id]||S.merit<R[0])return;
+  S.royal[id]=1;let name,more;
+  if(R[1]==='furn'){S.furn[id]=(S.furn[id]||0)+1;name=FURN[id].n;more='집 안에서 꾸미기로 놓을 수 있어요.'}
+  else if(R[1]==='fit'){if(!S.owned.includes(id))S.owned.push(id);name=OUTFITS[id].n;more='옷장에서 입을 수 있어요.'}
+  else{gearGet(id);name=GEAR[id].n;more='아래 "장비"에서 걸쳐요.'}
+  addXp(40);sfx('level');saveAll();closeModal();
+  dialog({who:'승지',role:'하사품',text:'전하께서 그대의 정성을 갸륵히 여겨 이것을 내리셨소.\n('+jo(name,'을','를')+' 받았어요. '+more+')',choices:[['성은이 망극하옵니다',openTribute]]});
 }
 // ───────── 대장간 ─────────
 // 연장 벼리기: 달군 쇳덩이들이 흘러와 모루 표시에 닿는 박자에 맞춰 두드린다. 두 번까지는 놓쳐도 된다
@@ -3785,6 +4451,8 @@ function reach(block){
 function syncPlace(){
   const b=$('bPlace'),k=S&&S.place,show=!!k&&scene==='town'&&started;
   if(!show)placing=false;
+  // 가꾸기 단추는 마을에서만 보인다. 마을을 떠나면 가꾸기도 끝난다
+  {const y=$('bYard'),on=!!S&&started&&scene==='town';if(!on)garden=null;y.hidden=!on;y.classList.toggle('on',!!garden);y.textContent=garden?'가꾸기 끝':'가꾸기'}
   b.hidden=!show;b.classList.toggle('on',placing);
   if(show)b.textContent=placing?'자리 고르기 그만':PENS[k].n+(S.pens[k]?' 옮기기':' 놓기');
 }
@@ -3904,6 +4572,7 @@ function buildTalk(){
   const ch=[[S.camp?'움막 짓기':'집 고치기',houseTalk]];
   if(S.house>=2)ch.push(['지붕 칠하기',roofTalk]);
   ch.push(['다리 놓기',bridgeTalk]);
+  if(Object.keys(S.ruin).length)ch.push(['상한 집 고쳐 주기',repairTalk]);
   for(const k in PENS)if(!S.pens[k]&&S.place!==k)ch.push([PENS[k].n+' 짓기',()=>penTalk(k)]);
   if(!S.furn.agungi&&!S.placed.some(f=>f.id==='agungi'))ch.push(['아궁이 놓기',hearthTalk]);
   if(!S.spouse&&!have('goose'))ch.push(['나무 기러기 깎기',gooseTalk]);
@@ -4191,7 +4860,8 @@ function nextDay(forced){
   if(scene==='cave')leaveCave(true);
   if(scene==='wild')leaveWild(true);
   if(scene==='palace')leavePalace(true);
-  S.wildN=8;wildBeasts=null;S.wpick=null;
+  S.wildN=10;wildBeasts=null;S.wpick=null;S.deepN=9;deepBeasts=null;S.dpick=null;wz=0;huntStreak=0;
+  const cupMsg=S.cup&&S.cup.on&&!S.cup.done?cupSettle(true):''; /* 마감하지 않고 잠든 사냥 대회는 아침에 셈한다 */
   const was=season(),prevW=S.weather;
   // 쫓지 못한 까마귀가 앉아 있던 밭은 쪼아 먹힌다(다 익은 것은 잃고, 자라던 것은 하루 뒷걸음). 가뭄 든 날 물을 못 준 작물도 하루 시든다
   let pecked=0;
@@ -4214,7 +4884,8 @@ function nextDay(forced){
   spawnPickups(S);rollShop(S);rollQuests(S);rollGlints();
   if(S.wx==='wind')windDrops();
   const crowN=spawnCrows();
-  for(const id of NPC_IDS){S.npcs[id].talk=false;S.npcs[id].gift=false;const a=NPCS[id].anchor,n=N[id];n.x=n.fx=a[0];n.y=n.fy=a[1];n.t=1;n.hold=0;n.emo=null}
+  comer=null;comeCool=rnd(30,70);S.cameN=0;
+  for(const id of NPC_IDS){S.npcs[id].talk=false;S.npcs[id].gift=false;S.npcs[id].came=false;const a=NPCS[id].anchor,n=N[id];n.x=n.fx=a[0];n.y=n.fy=a[1];n.t=1;n.hold=0;n.emo=null}
   const sea=season(),msgs=[SEASONS[sea]+' '+((S.day-1)%7+1)+'일 아침, '+(S.weather==='rain'?(sea===3?'눈이 내려요':'비가 내려요'):'날이 맑아요')];
   if(campNight)msgs.push(campNight===2?'비를 맞으며 자서 몸이 무거워요. 지붕이 있으면 좋겠어요':'짚자리에서 자서 기력이 조금 덜 찼어요');
   if(sea!==was){
@@ -4229,6 +4900,17 @@ function nextDay(forced){
   applyMarket();applyFest();
   {const f=fest(),nx=festOf(S.day+1);if(f)msgs.push('오늘은 '+jo(f.n,'이에요','예요')+'! 만물상 동쪽 마당에서 잔치가 열려요');else if(nx)msgs.push('내일은 '+jo(nx.n,'이에요','예요')+'. 잔치 마당에서 놀이가 열려요')}
   if(isMarket())msgs.push('오늘은 닷새에 한 번 서는 장날이에요. 만물상 동쪽 마당에 보부상과 객주가 왔어요');else if(marketIn()===1)msgs.push('내일은 장날이에요. 팔 물건을 모아 두세요');
+  if(cupMsg){msgs.push('어제 사냥 대회의 셈이 끝났어요: '+cupMsg);sendMail('mujin','{name} 보시오.\n어제 사냥 대회의 셈을 마쳤소. 그대는 '+cupMsg.split(' · ').slice(0,2).join(', ')+'이었소. 상은 이미 보냈으니 살펴보시오. 다음 대회에서 또 겨룹시다.\n— 무진')}
+  {const n=morningMail(),all=mailNew();if(all)msgs.push(n?'우편함에 편지가 왔어요. 집 문 앞에서 읽어요 (새 편지 '+all+'통)':'우편함에 아직 읽지 않은 편지가 '+all+'통 있어요')}
+  // 가꾼 마을: 놓은 것이 여섯을 넘으면 아침마다 기분이 좋고, 열둘을 넘으면 사흘에 한 번 이웃들도 좋아한다
+  if(S.yard.length>=6){const x=Math.min(20,Math.floor(S.yard.length/3));addXp(x);msgs.push('가꾼 마을을 둘러보니 기분이 좋아요 · 경험치 +'+x);
+    if(S.yard.length>=12&&S.day%3===0){for(const id of FOLK)addFriend(id,3);msgs.push('이웃들이 예뻐진 마을을 보고 좋아해요')}}
+  // 나쁜 길: 불탄 집은 그을린 채 며칠 가고, 때가 되면 이웃들이 고쳐 놓는다. 수배는 하루에 하나씩 풀리고, 왈패부터는 자릿세가 들어온다
+  {let fixed=0;for(const id in S.ruin){const R=S.ruin[id];if(R.k==='fire')R.k='burnt';if(S.day>=R.until){delete S.ruin[id];fixed++}}
+    if(fixed)msgs.push('이웃들이 상한 집 '+fixed+'채를 고쳐 놓았어요');
+    S.pee=[];cop=null;if(S.wanted>0)S.wanted--;
+    if(S.rogue&&ROGUE.rent[S.rogue.rank]){const r=ROGUE.rent[S.rogue.rank];S.coins+=r;msgs.push('이웃들이 겁이 나서 자릿세 '+r+'냥을 문 앞에 놓고 갔어요')}}
+  if(S.lore.pal||S.seenPal){if(cupDay())msgs.push('오늘은 임금의 사냥 대회 날이에요! 궁궐 궐문의 무진에게 이름을 올리고 사냥터로 가요');else if(cupOn(S.day+1))msgs.push('내일은 임금의 사냥 대회 날이에요. 기력을 아껴 두세요')}
   S.wild=sea===2?5:4;spawnBeasts();dayStock(msgs);
   if(S.merch)rollOrder();
   if(S.spouse)mateMorning(msgs);
@@ -4238,7 +4920,7 @@ function nextDay(forced){
   {let ripe=0;for(const j of S.jars)if(j&&j.d>0&&--j.d===0)ripe++;if(ripe)msgs.push('장독대에서 '+ripe+'독이 다 익었어요')}
   {let pay=0;for(const k in TRACKS)if(S[k]&&S[k].rank>=1)pay+=TRACKS[k].stipend[S[k].rank];if(pay){S.coins+=pay;msgs.push('나라에서 녹봉 '+pay+'냥을 보내왔어요')}}
   if(S.court&&S.court.rank>=1){const p=COURT.stipend[S.court.rank];S.coins+=p;msgs.push('왕실에서 내탕금 '+p+'냥을 보내왔어요')}
-  if(forced)msgs.push('깜빡 졸아서 집에 돌아와 잠들었어요');
+  if(forced)msgs.push(jailNight?'옥에서 하룻밤을 보내고 풀려났어요. 다시는 그러지 말라는 호통을 들었어요':'깜빡 졸아서 집에 돌아와 잠들었어요');jailNight=false;
   if(S.build){S.house=S.build;S.build=0;msgs.push('새 집 완성! '+HOUSES[S.house-1].n+' · 방이 넓어졌어요');sfx('level')}
   const cf=comfort();if(cf>0){addXp(cf*2);msgs.push('아늑한 집에서 푹 잤어요 · 경험치 +'+cf*2)}
   if(perk('sol')){gain('bread',1);msgs.push('문 앞에 솔이의 빵이 놓여 있어요')}
@@ -4281,7 +4963,7 @@ function closeDlg(){clearTimeout(dlgTimer);dlgState=null;$('dlg').hidden=true;$(
 // 살아갈 길(수라간·궁중 예법·장사·무예·글공부)은 처음부터 알려 주지 않는다. 이웃이 때가 됐을 때 들려주는 소문으로 그런 길이 있다는 것을 알고(S.lore[k]=1),
 // 그 길의 스승에게 다음 자리의 조건을 물어 들으면(S.lore['n'+k]=그 자리 번호) 신분 창에 적힌다. pal은 북쪽 길 끝이 궁궐이라는 이야기
 const ROUTES=['cook','court','merch','mil','civ'];
-const routeOf=k=>k==='cook'?S.job:k==='court'?S.court:k==='merch'?S.merch:k==='mil'||k==='civ'?S[k]:null;
+const routeOf=k=>k==='cook'?S.job:k==='court'?S.court:k==='merch'?S.merch:k==='mil'||k==='civ'||k==='rogue'?S[k]:null;
 const heard=k=>!!(routeOf(k)||S.lore[k]);
 function hear(k,quiet){if(S.lore[k])return;S.lore[k]=1;touch();if(!quiet){setTimeout(()=>toast('새 이야기를 들었어요. 아래 "신분"에 적어 뒀어요'),600);sfx('pick')}}
 const told=(k,r)=>(S.lore['n'+k]|0)>=r;
@@ -4293,9 +4975,14 @@ const RUMORS=[
   ['hut','moru',()=>!!S.camp&&!S.diy,'새로 온 젊은이로구먼. 집도 없이 짚자리에서 잔다고? 딱하지. 나무 여덟 개만 해 오게. 움막 하나쯤은 삯 없이 거들어 주겠네. "짓기·고치기"로 말하게.'],
   ['gear','moru',()=>S.level>=2||S.kills>=1,'연장만 벼리는 줄 아나? 가죽이나 쇳돌을 가져오면 몸에 걸칠 장비도 지어 주지. 짐승을 잡다 보면 쓸 만한 게 떨어지기도 하고 말일세.'],
   ['merch','moru',()=>S.level>=3||sv('trade')>=1,'은하가 가게 일 거들 눈썰미 있는 사람을 찾는 눈치더구먼. 장사에 뜻이 있거든 한번 물어보게.'],
+  ['rogue','dami',()=>S.level>=3||S.day>=6,'있잖아, 밤에 남의 집 문짝을 부수고 달아나는 못된 사람들이 있대! 이웃집 문 앞에서 행동하면… 아, 아니야! 포졸 아저씨한테 잡히면 옥에 갇힌댔어. 나는 그런 거 안 해!'],
   ['civ','dami',()=>S.level>=3||sv('lore')>=1,'훈장 할아버지가 서당에서 글 배울 제자를 찾는대! 나는 도망쳤지만!'],
   ['cook','sol',()=>S.lore.pal&&(S.level>=3||sv('cook')>=1),'궁궐 수라간에서 손끝 야무진 사람을 찾는대요. 수라간 앞에 계신 연 상궁이라는 분이 사람을 보신대요.'],
   ['bridge','parang',()=>S.level>=2||S.day>=3,'개울 건너편에 가려고 다리까지 빙 돌아가지? 모루 아저씨한테 다리 재목을 부탁해 봐. 네가 놓고 싶은 개울가에 다리를 놓을 수 있어.'],
+  ['hunt','parang',()=>(S.kills|0)>=1||S.level>=3,'사냥터 들머리에 사냥꾼들이 소식을 붙여 두는 방이 있어. 날마다 사냥감이 하나씩 붙는데, 다 잡아 오면 삯을 쳐 준대. 많이 잡으면 이름도 올려 준다더라.'],
+  ['deep','parang',()=>S.level>=4,'사냥터 숲 동쪽 길 끝까지 가 봤어? 그 너머가 깊은 산이야. 여우랑 늑대가 살고, 더 깊은 데는 곰도 있대. 레벨이 여섯은 돼야 들여보내 준다더라.'],
+  ['cup','parang',()=>S.lore.pal&&((S.kills|0)>=3||S.level>=4),'임금님이 열흘에 한 번 사냥 대회를 여신대. 궁궐 궐문의 무진 나리한테 이름을 올리면 그날 잡은 짐승으로 겨룬다더라. 으뜸을 하면 임금님 활을 받는대!'],
+  ['trib','eunha',()=>S.lore.pal&&S.level>=3,'궁궐 정전 앞에서는 철마다 진상을 받는답니다. 궁에서 찾는 물건을 바치면 공이 쌓이고, 임금님께서 귀한 물건을 내려 주신대요. 정전 문 앞에 가 보세요.'],
   ['mil','parang',()=>S.lore.pal&&(S.level>=4||S.kills>=3||sv('arms')>=1),'궁궐 궐문을 지키는 무진이라는 무관 알아? 활 잘 쏘는 사람을 눈여겨본다더라. 사냥 좀 해 봤으면 가 봐.'],
   ['court','hun',()=>S.lore.pal&&(S.level>=4||sv('grace')>=2),'중전마마께서는 몸가짐 바른 이를 곁에 두고 궁중의 법도를 가르치신다 하더구나. 뜻이 있거든 찾아뵙거라.']
 ];
@@ -4307,7 +4994,7 @@ const RELICS={
   r_flower:{n:'꽃놀이 한복',k:'fit',at:'town'},r_lantern:{n:'청사초롱',k:'furn',at:'town'},c_pouch:{n:'약초 주머니',k:'charm',at:'town',d:'기력 최대치가 10 늘어요'},
   r_moon:{n:'달빛 도포',k:'fit',at:'wild'},r_tigerpic:{n:'까치호랑이 그림',k:'furn',at:'wild'},c_feather:{n:'매 깃 살깃',k:'charm',at:'wild',d:'사냥할 때 과녁이 커져요'},c_bell:{n:'솔방울 방울',k:'charm',at:'wild',d:'들짐승이 한 칸 더 가까이 가야 달아나요'},
   r_sea:{n:'물빛 한복',k:'fit',at:'sea'},r_celadon:{n:'청자 매병',k:'furn',at:'sea'},r_pearl:{n:'진주 조개',k:'furn',at:'sea'},
-  r_gold:{n:'금박 예복',k:'fit',at:'cave'},r_crystal:{n:'수정 원석',k:'furn',at:'cave'},c_claw:{n:'범 발톱 노리개',k:'charm',at:'cave',d:'범이 덮쳐도 기력을 절반만 잃어요'}
+  r_gold:{n:'금박 예복',k:'fit',at:'cave'},r_crystal:{n:'수정 원석',k:'furn',at:'cave'},c_claw:{n:'범 발톱 노리개',k:'charm',at:'cave',d:'범 같은 사나운 짐승이 덮쳐도 기력을 절반만 잃어요'}
 };
 const RELIC_AT={town:'마을의 반짝이는 곳',wild:'사냥터의 반짝이는 곳',sea:'먼바다 섬의 반짝이는 곳',cave:'동굴의 반짝이는 곳'};
 const DIG_GOODS={town:[['iron',1],['yeot',2],['ginseng',1]],wild:[['ginseng',1],['antler',1],['hide',2]],sea:[['abalone',2],['mineo',1],['shell',3]],cave:[['silver',1],['jade',1],['iron',3]]};
@@ -4317,20 +5004,21 @@ function rollGlints(){
   if(S.glints&&S.glints.day===S.day)return;
   const rng=mulberry((S.day*7919+townSeed*31+5)>>>0),take=(list,n)=>{const a=list.slice(),out=[];for(let i=0;i<n&&a.length;i++)out.push(a.splice(Math.floor(rng()*a.length),1)[0].slice());return out};
   const far=TOWN.GRASS.filter(([x,y])=>!(x>=FARM[0]&&x<=FARM[2]&&y>=FARM[1]&&y<=FARM[3])&&Math.abs(x-SPAWN[0])+Math.abs(y-SPAWN[1])>8&&!BLD.some(b=>Math.abs(x-b.door[0])+Math.abs(y-b.door[1])<3));
-  S.glints={day:S.day,town:take(far,1),wild:take(WILD.GRASS.filter(q=>q[0]>14),2),sea:take(SEA.SAND,2)};
+  S.glints={day:S.day,town:take(far,1),wild:take(WILD.GRASS.filter(q=>q[0]>14&&!(Math.abs(q[0]-HUNT_AT[0])<2&&Math.abs(q[1]-HUNT_AT[1])<3)),2),sea:take(SEA.SAND,2),deep:take(DEEP.GRASS.filter(q=>q[0]>12),2)};
 }
-const glintsNow=()=>scene==='cave'?(cave&&cave.glint?[cave.glint]:[]):(S.glints&&S.glints[scene])||[];
+const glintKey=()=>scene==='wild'&&wz?'deep':scene; /* 깊은 산의 반짝이는 곳은 따로 둔다 (나오는 것은 사냥터와 같다) */
+const glintsNow=()=>scene==='cave'?(cave&&cave.glint?[cave.glint]:[]):(S.glints&&S.glints[glintKey()])||[];
 function glintHere(){const g=glintsNow();for(let i=0;i<g.length;i++)if(g[i][0]===P.x&&g[i][1]===P.y)return i;return-1}
 let dig=null;
 function digPress(){
   const i=glintHere();if(i<0)return false;
-  const key=scene+P.x+','+P.y;if(!dig||dig.k!==key)dig={k:key,n:0};
+  const key=glintKey()+P.x+','+P.y;if(!dig||dig.k!==key)dig={k:key,n:0};
   if(dig.n===0&&!useEn(2))return true;
   dig.n++;sfx('chop');
   if(dig.n<3){float('파는 중… '+dig.n+'/3');return true}
   dig=null;const area=scene;
   if(area==='cave'){if(!S.caveDug||S.caveDug.day!==S.day)S.caveDug={day:S.day,f:[]};S.caveDug.f.push(cave.floor);cave.glint=null}
-  else S.glints[area].splice(i,1);
+  else S.glints[glintKey()].splice(i,1);
   digLoot(area);return true;
 }
 function digLoot(area){
@@ -4428,6 +5116,20 @@ const GEAR={
   h_old:{n:'옛 장수의 투구',s:'h',g:2,lv:11,fx:{en:12,guard:.2},dig:'wild',look:{hat:'helm'}},
   a_seal:{n:'물개 가죽 옷',s:'a',g:1,lv:7,fx:{en:16,spd:.03},dig:'sea',look:{top:'#5a6870',rib:'#dfe9ee'}},
   s_gilt:{n:'금박 신',s:'s',g:3,lv:13,fx:{spd:.12,luck:.05},dig:'cave',look:{shoe:'#f7d24a'}},
+  // 깊은 산의 짐승에게서 나오거나 그 전리품으로 짓는 것, 사냥꾼의 이름이 나면 받는 것(find:'hunt')
+  t_foxtail:{n:'여우 꼬리 노리개',s:'t',g:1,lv:6,fx:{luck:.07,spd:.03},drop:['fox',.1],look:{gem:'#f08a2a'}},
+  a_fox:{n:'여우 털 배자',s:'a',g:1,lv:6,fx:{en:15,spd:.04},need:{foxfur:3,hide:2},cost:600,look:{top:'#e58a3a',rib:'#fff7ea'}},
+  w_fang:{n:'늑대 이빨 화살',s:'w',g:2,lv:8,fx:{aim:1.6,dmg:1},need:{fang:4,wood:6,feather:3},cost:1000,look:{bow:'#cfd6dc'}},
+  h_wolf:{n:'늑대 털 모자',s:'h',g:2,lv:8,fx:{en:10,guard:.15},drop:['wolf',.07],look:{hat:'cap'}},
+  a_bear:{n:'곰 가죽 갑옷',s:'a',g:2,lv:10,fx:{en:26,guard:.45},need:{bearhide:3,iron:6},cost:1800,look:{top:'#4a3528',rib:'#c9a86a'}},
+  s_bear:{n:'곰 털 가죽신',s:'s',g:2,lv:10,fx:{spd:.1,en:8},drop:['bear',.12],look:{shoe:'#4a3528'}},
+  w_tuskbow:{n:'대왕 엄니 활',s:'w',g:3,lv:13,fx:{aim:2.4,dmg:1,guard:.1},need:{tusk:1,antler:2,silver:2},cost:2600,look:{bow:'#fff7ea'}},
+  t_hunter:{n:'사냥꾼의 뿔피리',s:'t',g:2,lv:1,fx:{aim:.8,luck:.05},find:'hunt',look:{gem:'#b98a5a'}},
+  // 임금의 사냥 대회에서 받는 것(find:'cup')과 진상으로 공을 쌓아 받는 것(find:'trib')
+  h_cup:{n:'대회 깃 전립',s:'h',g:2,lv:1,fx:{aim:.7,xp:.04},find:'cup',look:{hat:'jeonrip'}},
+  w_royal:{n:'어사궁',s:'w',g:3,lv:1,fx:{aim:2,dmg:1,xp:.04},find:'cup',look:{bow:'#c8392f'}},
+  t_okdae:{n:'하사받은 옥 노리개',s:'t',g:3,lv:1,fx:{luck:.08,en:10,xp:.04},find:'trib',look:{gem:'#8fd6b0'}},
+  a_royal:{n:'임금이 내린 두정갑',s:'a',g:3,lv:8,fx:{en:30,guard:.5,aim:.5},find:'trib',look:{top:'#a8324a',rib:'#f7d24a'}},
   // 길마다 다른 장비: 그 길에 들어서면(rank 0) 손에 드는 것을, 자리가 오를 때마다(rank 1·2) 옷과 장신구를 스승에게 받는다. 짓거나 주울 수 없다.
   // 그 길의 일에 듣는 효과: cook 요리할 때 알맞은 불의 폭, friend 가까워지는 빠르기(비율), sell 파는 값(비율). ic는 그림 종류
   c_knife:{n:'수라간 식칼',s:'w',g:1,lv:1,route:'cook',rank:0,fx:{cook:.012},ic:'knife'},
@@ -4460,9 +5162,13 @@ const GEAR={
   k_great:{n:'대장 각궁',s:'w',g:3,lv:1,route:'mil',rank:2,fx:{aim:2.2,dmg:1},look:{bow:'#2e2a5a'}},
   v_shoe:{n:'선비 가죽신',s:'s',g:1,lv:1,route:'civ',rank:0,fx:{xp:.02,spd:.04},look:{shoe:'#3a2a22'}},
   v_hat:{n:'선비 갓',s:'h',g:2,lv:1,route:'civ',rank:1,fx:{xp:.05},look:{hat:'gat'}},
-  v_ink:{n:'용 벼루',s:'w',g:3,lv:1,route:'civ',rank:2,fx:{xp:.1},ic:'inkstone'}
+  v_ink:{n:'용 벼루',s:'w',g:3,lv:1,route:'civ',rank:2,fx:{xp:.1},ic:'inkstone'},
+  // 나쁜 길(왈패)의 장비: 악명이 쌓여 자리가 오를 때마다 손에 들어온다
+  x_shoe:{n:'밤도둑 버선신',s:'s',g:1,lv:1,route:'rogue',rank:0,fx:{spd:.08},look:{shoe:'#2a2a30'}},
+  x_coat:{n:'왈패 가죽 조끼',s:'a',g:2,lv:1,route:'rogue',rank:1,fx:{en:14,guard:.2,spd:.03},look:{top:'#3a2a22',rib:'#c8392f'}},
+  x_ring:{n:'두목의 쇠고리 목걸이',s:'t',g:3,lv:1,route:'rogue',rank:2,fx:{luck:.1,spd:.05},look:{gem:'#6a7178'}}
 };
-const FIND_AT={fresh:'민물 낚시',sea:'바다 낚시',deep:'먼바다 낚시',mine:'바위 캐기',vein:'동굴 광맥',chop:'소나무 베기',shake:'과일나무 흔들기',fest:'명절 잔치의 상',quest:'이웃의 부탁'};
+const FIND_AT={fresh:'민물 낚시',sea:'바다 낚시',deep:'먼바다 낚시',mine:'바위 캐기',vein:'동굴 광맥',chop:'소나무 베기',shake:'과일나무 흔들기',fest:'명절 잔치의 상',quest:'이웃의 부탁',hunt:'사냥꾼의 이름',cup:'임금의 사냥 대회',trib:'진상의 하사품'};
 // 일하다가 장비를 얻는다: 그 일(src)에서 나오는 것 가운데 아직 없는 것이 운(p)에 따라 나온다. quiet면 알리지 않고 id만 돌려준다(부르는 쪽이 말에 넣는다)
 function gearFind(src,p,how,quiet){
   const pool=Object.keys(GEAR).filter(k=>GEAR[k].find===src&&!S.gear.own[k]);
@@ -4471,7 +5177,7 @@ function gearFind(src,p,how,quiet){
   if(!quiet)setTimeout(()=>{if(!S)return;if(busy()||mg||fishing)toast(how+' '+jo(GEAR[id].n,'을','를')+' 얻었어요! "장비"에서 걸쳐요');else gearSay(id,how)},900);
   return id;
 }
-const ROUTE_N={cook:'수라간',court:'궁중 예법',merch:'장사',mil:'무예',civ:'글공부'};
+const ROUTE_N={cook:'수라간',court:'궁중 예법',merch:'장사',mil:'무예',civ:'글공부',rogue:'왈패'};
 const gearReq=G=>G.route?ROUTE_N[G.route]+'의 길':'레벨 '+G.lv+'부터';
 // 길의 장비 받기: 그 길에 들어서 있고 자리가 장비의 자리(rank) 이상인데 아직 없는 것이 있으면 받는다. hud()에서 틈틈이 살핀다(자리 오르는 곳마다 손대지 않으려고)
 function syncRouteGear(quiet){
@@ -4484,7 +5190,7 @@ function syncRouteGear(quiet){
   }
 }
 const GEAR_SLOTS=[['w','무기·도구'],['a','갑옷·옷'],['h','쓰개'],['s','신발'],['t','장신구']],GEAR_GRADE=['수수한','쓸 만한','귀한','으뜸'],GEAR_COL=['#8a7a5a','#3f8fc4','#8a63c9','#dd6a1c'];
-const FX_TXT={aim:v=>'사냥 과녁 +'+v,dmg:v=>'화살 힘 +'+v,en:v=>'기력 최대치 +'+v,spd:v=>'걷는 빠르기 +'+Math.round(v*100)+'%',guard:v=>'범에게 덜 다침 '+Math.round(v*100)+'%',luck:v=>'귀한 것이 나올 운 +'+Math.round(v*100)+'%',xp:v=>'경험치 +'+Math.round(v*100)+'%',
+const FX_TXT={aim:v=>'사냥 과녁 +'+v,dmg:v=>'화살 힘 +'+v,en:v=>'기력 최대치 +'+v,spd:v=>'걷는 빠르기 +'+Math.round(v*100)+'%',guard:v=>'사나운 짐승에게 덜 다침 '+Math.round(v*100)+'%',luck:v=>'귀한 것이 나올 운 +'+Math.round(v*100)+'%',xp:v=>'경험치 +'+Math.round(v*100)+'%',
   cook:v=>'요리 불의 폭 +'+Math.round(v/.12*100)+'%',friend:v=>'가까워지는 빠르기 +'+Math.round(v*100)+'%',sell:v=>'파는 값 +'+Math.round(v*100)+'%'};
 const gearFx=k=>{let v=0;if(S&&S.gear)for(const s in S.gear.on){const G=GEAR[S.gear.on[s]];if(G&&G.fx[k])v+=G.fx[k]}return v};
 const gearTxt=id=>Object.keys(GEAR[id].fx).map(k=>FX_TXT[k](GEAR[id].fx[k])).join(' · ');
@@ -4627,7 +5333,10 @@ const GEAR_DESC={
   h_blossom:'꽃 핀 가지를 엮은 화관. 쓰면 이웃들이 반가워해요.',t_yut:'윷가락 모양 노리개. 명절 잔치에서 이긴 사람만 받아요.',s_swing:'그네 뛸 때 신는 붉은 비단신. 잔치의 상이에요.',
   a_gift:'이웃이 손수 지어 준 솜옷. 마음까지 따뜻해요.',s_gift:'이웃이 삼아 준 미투리. 걸을 때마다 고마움이 떠올라요.',
   t_rabbit:'토끼 발 모양 부적. 지니면 운이 좋아진대요.',w_tusk:'멧돼지 엄니를 촉으로 단 화살. 묵직하게 꽂혀요.',s_pheasant:'꿩 깃으로 꾸민 꽃신. 발걸음이 가벼워져요.',h_antler:'사슴뿔을 단 투구. 쓰면 숲과 한 몸이 된 듯해요.',
-  a_stripe:'범 무늬를 넣은 도포. 범과 맞선 사람만 입을 수 있어요.',w_old:'땅속에 묻혀 있던 옛 활. 녹슬었어도 아직 쓸 만해요.',h_old:'옛 장수가 쓰던 투구. 깊은 숲에 묻혀 있었어요.',a_seal:'물개 가죽으로 지은 옷. 물에 젖지 않고 가벼워요.',s_gilt:'금박을 입힌 신. 동굴 깊은 곳에서 빛나고 있었어요.',
+  a_stripe:'범 무늬를 넣은 도포. 범과 맞선 사람만 입을 수 있어요.',
+  t_foxtail:'여우 꼬리로 만든 노리개. 걸음이 가벼워지고 운도 따라요.',a_fox:'여우 털을 덧댄 배자. 가볍고 따뜻해서 산바람에도 끄떡없어요.',w_fang:'늑대 이빨을 촉으로 단 화살. 한 대만 맞아도 깊이 박혀요.',h_wolf:'늑대 털로 지은 모자. 쓰면 무리의 우두머리 같아 보여요.',
+  a_bear:'곰 가죽을 통으로 지은 갑옷. 웬만한 앞발에는 꿈쩍도 안 해요.',s_bear:'곰 털을 안에 댄 가죽신. 눈밭도 성큼성큼 걸어요.',w_tuskbow:'대왕 멧돼지의 엄니를 깎아 만든 활. 산을 다스린 사냥꾼의 것이에요.',t_hunter:'사냥꾼들이 이름난 이에게 건네는 뿔피리. 불면 손이 떨리지 않아요.',
+  h_cup:'사냥 대회에서 이름을 올린 사람이 쓰는 전립. 깃이 바람에 날려요.',w_royal:'임금이 으뜸 사냥꾼에게 내리는 붉은 활. 쥐는 것만으로도 영광이에요.',t_okdae:'임금이 내린 옥 노리개. 나라에 공을 세운 사람의 표시예요.',a_royal:'쇠 못을 촘촘히 박은 붉은 갑옷. 임금이 믿는 이에게만 내려요.',w_old:'땅속에 묻혀 있던 옛 활. 녹슬었어도 아직 쓸 만해요.',h_old:'옛 장수가 쓰던 투구. 깊은 숲에 묻혀 있었어요.',a_seal:'물개 가죽으로 지은 옷. 물에 젖지 않고 가벼워요.',s_gilt:'금박을 입힌 신. 동굴 깊은 곳에서 빛나고 있었어요.',
   c_knife:'수라간에 들어서며 받은 식칼. 칼질이 고르면 불 맞추기도 쉬워요.',c_apron:'수라간의 흰 앞치마. 두르면 솜씨가 한결 나아져요.',c_spoon:'은수저 모양 노리개. 수라간 으뜸 자리의 표시예요.',
   q_fan:'예법을 배울 때 드는 부채. 몸가짐이 고와져요.',q_dang:'궁중에서 입는 당의. 입으면 말씨도 고와져요.',q_pin:'봉황을 새긴 비녀. 가장 높은 자리의 표시예요.',
   m_abacus:'박달나무 주판. 셈이 빨라 값을 잘 받아요.',m_vest:'객주에서 입는 배자. 장사꾼의 믿음직한 차림이에요.',m_seal:'거상의 인장. 찍으면 어디서든 값을 쳐줘요.',
@@ -4637,18 +5346,19 @@ const GEAR_DESC={
   q_shoe:'궁중에서 신는 당혜. 걸음걸이가 얌전해져요.',q_hat:'궁중 예복에 쓰는 족두리. 쓰면 모두가 눈여겨봐요.',q_scroll:'임금의 뜻이 적힌 두루마리. 가장 높은 자리의 표시예요.',
   m_hat:'장사꾼이 쓰는 패랭이. 먼 길 볕을 가려 줘요.',m_shoe:'보부상이 신는 질긴 미투리. 먼 장터도 금방이에요.',m_scale:'은으로 만든 저울. 한 치도 틀리지 않아 믿고 사 가요.',
   k_boot:'군관이 신는 검은 목화. 달려도 벗겨지지 않아요.',k_hat:'군관이 쓰는 전립. 쓰면 겨눔이 흔들리지 않아요.',k_great:'대장만 쥐는 각궁. 화살이 바위도 뚫는대요.',
+  x_shoe:'발소리가 나지 않는 검은 버선신. 달아날 때 요긴해요.',x_coat:'왈패들이 걸치는 질긴 가죽 조끼. 멱살을 잡혀도 끄떡없어요.',x_ring:'두목만 거는 쇠고리 목걸이. 보기만 해도 다들 길을 비켜요.',
   v_shoe:'선비가 신는 가죽신. 서당 가는 길이 가벼워요.',v_hat:'선비의 갓. 쓰면 몸가짐이 반듯해져요.',v_ink:'용을 새긴 벼루. 먹을 갈면 글이 절로 나와요.'
 };
-const FX_WHY={aim:'사냥할 때 과녁이 넓어져 맞히기 쉬워요',dmg:'화살 한 대가 짐승의 기운을 더 많이 깎아요',en:'기력이 더 많이 차서 하루에 더 많은 일을 해요',spd:'더 빨리 걸어요',guard:'범이 덮쳤을 때 기력을 덜 잃어요 (걸친 것을 모두 합쳐 75%까지)',
+const FX_WHY={aim:'사냥할 때 과녁이 넓어져 맞히기 쉬워요',dmg:'화살 한 대가 짐승의 기운을 더 많이 깎아요',en:'기력이 더 많이 차서 하루에 더 많은 일을 해요',spd:'더 빨리 걸어요',guard:'범·늑대·곰 같은 사나운 짐승이 덮쳤을 때 기력을 덜 잃어요 (걸친 것을 모두 합쳐 75%까지)',
   luck:'보물과 장비가 더 잘 나와요',xp:'무엇을 하든 경험치를 더 받아요',cook:'요리할 때 알맞은 불의 폭이 넓어져 맛있게 익히기 쉬워요',friend:'이웃과 더 빨리 가까워져요',sell:'물건을 더 비싼 값에 팔아요'};
 // 얻는 곳을 풀어서 적는다. 아직 모르는 것(full이 아님)은 재료나 확률 없이 곳만
 function gearWhere(id,full){
   const G=GEAR[id],a=[];
-  if(G.route)a.push(ROUTE_N[G.route]+'의 길: '+['그 길에 들어서면','자리가 한 번 오르면','가장 높은 자리에 오르면'][G.rank]+' 스승이 내어 줘요');
+  if(G.route)a.push(ROUTE_N[G.route]+'의 길: '+['그 길에 들어서면','자리가 한 번 오르면','가장 높은 자리에 오르면'][G.rank]+(G.route==='rogue'?' 손에 들어와요':' 스승이 내어 줘요'));
   if(G.need)a.push('대장간: 모루에게 "장비 짓기"를 부탁해 두드려 지어요'+(full?' ('+Object.keys(G.need).map(k=>(ITEMS[k]?ITEMS[k].n:k)+' '+G.need[k]).join(' · ')+' · 삯 '+won(G.cost)+')':''));
   if(G.drop)a.push('사냥: '+jo(BEASTS[G.drop[0]].n,'을','를')+' 잡으면 가끔 떨어뜨려요');
   if(G.dig)a.push('땅 파기: '+RELIC_AT[G.dig]+'을 파면 드물게 나와요');
-  if(G.find)a.push(G.find==='fest'?'명절: 잔치 놀이에서 이기면 상으로 받아요':G.find==='quest'?'부탁: 이웃의 부탁을 들어주다 보면 고마움의 뜻으로 받아요':FIND_AT[G.find]+': 하다 보면 가끔 딸려 나와요');
+  if(G.find)a.push(G.find==='fest'?'명절: 잔치 놀이에서 이기면 상으로 받아요':G.find==='quest'?'부탁: 이웃의 부탁을 들어주다 보면 고마움의 뜻으로 받아요':G.find==='hunt'?'사냥 방: 짐승을 많이 잡아 【'+HRANK[3][1]+'】의 이름을 얻으면 받아요':G.find==='cup'?'임금의 사냥 대회: '+(id==='w_royal'?'으뜸을 하면':'셋째 안에 들면')+' 상으로 받아요':G.find==='trib'?'진상: 궁궐 정전 앞에서 진상을 올려 공을 쌓으면 임금이 내려요':FIND_AT[G.find]+': 하다 보면 가끔 딸려 나와요');
   return a;
 }
 const LOOK_TXT={w:'등에 활을 메요',a:'저고리 빛깔과 띠가 바뀌어요',h:'머리에 써요',s:'신 빛깔이 바뀌어요',t:'가슴에 노리개가 달려요'};
@@ -4800,7 +5510,7 @@ function talk(id){
   if(id==='yeon')ch.push(['수라간 일',kitchenTalk]);
   if(id==='queen')ch.push(['궁중 일',courtTalk]);
   if(id==='eunha')ch.push(['장사 일',tradeTalk]);
-  if(id==='mujin')ch.push(['무예 일',()=>trackTalk('mil')]);
+  if(id==='mujin'){ch.push(['무예 일',()=>trackTalk('mil')]);ch.push([cupDay()?'오늘 사냥 대회':'사냥 대회',cupTalk])}
   if(id==='hun')ch.push(['글공부',()=>trackTalk('civ')]);
   // 혼인할 수 있는 이웃과 ♥4가 되면 청혼할 수 있다
   if(d.wed&&!S.spouse&&h>=4)ch.push(['청혼하기',()=>propose(id)]);
@@ -4969,6 +5679,7 @@ function openShop(tab){
 }
 function openFriends(){
   openModal('이웃',body=>{
+    {const t=el('div','tabs'),b=el('button','btn'+(mailNew()?' pri':''),'편지함'+(mailNew()?' (새 편지 '+mailNew()+'통)':S.mail.length?' ('+S.mail.length+'통)':''));b.type='button';b.onclick=openMail;t.appendChild(b);body.appendChild(t)}
     for(const id of NPC_IDS){
       // 궁궐 사람들은 궁궐에 한 번 다녀온 뒤부터 적힌다
       if(NPCS[id].at==='palace'){if(!S.seenPal)continue;if(id==='king')body.appendChild(el('p','sub','궁궐'))}
@@ -5065,7 +5776,9 @@ function openHelp(){
       '사냥터: 마을 큰길을 따라 동쪽 끝까지 가면 깊은 숲 사냥터로 나가요. 짐승이 훨씬 많고 범과 산삼도 있어요. 서쪽 길로 돌아오면 마을이에요.',
       '이름 바꾸기: 아래 "신분" 창 맨 위의 "이름 바꾸기"에서 내 이름을 언제든 바꿀 수 있어요. 아이 이름도 같은 창의 가족 칸에서 바꿔요.',
       '옷장: 옷장 버튼에서 남자·여자 모습과 옷을 바꿔요. 새 옷은 은하 만물상의 옷 칸에서 사요.',
-      '사냥: 들짐승은 가까이 가면 달아나요. 서너 칸 떨어져 일직선에 서서 행동 → 흔들리는 과녁이 짐승에 겹칠 때 한 번 더. 전리품은 지나가면서 주워요.',
+      '사냥: 들짐승은 가까이 가면 달아나요. 서너 칸 떨어져 일직선에 서서 행동 → 흔들리는 과녁이 짐승에 겹칠 때 한 번 더. 전리품은 지나가면서 주워요. 짐승마다 과녁이 흔들리는 모양이 다르고, 놓치지 않고 이어서 잡으면 경험치가 더 붙어요.',
+      (S.lore.hunt||(S.kills|0)>0)&&'사냥 방: 사냥터 들머리의 방에 날마다 내 레벨에 맞는 사냥감이 하나 붙어요. 다 잡고 방에 가면 삯을 받아요. 짐승을 많이 잡으면 사냥꾼의 이름이 오르고 과녁이 조금씩 커져요. 방에서 짐승마다 알맞은 레벨도 볼 수 있어요.',
+      (S.lore.deep||S.seenDeep)&&'깊은 산: 사냥터 숲의 동쪽 길 끝으로 가면 깊은 산이에요(레벨 '+DEEP_LV+'부터). 여우는 멀리서도 달아나고, 늑대는 무리 지어 쫓아와 물어요. 레벨이 오르면 곰과 대왕 멧돼지도 나타나요. 곰과 대왕 멧돼지는 건드리거나 바짝 다가가기 전에는 덤비지 않아요. 대왕 멧돼지가 나타난 날에는 땅에 발자국이 이어져 있어요.',
       '계절: 7일마다 바뀌어요. 심을 수 있는 작물, 잡히는 물고기, 주울 것, 들짐승이 계절마다 달라요. 겨울엔 밭과 과일나무가 쉬어요.',
       '도감: 처음 얻은 것은 도감에 적혀요. 한 갈래를 다 채우면 상금을 받아요.',
       canP2P()?'같이 하기: 같이 하기 버튼에서 방 이름을 정해 들어가고, 친구도 같은 방 이름으로 들어오면 서로의 마을에 나타나요. 방에 들어가면 나오는 초대 주소를 보내도 돼요. 친구를 눌러 인사·선물하고, 같이 하기 버튼으로 말을 걸어요. 마을은 각자 따로 키워요.'
@@ -5077,6 +5790,11 @@ function openHelp(){
       '살아갈 길: 처음부터 정해진 길은 없어요. 이웃과 이야기를 나누다 보면 때가 됐을 때 새로운 일과 자리 이야기를 들려줘요. 들은 이야기는 "신분"에 적히고, 더 높은 자리로 가는 길은 그 일을 가르쳐 주는 사람에게 물어봐요.',
       (S.lore.gear||Object.keys(S.gear.own).length>0)&&'장비: 무기·갑옷·쓰개·신발·장신구 다섯 칸에 걸쳐요. 아래 "장비"에서 걸치거나 바꾸고, 아직 못 구한 것은 어디서 나오는지 볼 수 있어요. 모루에게 "장비 짓기"로 재료를 대고 두드려 짓거나, 짐승을 잡거나, 반짝이는 곳을 파서 구해요. 낚시·나무 베기·바위 캐기·과일나무 흔들기를 하다가 딸려 나오기도 하고, 명절 잔치의 상이나 이웃의 부탁으로 받기도 해요. 갑옷과 쓰개는 걸치면 모습도 바뀌어요.',
       (S.seenPal||S.lore.pal)&&'궁궐: 마을 북쪽(만물상 옆) 길 끝으로 가면 한양 궁궐이에요. 궁 안 사람들과도 인사와 선물로 친해져요. 남쪽 궐문으로 나오면 마을이에요.',
+      '가꾸기: 마을에서 도구줄의 "가꾸기"를 눌러 꽃밭(들꽃 1개), 나무 울타리(나무 1개), 장명등(나무 2개와 40냥)을 골라요. 가까운 풀밭 칸을 누르거나 바라보고 행동하면 놓이고, 놓인 것을 누르면 거둬요(울타리와 장명등은 재료를 돌려받아요). 꽃밭은 밟고 지나가고, 울타리는 옆 울타리와 이어지고, 장명등은 밤에 불이 켜져요. 많이 가꾸면 아침마다 경험치를 조금 받고 이웃들도 좋아해요.',
+      '이웃과 편지: 마을에서 가까이 있던 이웃이 가끔 먼저 다가와 말을 걸어요(느낌표가 뜨면 잠깐 서서 기다려요). 소문이나 작은 선물을 주기도 해요. 가까운 이웃(♥2부터)과 고향의 어머니는 가끔 편지를 보내요. 집 문 옆 우편함에 깃발이 서면 문 앞에서 행동하거나 "이웃" 창의 편지함에서 읽어요.',
+      rogueKnown()&&'나쁜 길: 이웃집 문 앞에서 행동하면 "못된 짓"을 고를 수 있어요. 문짝 부수기(눈금 맞춰 다섯 번), 불 지르기(나무 2개, 행동을 연타해 불씨 살리기), 담벼락에 실례하기(가만히 서 있기)가 있고, 밤에는 알림판에 낙서도 해요. 할 때마다 악명이 쌓여 건달 → 왈패 → 두목으로 오르고 자릿세를 받아요. 대신 이웃들과 멀어지고 포졸이 쫓아와요. 포졸은 나보다 조금 느리니 달아나거나 집 안·마을 밖으로 숨어요. 잡히면 벌금을 물고 옥에서 하룻밤을 보내요. 상한 집은 며칠 뒤 저절로 고쳐지고, 모루의 "짓기·고치기"에서 바로 고칠 수도 있어요.',
+      S.lore.cup&&'사냥 대회: 열흘에 한 번(3·13·23…일) 임금의 사냥 대회가 열려요. 그날 궁궐 궐문의 무진에게 이름을 올리면 잡는 짐승마다 점수가 쌓여요(센 짐승일수록 높아요). 무진에게 돌아가 마감하면 맞수 셋과 견줘 등수가 정해지고, 가지 않으면 다음 날 아침에 셈해 줘요. 맞수들의 점수는 내 레벨에 맞춰져요.',
+      S.lore.trib&&'진상과 하사품: 궁궐 정전 문 앞에서 행동하면 진상을 올려요. 철마다 궁에서 찾는 물건이 다르고, 바칠 때마다 공이 쌓여요. 공이 차면 임금이 내리는 가구·옷·장비를 받아요. 공은 써서 없어지지 않아요.',
       cntOn()&&'하는 사람 수: 이 주소에서는 몇 명이 하는지 알려고 숫자만 세요(처음 켠 날 한 번, 그리고 날마다 한 번). 이름이나 마을 내용은 보내지 않아요.',
       '신분과 스탯: 레벨이 오르면 점수를 받아 손맛·기품·학식·무예·수완을 올려요. 요리·인사와 선물·도감·사냥·장사를 해도 조금씩 저절로 올라요.',
       '5일장: 닷새마다(5·10·15…일) 만물상 동쪽 마당에 장이 서요. 보부상은 쇳돌·엿·산삼과 장날에만 나오는 가구·옷을 팔아요. 객주에게는 흥정해서 팔아요. 값이 오르는 동안 기다리다 행동으로 값을 부르는데, 눈금이 떨릴 때가 마지막 기회예요. 인기 품목은 30% 더 받아요.',
@@ -5221,9 +5939,9 @@ function begin(st){
   townSeed=-1;buildTown(st.seed>>>0);kidKey=''; // 그 마을의 모양부터 새로 짓는다 (저장의 밭·나무 번호는 그 모양에 맞춰져 있다. 새로 지어야 남의 다리가 남지 않는다)
   S=fixState(st);applyBridges();syncRouteGear(true);started=true;$('title').hidden=true;scene='town';
   // 사냥터에서 저장된 채 끝났더라도 마을에서 다시 시작한다
-  useMap(TOWN);wildBeasts=null;cave=null;if(S.pickTown){if(S.pickups.length){if(S.away==='sea')S.spick=S.pickups;else if(S.away!=='palace')S.wpick=S.pickups}S.pickups=S.pickTown;delete S.pickTown}S.away=null;$('bDeco').hidden=true;warp(SPAWN[0],SPAWN[1],[0,1]);
+  useMap(TOWN);wildBeasts=null;deepBeasts=null;wz=0;huntStreak=0;cop=null;jailNight=false;comer=null;comeCool=rnd(40,80);cave=null;if(S.pickTown){if(S.pickups.length){if(S.away==='sea')S.spick=S.pickups;else if(S.away==='deep')S.dpick=S.pickups;else if(S.away!=='palace')S.wpick=S.pickups}S.pickups=S.pickTown;delete S.pickTown}S.away=null;$('bDeco').hidden=true;warp(SPAWN[0],SPAWN[1],[0,1]);
   // 가축 우리를 지도에 얹고, 새로 생긴 화덕·우리 자리에 남아 있던 주울 것은 치운다
-  crownNames();applyPens();applyWorks();applyMarket();applyFest();rollGlints();dig=null;S.pickups=S.pickups.filter(p=>!(TOWN.objAt[p.y]&&TOWN.objAt[p.y][p.x]));spawnHerd();placing=false;syncPlace();
+  crownNames();applyPens();applyWorks();applyMarket();applyFest();applyYard();garden=null;rollGlints();dig=null;S.pickups=S.pickups.filter(p=>!(TOWN.objAt[p.y]&&TOWN.objAt[p.y][p.x]));spawnHerd();placing=false;syncPlace();
   if(groundSeason!==season())buildGround();
   // 예전 저장에는 모습 정보가 없다: 한 번 옷장을 열어 고르게 한다
   if(!S.sex){S.sex='m';setTimeout(()=>{if(S&&!busy())openWardrobe()},1500)}
@@ -5649,7 +6367,7 @@ function openSay(){
 // ───────── 조작 ─────────
 window.addEventListener('keydown',e=>{
   if(e.target&&e.target.tagName==='INPUT')return;
-  if(e.code==='Escape'){if(!$('modal').hidden)closeModal();else if(decoMode)setDeco(false);else if(placing)stopPlacing();else if(mg&&['rite','eye','study','catch','scoop'].includes(mg.kind)){mgEnd();toast('그만뒀어요')}return}
+  if(e.code==='Escape'){if(!$('modal').hidden)closeModal();else if(decoMode)setDeco(false);else if(placing)stopPlacing();else if(garden){garden=null;syncPlace()}else if(mg&&['rite','eye','study','catch','scoop'].includes(mg.kind)){mgEnd();toast('그만뒀어요')}return}
   if(!started||sleeping)return;
   const go=e.code==='Space'||e.code==='KeyE'||e.code==='Enter';
   if(!$('dlg').hidden){
@@ -5669,7 +6387,10 @@ function dirDown(code,rep){
   if(mg&&mg.kind==='catch'){if(!rep&&q[0])catchMove(q[0]);return}
   if(mg&&mg.kind==='study'){studyMove(q[0],q[1]);return}
   if(mg&&mg.kind==='eye'){if(!rep&&q[0])eyePick(q[0]<0?0:1);return}
-  if(!keys.includes(code))keys.push(code);if(fishing){fishing=null;toast('낚시를 그만뒀어요')}if(mg)mgEnd();
+  // 새로 누른 방향이 언제나 맨 뒤(=지금 가는 방향)로 온다. 떼는 신호를 놓쳐 목록에 남아 있던 키를 다시 눌러도 그쪽으로 간다
+  if(!rep){const i=keys.indexOf(code);if(i>=0)keys.splice(i,1);keys.push(code);tapDir=code;tapT=performance.now()}
+  else if(!keys.includes(code))keys.push(code);
+  if(fishing){fishing=null;toast('낚시를 그만뒀어요')}if(mg)mgEnd();
 }
 window.addEventListener('keyup',e=>{const i=keys.indexOf(e.code);if(i>=0)keys.splice(i,1)});
 window.addEventListener('blur',()=>{keys.length=0;padSet(null);padId=null});
@@ -5680,12 +6401,17 @@ try{padOn=localStorage.getItem('doran-village-keys')!=='0'}catch(e){}
 function padSet(code){
   if(code===padCode)return;
   if(padCode){const i=keys.indexOf(padCode);if(i>=0)keys.splice(i,1)}
-  padCode=code;for(const a of keysEl.children)a.classList.toggle('on',a.dataset.k===code);
-  if(code&&started&&!busy()&&!((mg||fishing)&&performance.now()<guardUntil))dirDown(code,false);
+  padCode=code;padWait=false;for(const a of keysEl.children)a.classList.toggle('on',a.dataset.k===code);
+  // 지금 막혀 있으면 버리지 않고 기다렸다가(updPlayer) 풀리면 받는다. 예전에는 버려서, 누른 채로는 다시 받아 주지 않았다
+  if(code){if(started&&!busy()&&!((mg||fishing)&&performance.now()<guardUntil))dirDown(code,false);else padWait=true}
 }
 function padAim(e){
   const r=keysEl.getBoundingClientRect(),dx=e.clientX-(r.left+r.width/2),dy=e.clientY-(r.top+r.height/2);
-  padSet(Math.hypot(dx,dy)<10?null:Math.abs(dx)>Math.abs(dy)?(dx>0?'ArrowRight':'ArrowLeft'):(dy>0?'ArrowDown':'ArrowUp'));
+  if(Math.hypot(dx,dy)<10){padSet(null);return}
+  let code=Math.abs(dx)>Math.abs(dy)?(dx>0?'ArrowRight':'ArrowLeft'):(dy>0?'ArrowDown':'ArrowUp');
+  // 누르고 있던 방향은 대각선을 조금 넘어가도 그대로 둔다. 엄지가 살짝 미끄러졌다고 옆으로 꺾이지 않게 (뚜렷이 옆 단추로 가야 바뀐다)
+  if(padCode&&code!==padCode){const cur=KEYDIR[padCode],along=dx*cur[0]+dy*cur[1],across=Math.abs(dx*cur[1])+Math.abs(dy*cur[0]);if(along>0&&across<along*1.6)code=padCode}
+  padSet(code);
 }
 const padEnd=e=>{if(e.pointerId===padId){padId=null;padSet(null)}};
 keysEl.addEventListener('pointerdown',e=>{e.preventDefault();if(padId!==null)return;padId=e.pointerId;try{keysEl.setPointerCapture(e.pointerId)}catch(_){}padAim(e)});
@@ -5716,18 +6442,19 @@ function updMini(dt){
 }
 miniEl.addEventListener('click',()=>{if(started&&!sleeping&&!busy())openMap()});
 // 행동 단추의 글자: 지금 누르면 무엇을 하는지 보여 준다. 할 것이 없으면 "행동"이라 쓰인 채 흐려진다
-const ACT_TXT={npc:'말 걸기',rock:'캐기',beast:'사냥',peer:'인사',cave:'들어\n가기',crock:'깨기',ladder:'사다리',deco:'살피기',board:'알림판',soil:'밭일',till:'밭 갈기',stock:'돌보기',kid:'돌보기',
+const ACT_TXT={npc:'말 걸기',rock:'캐기',beast:'사냥',peer:'인사',hboard:'사냥 방',yard:'살피기',cave:'들어\n가기',crock:'깨기',ladder:'사다리',deco:'살피기',board:'알림판',soil:'밭일',till:'밭 갈기',stock:'돌보기',kid:'돌보기',
   pen:'우리',forge:'대장간',stall:'장터',fest:'잔치',shoal:'낚시',bed:'잠자기'};
 function actLabel(){
-  if(mg)return mg.kind==='hunt'?'쏘기':mg.kind==='forge'||mg.kind==='build'?'두드\n리기':'지금!';
+  if(mg)return mg.kind==='hunt'?'쏘기':mg.kind==='forge'||mg.kind==='build'?'두드\n리기':mg.kind==='kindle'?'연타!':mg.kind==='pee'?'쉬…':'지금!';
   if(fishing)return fishing.phase==='bite'?'채기':fishing.phase==='reel'?(fishing.thr===2?'멈춰!':'당기기'):'기다림';
   if(P.t<1)return null; /* 걷는 동안에는 바꾸지 않는다 */
+  if(garden&&scene==='town')return yardAt(P.x+P.dir[0],P.y+P.dir[1])?'거두기':yardOK(P.x+P.dir[0],P.y+P.dir[1])?'놓기':'';
   if(glintHere()>=0)return '파기';
   const f=faceTarget();if(!f)return '';
   const tg=f.tg;
   if(tg.t==='tree')return tg.k==='pine'?'베기':'흔들기';
   if(tg.t==='water')return scene==='palace'?'':S.kit>0&&!tg.sea&&bridgeSpan()?'다리\n놓기':'낚시';
-  if(tg.t==='bld')return tg.b.id==='home'?(S.camp?'눕기':'들어\n가기'):tg.b.id==='shop'?'가게':tg.b.pal?'들어\n가기':'똑똑';
+  if(tg.t==='bld')return tg.b.id==='home'?(S.camp?'눕기':'들어\n가기'):tg.b.id==='shop'?'가게':tg.b.pal?(tg.b.id==='hall'?'진상':tg.b.id==='kitchen'?'수라간':tg.b.id==='pav'?'쉬기':'살피기'):'똑똑';
   if(tg.t==='work')return workDone(tg.k)?(tg.k==='boat'?'배 타기':'쓰기'):'짓기';
   if(tg.t==='furn')return tg.f.id==='agungi'?'요리':'살피기';
   return ACT_TXT[tg.t]||'행동';
@@ -5752,6 +6479,7 @@ cv.addEventListener('pointerdown',e=>{
   const r=cv.getBoundingClientRect(),wx=(e.clientX-r.left)/zoom+cam.x,wy=(e.clientY-r.top)/zoom+cam.y;
   if(decoMode){decoClick(Math.floor(wx/T),Math.floor(wy/T));return}
   if(placing&&scene==='town'){placeClick(Math.floor(wx/T),Math.floor(wy/T));return}
+  if(garden&&scene==='town'&&!mg&&!fishing){gardenClick(Math.floor(wx/T),Math.floor(wy/T));return}
   if(mg&&mg.kind==='rite'){riteClick(wx,wy);return}
   if(mg&&mg.kind==='eye'){eyeClick(wx,wy);return}
   if(mg&&mg.kind==='study'){studyClick(wx,wy);return}
@@ -5770,6 +6498,7 @@ const tool=(id,fn)=>{$(id).onclick=()=>{if(!started||sleeping)return;if(!$('dlg'
 tool('bBag',openBag);tool('bJob',openStatus);tool('bFriends',openFriends);tool('bQuests',openQuests);tool('bHelp',openHelp);tool('bDex',openDex);tool('bSay',openSay);tool('bWear',openWardrobe);tool('bMap',openMap);tool('bGear',openGear);
 tool('bPad',()=>{padOn=!padOn;try{localStorage.setItem('doran-village-keys',padOn?'1':'0')}catch(e){}syncKeys();cv.focus({preventScroll:true})});
 tool('bDeco',()=>{setDeco(!decoMode);cv.focus({preventScroll:true})});
+tool('bYard',()=>{if(garden){garden=null;syncPlace()}else if(!busy()&&scene==='town')openYard();cv.focus({preventScroll:true})});
 tool('bPlace',()=>{if(placing)stopPlacing();else{placing=true;syncPlace();toast('집 둘레 내 땅(밝게 표시된 풀밭)에서 지을 자리를 눌러요')}cv.focus({preventScroll:true})});
 tool('bSave',()=>{saveAll();toast(cloudDoc?'저장했어요 · 계정에도 올려서 다른 기기에서 이어 할 수 있어요':'저장했어요 · 이 브라우저에 보관돼요');cv.focus({preventScroll:true})});
 tool('bSound',()=>{S.sound=!S.sound;$('bSound').textContent=S.sound?'소리 켬':'소리 끔';touch();sfx('pick');cv.focus({preventScroll:true})});
@@ -5783,7 +6512,7 @@ function frame(ts){
   requestAnimationFrame(frame);
   const dt=Math.min(.05,Math.max(0,(ts-last)/1000||0));last=ts;now+=dt;
   if(started&&S){
-    if(!busy()){updTime(dt);updPlayer(dt);updNpcs(dt);updBeasts(dt);updHerd(dt);updKids(dt);updFishing(dt);updMg(dt)}
+    if(!busy()){updTime(dt);updPlayer(dt);updNpcs(dt);updBeasts(dt);updCop(dt);updHerd(dt);updKids(dt);updFishing(dt);updMg(dt)}
     else if(P.t<1){P.t=Math.min(1,P.t+dt*WALK);if(P.t>=1){P.fx=P.x;P.fy=P.y}}
     for(const o of TREES)if(o.sh>0)o.sh-=dt;
     for(const o of ROCKS)if(o.sh>0)o.sh-=dt;
