@@ -3167,16 +3167,28 @@ function promoTalk(){
   if(!ok.every(Boolean)){say(next+'의 자리에 오르려면 이만큼은 갖춰야 하네.\n'+list);return}
   say('다 갖췄구먼. 시험은 내가 보는 앞에서 '+jo(ITEMS[J.exam[r]].n,'을','를')+' 짓는 걸세. 불이 띠 위로 오래 넘치면 안 되네. 재료는 내어 주겠네.',[['시험 볼게요',()=>startCook(J.exam[r],true)],['다음에요',null]]);
 }
+// 주민 이름 바꾸기: 신분 창에서 언제든. 같이 하는 친구에게도 새 이름으로 보인다
+function renameMe(){
+  openModal('이름 바꾸기',body=>{
+    body.appendChild(el('p','note','마을에서 불릴 이름이에요. 같이 하는 친구에게도 이 이름으로 보여요. (여덟 글자까지)'));
+    const inp=el('input');inp.type='text';inp.maxLength=8;inp.autocomplete='off';inp.value=S.name;
+    inp.style.cssText='font:inherit;padding:7px 10px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);width:100%;display:block;margin:4px 0 8px';
+    const ok=()=>{const n=cleanText(inp.value).trim().slice(0,8);if(!n)return;S.name=n;hud();saveAll();toast('이제 이름은 '+jo(n,'이에요','예요'));openStatus()};
+    inp.onkeydown=e=>{e.stopPropagation();if(e.key==='Enter')ok()};body.appendChild(inp);
+    const b=el('button','btn pri','바꾸기');b.type='button';b.onclick=ok;body.appendChild(b);
+  });
+}
 function openStatus(){
   openModal('신분',body=>{
     body.appendChild(el('p','note',S.name+' · '+rankName()+' · 레벨 '+S.level+(S.spouse?' · 배필 '+NPCS[S.spouse].name:'')));
+    {const b=el('button','btn','이름 바꾸기');b.type='button';b.onclick=renameMe;body.appendChild(b)}
     if(partner()||S.kids.length||S.baby){
       body.appendChild(el('p','sub','가족'));
       const pid=partner();
       if(S.baby)body.appendChild(el('p','note','삼신할머니께 빌어 둔 아이가 '+Math.max(1,S.baby.due-S.day)+'일 뒤 아침에 와요.'));
       else if(!S.kids.length&&pid)body.appendChild(el('p','note',jo(NPCS[pid].name,'과','와')+' "아이 이야기"를 나눠 봐요. 삼신상에는 바닷가에서 줍는 미역 2개와 200냥이 들어요.'));
       for(const k of S.kids)row(body,el('span','badge',kidNm(k)[0]),kidNm(k),[(k.sex==='f'?'딸':'아들')+' · 태어난 지 '+kidAge(k)+'일 · 정 ♥'+kidHearts(k),
-        k.gift?'돌잡이: '+DOL[k.gift].n+' ('+DOL[k.gift].d+') · '+DOL[k.gift].h:kidAge(k)>=7?'돌잡이를 할 때예요. 집에서 아이에게 말을 걸어요':'돌잡이까지 '+(7-kidAge(k))+'일 · 날마다 안아 주고 먹여요']);
+        k.gift?'돌잡이: '+DOL[k.gift].n+' ('+DOL[k.gift].d+') · '+DOL[k.gift].h:kidAge(k)>=7?'돌잡이를 할 때예요. 집에서 아이에게 말을 걸어요':'돌잡이까지 '+(7-kidAge(k))+'일 · 날마다 안아 주고 먹여요'],[['이름',()=>kidName(S.kids.indexOf(k))]]);
     }
     body.appendChild(el('p','sub','스탯 · 남은 점수 '+S.sp+'점'));
     body.appendChild(el('p','note','레벨이 오를 때마다 점수를 2점 받아요. 관련된 일을 해도 조금씩 저절로 올라요. 스탯 하나는 '+STAT_MAX+'까지 올릴 수 있어요.'));
@@ -4130,6 +4142,7 @@ function openHelp(){
       '소나무: 움직이는 눈금이 초록 칸에 올 때 행동. 노란 칸이면 완벽! 바위: 줄어드는 고리가 흰 원에 겹칠 때 행동.',
       '낚시: 물가에서 행동 → 느낌표가 뜨면 챔 → 잔잔할 때 연타로 당기고 물이 튀면 멈춰요. 비 오는 날 더 잘 물어요.',
       '사냥터: 마을 큰길을 따라 동쪽 끝까지 가면 깊은 숲 사냥터로 나가요. 짐승이 훨씬 많고 범과 산삼도 있어요. 서쪽 길로 돌아오면 마을이에요.',
+      '이름 바꾸기: 아래 "신분" 창 맨 위의 "이름 바꾸기"에서 내 이름을 언제든 바꿀 수 있어요. 아이 이름도 같은 창의 가족 칸에서 바꿔요.',
       '옷장: 옷장 버튼에서 남자·여자 모습과 옷을 바꿔요. 새 옷은 은하 만물상의 옷 칸에서 사요.',
       '사냥: 들짐승은 가까이 가면 달아나요. 서너 칸 떨어져 일직선에 서서 행동 → 흔들리는 과녁이 짐승에 겹칠 때 한 번 더. 전리품은 지나가면서 주워요.',
       '계절: 7일마다 바뀌어요. 심을 수 있는 작물, 잡히는 물고기, 주울 것, 들짐승이 계절마다 달라요. 겨울엔 밭과 과일나무가 쉬어요.',
