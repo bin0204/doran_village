@@ -56,8 +56,9 @@ body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15p
 #stage,#bar{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 .btn,#actBtn{touch-action:manipulation}
 /* 작은 지도(오른쪽 위)와 터치용 조작키(왼쪽 아래). 알림 글은 작은 지도를 피해 왼쪽으로 물러난다 */
-#mini{position:absolute;top:8px;right:8px;width:min(32%,148px);height:auto;border-radius:10px;border:2px solid var(--line);background:#16261c;opacity:.94;image-rendering:pixelated;cursor:pointer;z-index:1}
-#stage.hasmini #toasts{right:calc(min(32%,148px) + 18px)}
+#mini{position:absolute;top:8px;right:8px;width:min(27%,132px);height:auto;border-radius:10px;border:2px solid var(--line);background:#16261c;opacity:.94;image-rendering:pixelated;cursor:pointer;z-index:1;transition:opacity .18s}
+#mini.ghost{opacity:.13;pointer-events:none} /* 그 밑에 나나 짐승·이웃이 있으면 비켜 준다: 흐려지고, 누름은 그대로 마을 화면으로 간다 */
+#stage.hasmini #toasts{right:calc(min(27%,132px) + 18px)}
 #keys{position:absolute;left:8px;bottom:8px;width:116px;height:116px;touch-action:none;z-index:1;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 #keys i{position:absolute;width:37px;height:37px;border-radius:10px;background:var(--surface);border:2px solid var(--line);box-shadow:0 3px 0 var(--shade);opacity:.8;
   display:flex;align-items:center;justify-content:center;font-style:normal;font-size:14px;color:var(--ink);pointer-events:none}
@@ -2081,7 +2082,7 @@ function render(){
   }
   if(town&&scene!=='cave'&&S.wx==='rainbow'){
     // 무지개: 화면 위쪽에 걸린 옅은 일곱 빛깔 띠
-    c.globalAlpha=.2;c.lineWidth=7;['#e0453a','#f08a2a','#f7d24a','#5cab4a','#3f8fc4','#5a4f9a','#8a63c9'].forEach((k,i)=>{c.strokeStyle=k;c.beginPath();c.arc(view.w/2,view.h*1.05,view.w*.62-i*7,Math.PI*1.08,Math.PI*1.92);c.stroke()});c.globalAlpha=1;
+    c.globalAlpha=.2;c.lineWidth=7;['#e0453a','#f08a2a','#f7d24a','#5cab4a','#3f8fc4','#5a4f9a','#8a63c9'].forEach((k,i)=>{c.strokeStyle=k;c.beginPath();c.arc(view.w/2,view.h*1.05,Math.max(1,view.w*.62-i*7),Math.PI*1.08,Math.PI*1.92);c.stroke()});c.globalAlpha=1;
   }
   if(town&&scene!=='cave'&&S.wx==='drought'){c.fillStyle='rgba(255,170,60,.08)';c.fillRect(0,0,view.w,view.h)}
   if(town&&scene!=='cave'&&S.wx==='wind'){
@@ -5783,6 +5784,8 @@ function openHelp(){
       '도감: 처음 얻은 것은 도감에 적혀요. 한 갈래를 다 채우면 상금을 받아요.',
       canP2P()?'같이 하기: 같이 하기 버튼에서 방 이름을 정해 들어가고, 친구도 같은 방 이름으로 들어오면 서로의 마을에 나타나요. 방에 들어가면 나오는 초대 주소를 보내도 돼요. 친구를 눌러 인사·선물하고, 같이 하기 버튼으로 말을 걸어요. 마을은 각자 따로 키워요.'
         :'같이 하기: 공유 메뉴에서 친구를 초대하면, 같은 시간에 페이지를 연 친구가 마을에 나타나요. 친구를 눌러 인사·선물하고, 같이 하기 버튼으로 말을 걸어요. 마을은 각자 따로 키워요.',
+      canP2P()&&'캐릭터 정리: 같은 기기에서 브라우저나 창을 여러 개 열면 방에 캐릭터가 여럿 생겨요. 가려 둔 창은 30초쯤, 켜 두고 손대지 않은 창은 5분쯤 지나면 스스로 방에서 빠지고(다시 보거나 누르면 돌아와요), 같은 브라우저에서 새 창으로 들어가면 먼저 있던 창이 빠져요. 그래도 남은 캐릭터는 "같이 하기" 창의 "방에 있는 캐릭터"나 그 캐릭터를 눌러 "캐릭터 정리"로 지워요. 지금 움직이고 있는 친구는 내 화면에서만 사라지고 방에서는 나가지 않아요.',
+      '작은 지도: 오른쪽 위 작은 지도 밑에 나나 짐승·이웃이 들어가면 지도가 흐려지고, 그 자리를 눌러도 지도 대신 마을 화면이 눌려요.',
       '아이·가족: 배필에게 말을 걸어 "아이 이야기"를 나눠요(초가삼간 이상, 혼례 사흘 뒤). 미역 2개(바닷가)와 200냥으로 삼신상을 차리면 사흘 뒤 아침에 아기가 와요. 날마다 안아 주고 우유나 죽을 먹이면 정이 쌓여요. 이레째에는 돌잡이를 하는데, 잡은 물건(붓·활·엽전·실타래·떡)이 아이의 재주가 돼요. 돌이 지난 아이는 낮에 집 앞마당에서 놀고, 정이 깊을수록 아침에 자주 거들어 줘요. 아이는 둘까지예요.',
       '친구와 놀이: 친구 곁(네 칸 안)에서 일하면 경험치를 10% 더 받아요. 같이 하기 버튼의 몸짓(절하기·폴짝·손 흔들기·덩실덩실)을 친구와 같이 하면 마음이 통해요. 친구를 누르면 가위바위보와 술래잡기를 할 수 있어요. 술래는 셋을 센 뒤 친구 옆에서 행동해서 잡고, 잡힌 친구가 다음 술래예요. 술래잡기는 3분 뒤에 끝나요.',
       '집 직접 짓기: 모루에게 직접 짓겠다고 하면 값이 절반이에요. 집 문 앞에서 양쪽 눈금이 만날 때 못을 박아 세 단계를 지으면 바로 완성돼요.',
@@ -5975,16 +5978,17 @@ function syncPresence(){
     m:rps?{w:rps.w,id:rps.id,st:rps.st,p:rps.st==='show'?rps.me:0}:null,tg:tag?{id:tag.id,q:tag.q,it:tag.it}:null}).catch(()=>{});
 }
 function onPeers(ch){
-  peers=ch.peers.filter(p=>!p.isMe&&p.kind==='viewer'&&p.presence&&typeof p.presence.n==='string');
+  peers=ch.peers.filter(p=>!p.isMe&&p.kind==='viewer'&&p.presence&&typeof p.presence.n==='string'&&!peerOff[p.peer]); /* 내가 정리한 캐릭터는 보이지 않는다 */
   const me=ch.peers.find(p=>p.sameTab);if(me)myPeer=me.peer;
   for(const p of peers){
     const q=p.presence;let x=q.x|0,y=q.y|0,v=PV[p.peer];
     // 친구의 마을 모양이 내 마을과 다르면(씨앗 v가 다르면), 마을 안의 자리는 내 마을의 가까운 빈칸으로 옮겨 보여 준다
     if(q.s===0&&(q.v>>>0)!==townSeed){const z=townSpot(x,y);x=z[0];y=z[1]}
-    if(!v)v=PV[p.peer]={x,y,fx:x,fy:y,t:1,say:'',sayAt:-99,st:0,e:0,et:q.et,eAt:-99}; /* 들어오기 전에 한 몸짓은 다시 보여 주지 않는다 */
+    if(!v)v=PV[p.peer]={x,y,fx:x,fy:y,t:1,say:'',sayAt:-99,st:0,e:0,et:q.et,eAt:-99,act:Date.now(),sc:q.s}; /* 들어오기 전에 한 몸짓은 다시 보여 주지 않는다. act=마지막으로 움직인 때 */
+    if(v.x!==x||v.y!==y||v.sc!==q.s){v.act=Date.now();v.sc=q.s}
     if(v.x!==x||v.y!==y){const cx=lerp(v.fx,v.x,v.t),cy=lerp(v.fy,v.y,v.t),far=Math.abs(cx-x)+Math.abs(cy-y)>3;v.fx=far?x:cx;v.fy=far?y:cy;v.x=x;v.y=y;v.t=far?1:0}
-    if(q.st&&q.st!==v.st){v.st=q.st;v.say=cleanText(q.say).slice(0,30);v.sayAt=now}
-    if(q.et&&q.et!==v.et){const e=q.e|0;v.et=q.et;v.e=e>=1&&e<=4?e:0;v.eAt=now;bond(p)}
+    if(q.st&&q.st!==v.st){v.st=q.st;v.say=cleanText(q.say).slice(0,30);v.sayAt=now;v.act=Date.now()}
+    if(q.et&&q.et!==v.et){const e=q.e|0;v.et=q.et;v.e=e>=1&&e<=4?e:0;v.eAt=now;v.act=Date.now();bond(p)}
   }
   for(const k in PV)if(!peers.some(p=>p.peer===k))delete PV[k];
   tagSync();rpsSync();peerChip();
@@ -6030,7 +6034,7 @@ async function p2pRoom(lib,name){
   // 방마다 같은 차례로 고른 연결 서버 여덟 곳. 모두에게 귀를 열어 두고, 올릴 때는 그 가운데 몇 곳만 쓴다
   const ord=[];for(const u of P2P_RELAYS)ord.push([p2pHex(await p2pSha(topic+u)),u]);ord.sort((a,b)=>a[0]<b[0]?-1:1);
   const socks=ord.slice(0,8).map((q,i)=>({i,url:'wss://'+q[1],ws:null,bad:0,retry:3000,timer:0}));
-  const mine={},others=Object.create(null),giftAt=Object.create(null),hs=[],on=Object.create(null),seen=new Set(),ids=[];
+  const mine={},others=Object.create(null),giftAt=Object.create(null),hs=[],on=Object.create(null),seen=new Set(),ids=[],dead=new Set();
   let closed=false,q=0,pub=[],pt=0,ptimer=0,gt=0,bye='',tx=0,rx=0;
   const live=s=>!!s.ws&&s.ws.readyState===1,openOnes=()=>socks.filter(live),mask=()=>openOnes().reduce((m,s)=>m|1<<s.i,0);
   const fire=()=>{const l=[{peer:me,isMe:true,sameTab:true,kind:'viewer',presence:mine}];for(const id in others)l.push({peer:id,isMe:false,sameTab:false,kind:'viewer',presence:others[id].p});for(const h of hs)h({peers:l})};
@@ -6055,8 +6059,11 @@ async function p2pRoom(lib,name){
   const greet=()=>{const t=Date.now();if(t-gt<1500)return;gt=t;pick();send({t:'h',q:++q,on:mask(),p:mine.n?mine:null},true);pack({t:'b'}).then(m=>{bye=m},()=>{})};
   const handle=(id,d)=>{
     const t=Date.now();let r=others[id];
-    if(d.t==='b'){if(r){delete others[id];delete giftAt[id];pick();fire()}return}
+    // 작별 인사를 한 번호는 다시 살리지 않는다: 서버마다 닿는 때가 달라, 작별보다 늦게 온 옛 소식이 나간 캐릭터를 25초쯤 다시 세워 놓곤 했다 (다시 들어오면 새 번호다)
+    if(d.t==='b'){dead.add(id);if(dead.size>400)dead.delete(dead.values().next().value);if(r){delete others[id];delete giftAt[id];pick();fire()}return}
+    if(dead.has(id))return;
     if(d.t==='g'){if(!r||t-(giftAt[id]||0)<1500)return;giftAt[id]=t;for(const h of on.gift||[])h({data:{to:d.to,item:d.item},peer:id,isMe:false});return}
+    if(d.t==='k'){if(d.to===me)for(const h of on.kick||[])h({peer:id});return} /* 자리 비운 캐릭터를 정리해 달라는 부탁. 들을지는 받는 쪽이 정한다 */
     if(d.t!=='p'&&d.t!=='h')return;
     if(!r){if(Object.keys(others).length>=P2P_MAX)return;r=others[id]={p:null,q:-1,at:t,on:0};p2pWarn='';gt=0;setTimeout(greet,60)}
     r.at=t;if(typeof d.on==='number'&&r.on!==(d.on|0)){r.on=d.on|0;pick()}
@@ -6097,7 +6104,8 @@ async function p2pRoom(lib,name){
   return{p2p:true,
     presence(p){Object.assign(mine,p);if(!ptimer)ptimer=setTimeout(()=>{ptimer=0;pt=Date.now();send({t:'p',q:++q,on:mask(),p:mine})},Math.max(0,P2P_GAP-(Date.now()-pt)));return Promise.resolve()},
     onPeers(h){hs.push(h);fire()},on(t,h){(on[t]=on[t]||[]).push(h)},
-    emit(t,d){return t==='gift'&&d&&p2pId(d.to)&&others[d.to]?send({t:'g',q:++q,to:d.to,item:d.item},true).then(ok=>{if(!ok)throw new Error('gone')}):Promise.reject(new Error('gone'))},
+    emit(t,d){if(t==='kick')return d&&p2pId(d.to)?send({t:'k',q:++q,to:d.to},true).then(()=>{}):Promise.reject(new Error('gone'));
+      return t==='gift'&&d&&p2pId(d.to)&&others[d.to]?send({t:'g',q:++q,to:d.to,item:d.item},true).then(ok=>{if(!ok)throw new Error('gone')}):Promise.reject(new Error('gone'))},
     connected(){return openOnes().length>0},
     status(){const t=Date.now();return{open:openOnes().length,all:socks.length,peers:Object.keys(others).length,bad:socks.filter(s=>s.bad>t).length,pub:pub.map(s=>s.i),tx,rx}},
     leave(){if(closed)return;if(bye)post(bye,true);closed=true;clearInterval(beat);clearTimeout(ptimer);window.removeEventListener('pagehide',onHide);
@@ -6111,7 +6119,8 @@ async function p2pJoin(name,quiet){
   try{
     if(!p2pLib)p2pLib=await import(P2P_LIB);
     const r=await p2pRoom(p2pLib,name);net=r;p2pName=name;lastPres='';p2pSave(name);
-    r.onPeers(onPeers);r.on('gift',onGift);
+    r.onPeers(onPeers);r.on('gift',onGift);r.on('kick',onKick);
+    p2pAway='';hiddenAt=0;lastInput=performance.now();try{if(tabBc)tabBc.postMessage({t:'join',id:tabId,room:name})}catch(e){} /* 같은 브라우저의 다른 창에 알린다: 그 창의 캐릭터는 쉰다 */
     if(!quiet)toast('‘'+name+'’ 방에 들어왔어요. 친구가 같은 방 이름으로 들어오면 마을에 나타나요');
     // 연결 서버 어디에도 닿지 못하면(막힌 인터넷) 알려 준다
     setTimeout(()=>{if(net===r&&!r.connected())p2pTrouble('연결 서버에 닿지 못했어요. 인터넷 연결을 확인해 주세요')},9000);
@@ -6122,8 +6131,42 @@ async function p2pJoin(name,quiet){
 function p2pLeave(keep){
   if(!net||!net.p2p)return;
   net.leave();net=null;myPeer=null;peers=[];rps=null;tag=null;for(const k in PV)delete PV[k];
-  if(!keep){p2pName='';p2pWarn='';p2pSave('');toast('방에서 나왔어요')}
+  if(!keep){p2pName='';p2pWarn='';p2pAway='';p2pSave('');toast('방에서 나왔어요')}
   peerChip();
+}
+// ───────── 캐릭터 정리 ─────────
+// 방에 들어갈 때마다 창마다 새 번호가 붙는다. 그래서 같은 기기에서 브라우저나 창을 여러 개 열면 캐릭터가 여럿 생기고, 열어 둔 채 안 쓰는 창의 캐릭터가 계속 남는다.
+// ① 안 쓰는 창은 스스로 빠진다: 가려진 지 30초, 또는 아무 입력 없이 5분이 지나면 방에서 잠시 나가고(p2pAway), 다시 보거나 누르면 돌아온다.
+// ② 같은 브라우저에서 다른 창이 같은 방에 들어가면 먼저 있던 창이 빠진다(BroadcastChannel).
+// ③ 그래도 남은 캐릭터는 손으로 정리한다: 내 화면에서는 바로 지우고(peerOff), 그 창에는 나가 달라고 부탁한다. 그 창이 자리를 비운 상태일 때만 듣는다(움직이는 친구는 쫓겨나지 않는다).
+const peerOff=Object.create(null),tabId=Math.random().toString(36).slice(2);
+let lastInput=performance.now(),hiddenAt=0,p2pAway='',awayWhy='',tabBc=null;
+try{tabBc=new BroadcastChannel('doran-village-tabs');tabBc.onmessage=e=>{const d=e.data;if(d&&d.t==='join'&&d.id!==tabId&&net&&net.p2p&&d.room===p2pName)goAway('tab')}}catch(e){tabBc=null}
+function goAway(why){
+  if(!net||!net.p2p)return;
+  p2pAway=p2pName;awayWhy=why;p2pLeave(true);
+  if(why==='tab')toast('다른 창에서 같은 방에 들어가서, 이 창의 캐릭터는 쉬어요. 이 창을 누르면 다시 들어가요');
+  else if(why==='kick')toast('자리를 비운 사이 방에서 캐릭터가 정리됐어요. 움직이면 다시 들어가요');
+}
+function comeBack(){if(!p2pAway||net||p2pBusy||!started)return;const n=p2pAway;p2pAway='';p2pJoin(n,true)}
+function onKick(){if(document.hidden||performance.now()-lastInput>20000)goAway('kick')}
+setInterval(()=>{
+  if(!net||!net.p2p||!started)return;const t=performance.now();
+  if(document.hidden){if(!hiddenAt)hiddenAt=t;else if(t-hiddenAt>30000)goAway('hidden')}
+  else{hiddenAt=0;if(t-lastInput>300000)goAway('idle')}
+},5000);
+for(const ev of ['keydown','pointerdown'])window.addEventListener(ev,()=>{lastInput=performance.now();if(p2pAway)comeBack()},true);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){hiddenAt=0;lastInput=performance.now();if(p2pAway&&awayWhy!=='kick'&&awayWhy!=='tab')comeBack()}});
+const peerIdle=p=>{const v=PV[p.peer];return v?Math.max(0,Math.round((Date.now()-v.act)/1000)):0};
+const idleText=s=>s<20?'방금 움직였어요':s<90?s+'초째 가만히 있어요':Math.round(s/60)+'분째 가만히 있어요';
+function peerSweep(p,quiet){
+  peerOff[p.peer]=1;
+  if(net&&net.p2p)net.emit('kick',{to:p.peer}).catch(()=>{});
+  peers=peers.filter(q=>q.peer!==p.peer);delete PV[p.peer];tagSync();rpsSync();peerChip();
+  if(!quiet)toast(peerName(p)+' 캐릭터를 정리했어요');
+}
+function sweepAsk(p){
+  dialog({who:peerName(p),role:'캐릭터 정리',text:'안 쓰는 창에 남아 있는 캐릭터인가요? ('+idleText(peerIdle(p))+')\n정리하면 내 화면에서 바로 사라지고, 그 창이 자리를 비운 상태면 방에서도 나가요. 지금 움직이고 있는 친구는 방에서 나가지 않아요.',choices:[['정리하기',()=>peerSweep(p)],['그만',null]]});
 }
 // 시작할 때: 초대 주소(#room=이름)로 왔으면 물어보고, 전에 들어가 있던 방이면 바로 다시 들어간다
 function initP2P(){
@@ -6142,7 +6185,7 @@ function peerMenu(p){
   const nm=peerName(p);
   if(tagIt()){tagHit(p);return}
   dialog({who:nm,role:'같이 노는 친구',text:tagOn()?'술래잡기 하는 중이에요. 술래: '+tagName():'무엇을 할까요?',
-    choices:[['인사하기',()=>speak('안녕, '+nm+'!')],['선물하기',()=>peerGift(p,nm)],['가위바위보',()=>rpsAsk(p)],tagOn()?['술래잡기 그만',tagFinish]:['술래잡기',tagBegin],['그만',null]]});
+    choices:[['인사하기',()=>speak('안녕, '+nm+'!')],['선물하기',()=>peerGift(p,nm)],['가위바위보',()=>rpsAsk(p)],tagOn()?['술래잡기 그만',tagFinish]:['술래잡기',tagBegin],['캐릭터 정리',()=>sweepAsk(p)],['그만',null]]});
 }
 
 // ───────── 친구와 놀이 ─────────
@@ -6164,8 +6207,8 @@ function playXp(n){
   const g=Math.min(n,60-S.playXp);if(g<=0)return;S.playXp+=g;addXp(g);float('+'+g+' 경험',null,P.y*T-96);
 }
 function peerChip(){
-  const h=$('hPeers'),wait=!peers.length&&!!net&&!!net.p2p;h.hidden=!peers.length&&!wait;if(h.hidden)return;
-  const t=wait?'방 ‘'+p2pName+'’ · 친구 기다리는 중':tagOn()?'술래잡기 · 술래: '+tagName():'함께 '+(peers.length+1)+'명'+(buddy()?' · 덤 10%':'');
+  const h=$('hPeers'),wait=!peers.length&&!!net&&!!net.p2p,away=!net&&!!p2pAway;h.hidden=!peers.length&&!wait&&!away;if(h.hidden)return;
+  const t=away?'방 ‘'+p2pAway+'’ · 쉬는 중':wait?'방 ‘'+p2pName+'’ · 친구 기다리는 중':tagOn()?'술래잡기 · 술래: '+tagName():'함께 '+(peers.length+1)+'명'+(buddy()?' · 덤 10%':'');
   if(h.textContent!==t)h.textContent=t;
 }
 // 몸짓: 발끝(x,y)을 축으로 캐릭터 그림을 움직인다
@@ -6346,6 +6389,17 @@ function openSay(){
       const st=net.status(),sp=el('p','note',st.open?'연결 서버 '+st.all+'곳 가운데 '+st.open+'곳에 닿았어요 · 방에 나 말고 '+st.peers+'명.'+(st.peers?'':' 친구가 안 보이면 방 이름이 같은지, 친구가 게임 화면을 켜 두었는지 확인해 주세요.'):'연결 서버에 아직 닿지 못했어요. 잠시 뒤에 다시 열어 보세요.');
       sp.style.marginTop='8px';body.appendChild(sp);
     }
+    // 방에 있는 캐릭터와 정리: 같은 기기에서 브라우저나 창을 여러 개 열어 남은 캐릭터를 지운다
+    if(net&&peers.length){
+      body.appendChild(el('p','sub','방에 있는 캐릭터'));
+      body.appendChild(el('p','note','같은 기기에서 브라우저나 창을 여러 개 열면 캐릭터가 여럿 생겨요. 안 쓰는 창은 조금 지나면 스스로 빠지고, 남아 있는 것은 여기서 정리해요. 정리하면 내 화면에서 바로 사라지고, 자리를 비운 창이면 방에서도 나가요.'));
+      for(const p of peers.slice()){
+        const i=el('span','badge',peerName(p).slice(0,1)),s=peerIdle(p);
+        row(body,i,peerName(p),[idleText(s)],[['정리',()=>{peerSweep(p);openSay()}]]);
+      }
+      const idle=peers.filter(p=>peerIdle(p)>=60);
+      if(idle.length>1||(idle.length&&peers.length>1)){const b=el('button','btn','가만히 있는 캐릭터 '+idle.length+'명 모두 정리');b.type='button';b.onclick=()=>{for(const p of idle)peerSweep(p,true);toast('가만히 있던 캐릭터 '+idle.length+'명을 정리했어요');openSay()};body.appendChild(b)}
+    }
     const g=el('div','tabs');g.style.flexWrap='wrap';
     for(const t of ['안녕!','같이 낚시하자','이리 와 봐','고마워!','잘 가~']){const b=el('button','btn',t);b.type='button';b.onclick=()=>{speak(t);closeModal()};g.appendChild(b)}
     body.appendChild(g);
@@ -6439,6 +6493,19 @@ function updMini(dt){
   c.drawImage(miniBase,0,0);
   for(const p of peers){const v=PV[p.peer];if(v&&peerHere(p))dot(v.x,v.y,'#3f8fc4',2.5)}
   dot(P.x,P.y,'#d94a74',3);
+  miniEl.classList.toggle('ghost',miniCovers());
+}
+// 작은 지도가 가리는 자리에 나나 짐승·이웃·친구·겨누는 과녁이 있는가. 있으면 지도를 흐리게 하고 누름이 통과하게 한다(사냥감을 가리지 않게)
+function miniCovers(){
+  const r=miniEl.getBoundingClientRect(),cr=cv.getBoundingClientRect(),pad=20;if(!r.width)return false;
+  const under=(wx,wy)=>{const sx=cr.left+(wx-cam.x)*zoom,sy=cr.top+(wy-cam.y)*zoom;return sx>r.left-pad&&sx<r.right+pad&&sy>r.top-pad&&sy<r.bottom+pad};
+  const at=o=>under((rx(o)+.5)*T,(ry(o)+.5)*T)||under((rx(o)+.5)*T,(ry(o)-.6)*T); /* 발밑 칸과 머리 높이 */
+  if(at(P)||beasts.some(at))return true;
+  if(mg&&mg.kind==='hunt'&&mg.b&&at(mg.b))return true;
+  if(cop&&at(cop))return true;
+  if((scene==='town'||scene==='palace')&&npcOut())for(const id of NPC_IDS)if(npcHere(id)&&at(N[id]))return true;
+  for(const p of peers){const v=PV[p.peer];if(v&&peerHere(p)&&under((lerp(v.fx,v.x,v.t)+.5)*T,(lerp(v.fy,v.y,v.t)+.5)*T))return true}
+  return false;
 }
 miniEl.addEventListener('click',()=>{if(started&&!sleeping&&!busy())openMap()});
 // 행동 단추의 글자: 지금 누르면 무엇을 하는지 보여 준다. 할 것이 없으면 "행동"이라 쓰인 채 흐려진다
