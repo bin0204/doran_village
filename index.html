@@ -58,6 +58,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15p
   background:var(--accent);color:var(--accent-ink);font-family:var(--display);font-size:13.5px;line-height:1.08;white-space:pre-line;cursor:pointer;box-shadow:0 3px 0 var(--shade);
   transition:opacity .15s}
 #actBtn.idle{opacity:.42} /* 지금 할 것이 없으면 흐리게 */
+/* 밭 되돌리기 단추: 행동 단추 바로 위에 잠깐 뜬다 */
+#undoBtn{position:absolute;right:8px;bottom:78px;padding:4px 9px;border-radius:11px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);font-family:var(--display);font-size:12.5px;cursor:pointer;box-shadow:0 2px 0 var(--shade);touch-action:manipulation}
 #actBtn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--shade)}
 #stage,#bar{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 .btn,#actBtn{touch-action:manipulation}
@@ -87,6 +89,10 @@ body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15p
 .btn:disabled{opacity:.45;cursor:default}
 #bar{display:flex;flex-wrap:wrap;gap:6px}
 #bar .sp{margin-left:auto}
+#bar .btn{min-width:46px} /* "나"처럼 한 글자짜리 단추도 누르기 쉽게 */
+/* 묶음 탭: 도구줄 단추 하나가 창 여럿을 맡는다. 창 제목 아래에 붙어 있고 내용과 함께 굴러가지 않는다 */
+#mTabs{display:flex;flex-wrap:wrap;gap:6px;padding:8px 14px 0}
+#mTabs .btn{padding:4px 12px;font-size:14px}
 #deco{background:var(--surface);border:2px solid var(--line);border-radius:16px;
   padding:8px 10px;display:flex;flex-direction:column;gap:6px;max-height:30%;overflow:auto;flex:none}
 #deco p{margin:0;font-size:13px;color:var(--muted)}
@@ -152,7 +158,7 @@ ul.help{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
   #stage{min-height:120px;border-radius:12px}
   #bar{flex-wrap:nowrap;overflow-x:auto;gap:4px;scrollbar-width:none} #bar::-webkit-scrollbar{display:none}
   #bar .btn{flex:none;font-size:13px;padding:4px 9px;border-radius:10px} #bar .sp{margin-left:0}
-  #actBtn{width:48px;height:48px;font-size:12.5px}
+  #actBtn{width:48px;height:48px;font-size:12.5px}#undoBtn{bottom:68px}
 }
 @media (prefers-reduced-motion:reduce){ .toast{animation:none} #fade{transition:none} }
 </style>
@@ -176,6 +182,7 @@ ul.help{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
     <div id="fade"></div>
     <div id="toasts" aria-live="polite"></div>
     <button id="actBtn" type="button" aria-label="행동하기">행동</button>
+    <button id="undoBtn" type="button" hidden>되돌리기</button>
     <div id="dlg" hidden>
       <div id="dlgWho"></div>
       <div id="dlgText"></div>
@@ -186,6 +193,7 @@ ul.help{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
     <div id="modal" hidden>
       <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="mTitle">
         <header><h2 id="mTitle"></h2><button class="btn" id="mClose" type="button">닫기</button></header>
+        <div id="mTabs" hidden></div>
         <div id="mBody"></div>
       </div>
     </div>
@@ -203,22 +211,13 @@ ul.help{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
   </div>
   <nav id="bar" aria-label="도구">
     <button class="btn" id="bBag" type="button">가방</button>
-    <button class="btn" id="bJob" type="button">신분</button>
-    <button class="btn" id="bFriends" type="button">이웃</button>
-    <button class="btn" id="bQuests" type="button">부탁</button>
-    <button class="btn" id="bMap" type="button">지도</button>
-    <button class="btn" id="bDex" type="button">도감</button>
-    <button class="btn" id="bWear" type="button">옷장</button>
-    <button class="btn" id="bGear" type="button">장비</button>
+    <button class="btn" id="bMe" type="button">나</button>
+    <button class="btn" id="bLog" type="button">기록</button>
     <button class="btn" id="bSay" type="button">같이 하기</button>
     <button class="btn" id="bDeco" type="button" hidden>꾸미기</button>
     <button class="btn" id="bYard" type="button" hidden>가꾸기</button>
     <button class="btn" id="bPlace" type="button" hidden>우리 놓기</button>
-    <button class="btn sp" id="bSave" type="button">저장</button>
-    <button class="btn" id="bPad" type="button" hidden>조작키 켬</button>
-    <button class="btn" id="bSound" type="button">소리 켬</button>
-    <button class="btn" id="bHelp" type="button">도움말</button>
-    <button class="btn" id="bNews" type="button">소식</button>
+    <button class="btn sp" id="bSet" type="button">설정</button>
   </nav>
 </div>
 
@@ -311,7 +310,36 @@ const FURN={
   // 반짝이는 곳을 파서만 얻는 가구 (RELICS)
   r_lantern:{n:'청사초롱',c:7}, r_tigerpic:{n:'까치호랑이 그림',c:8}, r_celadon:{n:'청자 매병',c:8}, r_pearl:{n:'진주 조개',c:7}, r_crystal:{n:'수정 원석',c:8},
   // 진상으로 공을 쌓으면 임금이 내리는 가구 (ROYAL)
-  k_vase:{n:'궁중 꽃 항아리',c:8}, k_screen:{n:'일월오봉도 병풍',c:10}
+  k_vase:{n:'궁중 꽃 항아리',c:8}, k_screen:{n:'일월오봉도 병풍',c:10},
+  // 도안(S.plans)을 찾아 모루와 함께 짜는 가구. mk: at 도안이 묻힌 곳(PLAN_AT), g 대패질 어려움 0~2, cost 삯, need 재료
+  soban:{n:'소반',c:3,mk:{at:'town',g:0,cost:60,need:{wood:4}}}, seoan:{n:'서안',c:4,mk:{at:'town',g:0,cost:120,need:{wood:6}}},
+  deungjan:{n:'등잔대',c:4,mk:{at:'town',g:0,cost:150,need:{wood:3,iron:1}}}, bandaji:{n:'반닫이',c:6,mk:{at:'town',g:1,cost:300,need:{wood:10,iron:2}}},
+  pyeongsang:{n:'평상',c:5,mk:{at:'wild',g:0,cost:180,need:{wood:12}}}, hwaro:{n:'놋화로',c:5,mk:{at:'wild',g:1,cost:250,need:{iron:3,stone:4}}},
+  hwaetdae:{n:'사슴뿔 횃대',c:6,mk:{at:'wild',g:1,cost:200,need:{wood:4,antler:1}}},
+  tongmok:{n:'통나무 걸상',c:4,mk:{at:'deep',g:0,cost:100,need:{wood:8}}}, gomrug:{n:'곰 가죽 깔개',c:8,walk:1,mk:{at:'deep',g:1,cost:300,need:{bearhide:1,hide:2}}},
+  hopi:{n:'호피 방석',c:9,mk:{at:'deep',g:2,cost:500,need:{tigerskin:1,wood:4}}},
+  seokdeung:{n:'석등',c:6,mk:{at:'cave',g:1,cost:300,need:{stone:12,iron:1}}}, euncho:{n:'은 촛대',c:7,mk:{at:'cave',g:1,cost:400,need:{silver:2,wood:2}}},
+  okhyang:{n:'옥 향로',c:9,mk:{at:'cave',g:2,cost:600,need:{jade:2,stone:4}}}, geumham:{n:'금박 함',c:10,mk:{at:'cave',g:2,cost:800,need:{gold:1,wood:6}}},
+  punggyeong:{n:'조개 풍경',c:5,mk:{at:'sea',g:0,cost:120,need:{shell:6,wood:1}}}, baegwe:{n:'뱃사람 궤',c:6,mk:{at:'sea',g:1,cost:300,need:{wood:10,iron:2}}},
+  jagae:{n:'자개 문갑',c:9,mk:{at:'sea',g:2,cost:600,need:{abalone:3,wood:8}}},
+  kkotsal:{n:'꽃살 가리개',c:8,mk:{at:'royal',g:1,cost:450,need:{wood:10,flower:4}}}, gyeongdae:{n:'경대',c:8,mk:{at:'royal',g:2,cost:550,need:{wood:6,silver:1}}},
+  hwachojang:{n:'화초장',c:11,mk:{at:'royal',g:2,cost:900,need:{wood:14,gold:1,jade:1}}},
+  // 첫 집들이 때 이웃들이 모아 주는 선물
+  jori:{n:'복조리 걸이',c:5}
+};
+// 가구 세트: 한 묶음을 빠짐없이 집 안에 놓으면 아늑함이 c만큼 더해진다. open: 처음부터 이름을 아는 묶음, h: 구하는 곳
+const SETS={
+  basic:{n:'잡화점 살림',c:5,open:1,h:'잡화점에서 사요',ids:['chair','plant','table','rug','lamp','shelf','sofa','tank','stove']},
+  sarang:{n:'사랑방',c:6,h:'마을에서 찾은 도안으로 짜요',ids:['soban','seoan','deungjan','bandaji']},
+  market:{n:'장터의 멋',c:6,open:1,h:'장날에 보부상에게서 사요',ids:['screen','jar','mat']},
+  gift:{n:'이웃의 정',c:8,open:1,h:'이웃과 아주 가까워지면 받아요',ids:['g_moru','g_sol','g_parang','g_dami','g_eunha']},
+  hunter:{n:'사냥꾼의 방',c:7,h:'사냥터 숲에서 찾은 도안으로 짜요',ids:['pyeongsang','hwaro','hwaetdae']},
+  deep:{n:'깊은 산 산막',c:9,h:'깊은 산에서 찾은 도안으로 짜요',ids:['tongmok','gomrug','hopi']},
+  sea:{n:'바닷가 방',c:9,h:'먼바다의 섬에서 찾은 도안으로 짜요',ids:['punggyeong','baegwe','jagae']},
+  cave:{n:'굴속의 보물',c:12,h:'동굴에서 찾은 도안으로 짜요',ids:['seokdeung','euncho','okhyang','geumham']},
+  royal:{n:'궁중 안방',c:12,h:'금원에서 찾은 도안으로 짜요',ids:['kkotsal','gyeongdae','hwachojang']},
+  relic:{n:'옛사람의 보물',c:10,h:'반짝이는 곳을 파면 나와요',ids:['r_lantern','r_tigerpic','r_celadon','r_pearl','r_crystal']},
+  king:{n:'임금의 하사품',c:8,h:'진상으로 공을 쌓으면 임금이 내려요',ids:['k_vase','k_screen']}
 };
 // 옷: 저고리(top)·치마나 바지(bot)·고름(rib) 색과 쓰개(hat). 은하 만물상에서 사고 옷장에서 갈아입는다
 const OUTFITS={
@@ -322,6 +350,11 @@ const OUTFITS={
   hunter:{n:'사냥꾼 옷',top:'#7a5a3e',bot:'#4a3b32',rib:'#c9a86a',hat:'cap',buy:600},
   scholar:{n:'선비 도포와 갓',top:'#dfe9ee',bot:'#dfe9ee',rib:'#2e4a6a',hat:'gat',buy:900},
   silk:{n:'비단 한복',top:'#b77ac0',bot:'#f6c9d8',rib:'#f7d24a',buy:1500},
+  navy:{n:'남색 쾌자',top:'#2e4a6a',bot:'#e9e4d8',rib:'#c8392f',buy:700},
+  peach:{n:'연분홍 당의',top:'#f6c9d8',bot:'#8fbf5f',rib:'#c8392f',buy:800},
+  mint:{n:'옥색 두루마기와 갓',top:'#bfe0d8',bot:'#e9e4d8',rib:'#3f6fb0',hat:'gat',buy:1200},
+  wine:{n:'자줏빛 장옷',top:'#7a3a5a',bot:'#3f6fb0',rib:'#f7d24a',buy:2500},
+  goldsilk:{n:'금실 수놓은 한복',top:'#f3ead6',bot:'#a8324a',rib:'#f7d24a',buy:5000},
   // 수라간에서 품계가 오를 때 받는 옷 (가게에서는 팔지 않는다)
   nain:{n:'수라간 일옷',top:'#bfe0d8',bot:'#2e4a8a',rib:'#d9412e',job:1},
   sanggung:{n:'수라간 예복',top:'#3f8a5a',bot:'#2e4a8a',rib:'#f7d24a',job:1},
@@ -345,11 +378,28 @@ const OUTFITS={
   r_moon:{n:'달빛 도포',top:'#e6ecf7',bot:'#9aa8d0',rib:'#f7d24a',hat:'gat',job:1},
   r_sea:{n:'물빛 한복',top:'#7fd0e6',bot:'#f6f1e6',rib:'#3f6fb0',job:1},
   r_gold:{n:'금박 예복',top:'#f7d24a',bot:'#7a3a7a',rib:'#c8392f',job:1},
+  r_rain:{n:'도롱이 차림',top:'#b9a86a',bot:'#8a7a5a',rib:'#6b5a4c',hat:'straw',job:1},
+  r_falcon:{n:'매사냥꾼 차림',top:'#5a6a4a',bot:'#3a3a40',rib:'#c9a86a',hat:'jeonrip',job:1},
+  r_diver:{n:'해녀 물소중이',top:'#f6f1e6',bot:'#2e4a6a',rib:'#2e4a6a',job:1},
+  r_jade:{n:'옥빛 원삼',top:'#7fc7a8',bot:'#c8392f',rib:'#f7d24a',hat:'hwagwan',job:1},
   // 진상으로 공을 쌓으면 임금이 내리는 옷 (ROYAL)
   k_silk:{n:'하사받은 비단 도포',top:'#2e6a8a',bot:'#f3ead6',rib:'#f7d24a',hat:'gat',job:1},
   // 나쁜 길에서 악명이 쌓이면 얻는 옷 (ROGUE)
   rogue1:{n:'왈패 검은 차림',top:'#2a2a30',bot:'#3a3a40',rib:'#c8392f',hat:'cap',job:1},
-  rogue2:{n:'두목 털조끼 차림',top:'#4a3528',bot:'#2a2220',rib:'#f7d24a',hat:'cap',job:1}
+  rogue2:{n:'두목 털조끼 차림',top:'#4a3528',bot:'#2a2220',rib:'#f7d24a',hat:'cap',job:1},
+  // 본업의 높은 자리(1~4단계)에 오를 때마다 받는 옷 (MAIN의 fit). hatC는 쓰개 빛깔
+  mil3:{n:'절도사 융복',top:'#22304f',bot:'#7a2f2a',rib:'#f7d24a',hat:'jeonrip',job:1},mil4:{n:'훈련대장 구군복',top:'#1f1f24',bot:'#c8392f',rib:'#f2c531',hat:'jeonrip',hatC:'#7a2430',job:1},
+  mil5:{n:'병조판서 관복',top:'#3f6fb0',bot:'#3f6fb0',rib:'#f7d24a',hat:'samo',job:1},mil6:{n:'도원수 금빛 갑주',top:'#e9b930',bot:'#7a2f2a',rib:'#c8392f',hat:'helmG',job:1},
+  civ3:{n:'우의정 청색 관복',top:'#2e4a8a',bot:'#2e4a8a',rib:'#f7d24a',hat:'samo',job:1},civ4:{n:'좌의정 자색 관복',top:'#6a3a8a',bot:'#6a3a8a',rib:'#f7d24a',hat:'samo',job:1},
+  civ5:{n:'영의정 홍색 관복',top:'#c8392f',bot:'#c8392f',rib:'#f7d24a',hat:'samo',job:1},civ6:{n:'국로의 학창의',top:'#f6f1e6',bot:'#f6f1e6',rib:'#1f1f24',hat:'gat',job:1},
+  merch3:{n:'도고 비단 도포',top:'#3f8a8a',bot:'#dfe9ee',rib:'#f7d24a',hat:'gat',job:1},merch4:{n:'행수 남빛 차림',top:'#22304f',bot:'#e9e4d8',rib:'#f2c531',hat:'gat',job:1},
+  merch5:{n:'대행수 자줏빛 차림',top:'#7a3a5a',bot:'#f3ead6',rib:'#f7d24a',hat:'gat',job:1},merch6:{n:'으뜸 거상 금실 차림',top:'#f3ead6',bot:'#2e2a5a',rib:'#f2c531',hat:'gat',hatC:'#3a2a5a',job:1},
+  cook3:{n:'어선 당의',top:'#3f8a5a',bot:'#2e2a5a',rib:'#f7d24a',job:1},cook4:{n:'제조 예복',top:'#2e4a8a',bot:'#7a3a7a',rib:'#f7d24a',job:1},
+  cook5:{n:'수라간 큰어른 예복',top:'#a8324a',bot:'#2e2a5a',rib:'#f7d24a',job:1},cook6:{n:'금수 놓은 어선 예복',top:'#f3ead6',bot:'#a8324a',rib:'#f2c531',job:1},
+  court3:{n:'어진 이의 원삼',top:'#3f8a5a',bot:'#c8392f',rib:'#f7d24a',hatF:'gache',hatM:'ikseon',job:1},court4:{n:'덕 높은 이의 자적 포',top:'#7a3a7a',bot:'#2e2a5a',rib:'#f7d24a',hatF:'gache',hatM:'ikseon',job:1},
+  court5:{n:'어버이의 황금 포',top:'#e9b930',bot:'#c8392f',rib:'#c8392f',hatF:'gache',hatM:'ikseon',job:1},court6:{n:'성군의 구장복',top:'#1f1f24',bot:'#c8392f',rib:'#f2c531',hat:'crown',job:1},
+  rogue3:{n:'큰 두목 흑립 차림',top:'#2a2a30',bot:'#3a2a22',rib:'#c8392f',hat:'gat',job:1},rogue4:{n:'대두목 범 가죽 차림',top:'#c9862e',bot:'#2a2220',rib:'#1f1f24',hat:'fur',hatC:'#c9862e',job:1},
+  rogue5:{n:'검계 수령 복면 차림',top:'#1f1f24',bot:'#1f1f24',rib:'#6a7178',hat:'band',hatC:'#1f1f24',job:1},rogue6:{n:'밤의 임금 차림',top:'#2e2a5a',bot:'#1f1f24',rib:'#f2c531',hat:'straw',hatC:'#1f1f24',job:1}
 };
 // 옛말로 바꿔 보여 주기: 대사와 이름에 남아 있는 요즘 말을 조선 마을에 맞게 고친다
 const JZ=[['빵집','떡집'],['갓 구운 빵','갓 찐 떡'],['빵','떡'],['오븐','시루'],['타르트','화전'],['파이','정과'],['잡화점','만물상'],['로켓 발사대','하늘을 나는 수레'],['녹음기','소리 단지'],['기계','기구'],['텐트','움막']];
@@ -362,7 +412,7 @@ const HOUSES=[
   {n:'기와집',cost:6000,wood:40,stone:25,room:[10,7],plots:10},
   {n:'솟을대문 기와집',cost:15000,wood:60,stone:50,room:[12,8],plots:12}
 ];
-const TITLES=['새내기 주민','동네 일꾼','마을 살림꾼','든든한 이웃','마을의 자랑'];
+const TITLES=['새내기 주민','동네 일꾼','마을 살림꾼','든든한 이웃','마을의 자랑','고을의 일꾼','고을의 기둥','이름난 재주꾼','온 고을의 자랑','나라가 아는 이름','살아 있는 전설'],TITLE_LV=[1,2,3,4,5,8,11,14,18,22,26];
 // 연장: 모루의 대장간에서 세 번까지 벼린다. d[단계]=그 단계의 쓸모, FORGE[다음 단계]=드는 값과 재료
 const TOOLS={
   hoe:{n:'괭이',d:['한 번에 1칸을 갈아요','한 번에 2칸을 갈아요','한 번에 3칸을 갈아요','한 번에 5칸을 갈아요']},
@@ -418,8 +468,10 @@ const FESTS=[
 ];
 const FEST_AT=[20,7];
 // 5일장: 닷새마다(5·10·15…일) 만물상 동쪽 마당에 좌판 둘이 선다. 보부상은 귀한 물건을 팔고, 객주는 흥정해서 내 물건을 사 간다
-const STALLS=[{k:'peddler',n:'보부상',x:19,y:8},{k:'broker',n:'객주',x:21,y:8}];
-const MERCH={peddler:{skin:'#e0b48c',hair:'#2e2a2a',shirt:'#e9e4d8',bot:'#8a7a5a',rib:'#c9a86a',sex:'m',hat:'straw'},
+// 골동품 장수는 열흘에 한 번(antiqueIn) 두 좌판 사이에 돗자리를 편다. 자리는 따로 뽑지 않고 첫 좌판의 바로 오른쪽 칸이다(setLayout)
+const STALLS=[{k:'peddler',n:'보부상',x:19,y:8},{k:'broker',n:'객주',x:21,y:8},{k:'antique',n:'골동품 장수',x:20,y:8}];
+const MERCH={antique:{skin:'#e6c2a0',hair:'#9a9a9a',shirt:'#5a4a6a',bot:'#3a3a40',rib:'#c9a86a',sex:'m',hat:'gat',hatC:'#3a3a44',beard:1},
+  peddler:{skin:'#e0b48c',hair:'#2e2a2a',shirt:'#e9e4d8',bot:'#8a7a5a',rib:'#c9a86a',sex:'m',hat:'straw'},
   broker:{skin:'#f0cdb0',hair:'#2e2a2a',shirt:'#5a7a4a',bot:'#3a3a40',rib:'#f7d24a',sex:'f',hat:'bun'}};
 // 보부상이 파는 것: [아이템, 값, 장날 하루에 살 수 있는 개수]. 가구와 옷은 따로 붙는다
 const MKT_GOODS=[['iron',55,5],['feed',6,20],['yeot',20,5],['ginseng',420,1]];
@@ -616,7 +668,7 @@ function setLayout(L){
   for(const b of BLD){const q=L.bld[b.id];b.x=q[0];b.y=q[1];b.door=[q[0]+1,q[1]+b.h]}
   PLOTS.length=0;for(const p of L.plots)PLOTS.push(p.slice());
   BOARD[0]=L.board[0];BOARD[1]=L.board[1];SPAWN[0]=L.spawn[0];SPAWN[1]=L.spawn[1];FORGE_AT[0]=L.forge[0];FORGE_AT[1]=L.forge[1];FEST_AT[0]=L.fest[0];FEST_AT[1]=L.fest[1];
-  STALLS.forEach((s,i)=>{s.x=L.stalls[i][0];s.y=L.stalls[i][1]});PAL_X=L.pal;
+  STALLS.forEach((s,i)=>{const q=L.stalls[i]||[L.stalls[0][0]+1,L.stalls[0][1]];s.x=q[0];s.y=q[1]});PAL_X=L.pal;
   for(const id in L.anchors)NPCS[id].anchor=L.anchors[id].slice();
   for(const k in L.works){WORKS[k].x=L.works[k][0];WORKS[k].y=L.works[k][1]}
   for(let i=0;i<4;i++)FARM[i]=L.farm[i];EXIT_Y=L.exitY;PIER[0]=L.pier[0];PIER[1]=L.pier[1];
@@ -971,6 +1023,44 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:56,d:'11월 25일',t:'높은 자리의 옷과 장비',l:[
+    '본업의 높은 자리에 오를 때마다 그 자리의 옷 한 벌과 장비 하나를 받아요. 길마다 네 벌, 네 가지씩 모두 스물네 벌과 스물네 가지예요.',
+    '장비는 단계마다 신발, 쓰개, 옷, 그리고 그 길의 으뜸 물건 순서로 받아요. 넷째 단계의 물건은 "전설의" 등급이에요.',
+    '이미 높은 자리에 올라 있었다면 그 단계까지의 옷과 장비가 바로 들어와요.',
+    '어떤 것이 있는지는 아래 "나"의 "장비" 맨 아래 목록에서 볼 수 있어요.']},
+  {v:55,d:'11월 25일',t:'본업과 더 높은 자리',l:[
+    '레벨 10부터 걷는 길 가운데 하나를 본업으로 고를 수 있어요. 아래 "나"의 "신분"에서 골라요. 다른 길의 일과 자리는 그대로 할 수 있어요.',
+    '본업은 수고비와 녹봉을 1.25배로 받아요. 높은 자리에 오를 때마다 0.25배씩 더 늘어요.',
+    '본업의 으뜸 자리에 오른 뒤에는 임금에게 "높은 자리 청하기"로 네 단계를 더 오를 수 있어요. 레벨 12·16·20·25와 스탯, 그 길의 일 횟수, 임금과의 ♥를 갖추고 사은숙배를 올려요.',
+    '높은 자리는 그 길의 힘도 키워요: 상인은 파는 값, 무관은 기력, 문관은 경험치, 수라간은 하사금, 왕실은 내탕금, 나쁜 길은 자릿세가 늘어요.',
+    '높은 자리에 한 번 오르면 본업을 바꿀 수 없어요. 그 전까지는 바꿀 수 있어요.',
+    '길을 걷지 않을 때의 마을 이름도 레벨 26까지 여섯 단계가 더 생겼고, 레벨로 느는 기력도 레벨 16까지로 늘었어요.']},
+  {v:54,d:'11월 25일',t:'골동품 장수',l:[
+    '열흘에 한 번(10·20·30…일) 큰 장날에 골동품 장수가 와요. 보부상과 객주 좌판 사이에 돗자리를 펴요. 잔치와 겹치는 날에는 오지 않아요.',
+    '아직 못 찾은 가구 도안, 일하거나 사냥하다 얻는 귀한 장비, 옛 보물을 네 가지쯤 가져와요. 이미 가진 것은 가져오지 않고, 올 때마다 물건이 달라요.',
+    '값은 아주 비싸요. 물건마다 한 번씩 흥정해서 깎을 수 있어요. 값이 내려가는 동안 기다리다가 행동으로 값을 부르는데, 너무 욕심내면 흥정이 깨져서 제값을 다 줘야 해요.',
+    '"전설의" 장비와 부적, 상으로 받는 장비는 팔지 않아요. 그런 것은 여전히 직접 찾아야 해요.']},
+  {v:53,d:'11월 25일',t:'새 쓰개 모양',l:[
+    '쓰개 모양이 여섯 가지 늘었어요: 족두리, 금관, 털모자, 사슴뿔 투구, 등 달린 투구, 머리띠.',
+    '모양이 같던 쓰개들은 빛깔이 달라졌어요. 갈대 삿갓, 어부 삿갓, 패랭이, 낡은 선비 갓, 수달피 귀마개, 옛 장수의 투구, 대회 깃 전립, 군관 전립이에요.',
+    '이미 가진 쓰개도 바로 새 모습으로 보여요. 같이 하는 이웃에게도 그대로 보여요. 이웃 쪽 판이 옛것이면 맨머리로 보일 수 있어요.']},
+  {v:52,d:'11월 25일',t:'가구 세트와 집들이',l:[
+    '가구 세트가 생겼어요. 같은 데서 난 가구를 빠짐없이 집 안에 놓으면 세트가 되어 아늑함이 더해져요. 모두 열한 묶음이고, 집 안 꾸미기의 "세트" 단추에서 볼 수 있어요.',
+    '집들이를 열 수 있어요. 집 안에 놓은 소반·둥근 탁자·평상 앞에서 행동하면 돼요. ♥ 한 칸 넘게 친해진 마을 이웃이 다섯까지 와요. 이레에 한 번, 80냥이 들어요.',
+    '집들이에서는 식혜를 따라요. 행동을 누르고 있으면 사발이 차고, 손님이 바라는 초록 띠 안에서 손을 떼면 돼요. 넘치면 안 돼요.',
+    '집이 아늑할수록, 잘 따를수록 선물이 푸짐해요. 새로 갖춘 세트는 이웃들이 알아보고 축하해 줘요. 첫 집들이 때는 기념 가구도 받아요.',
+    '세트로 더해진 아늑함은 아침 경험치에도 들어가요.']},
+  {v:51,d:'11월 25일',t:'아래 단추 정리, 장비와 옷 늘리기',l:[
+    '장비가 쉰 가지 넘게 늘었어요. 칼·창·작살 같은 무기, 갑옷, 쓰개, 신발, 장신구가 골고루 생겼고, 새 등급 "전설의" 장비도 있어요.',
+    '귀한 장비일수록 훨씬 드물게 나와요. 낚시나 땅 파기로 쉽게 나오던 것도 줄였어요. 전설의 것은 지을 수 없고 찾아야만 해요.',
+    '만물상에 옷 다섯 벌이 새로 들어왔고, 반짝이는 곳에서만 나오는 옷도 네 벌 늘었어요.',
+    '아래 단추가 다섯 개로 줄었어요: 가방, 나, 기록, 같이 하기, 설정.',
+    '"나"에는 신분·옷장·장비, "기록"에는 이웃·부탁·도감·지도가 들어 있어요. 창 위의 탭으로 오가고, 단추를 누르면 마지막에 본 탭이 다시 열려요.',
+    '저장, 소리, 조작키, 도움말, 소식은 "설정"에 모았어요. 평소에도 틈틈이 저절로 저장돼요.']},
+  {v:50,d:'11월 25일',t:'가구 짜기와 도안, 밭 되돌리기',l:[
+    '목수 모루와 함께 가구를 짤 수 있어요. 모루에게 "가구 짜기"를 말하면 널판을 대패로 미는 놀이가 시작돼요.',
+    '소반, 반닫이, 자개 문갑 같은 옛 가구 스무 가지가 새로 생겼어요. 짜려면 도안이 있어야 하는데, 도안이 곳곳에 묻혀 있다는 말이 돌아요.',
+    '밭을 잘못 갈았으면 행동 단추 위의 "되돌리기"(Z 키)로 바로 물릴 수 있어요. 빈 밭 앞에서는 "밭 메우기"로 풀밭으로 되돌려요.']},
   {v:49,d:'11월 25일',t:'궁궐 처소, 숨은 문, 마을 옮기기',l:[
     '궁궐에서 자리가 오르면 큰길 서쪽의 전각이 내 처소가 돼요. 꾸미고, 자고, 다음 날 거기서 눈을 떠요.',
     '왕실과 인연을 맺었다면 배필이 밤과 아침에 처소에 함께 있어요.',
@@ -980,7 +1070,7 @@ const NEWS=[
     '밭일이 서 있는 칸부터 걸려요. 가고 싶은 칸까지 걸어가서 행동하면 바로 그 칸이 갈려요. 전에는 한 칸 앞이 갈렸어요.',
     '서 있는 칸에 할 일이 없을 때만 바라보는 칸에 해요. 흰 테두리가 행동이 걸릴 칸이에요.',
     '행동 버튼에 심기·물 주기·거두기가 적혀요. 서 있는 풀밭 칸을 한 번 더 눌러도 갈려요.',
-    '판이 바뀌면 이 소식 창이 한 번 떠요. 아래 도구줄의 "소식"에서 다시 볼 수 있어요.']},
+    '판이 바뀌면 이 소식 창이 한 번 떠요. 아래 "설정"의 "소식"에서 다시 볼 수 있어요.']},
   {v:47,d:'11월 25일',t:'스페이스 조작, 사냥 동작',l:[
     '바로 곁에 있는 이웃에게는 바라보지 않아도 행동(스페이스)으로 말이 걸려요.',
     '대화 창을 키보드로 다뤄요. 스페이스로 넘기고 정하고, 방향키로 옮기고, 숫자 키로 바로 골라요.',
@@ -1096,6 +1186,13 @@ function fixState(s){
   // 보물(relics: 찾은 것), 곳마다 파 본 횟수(digs), 오늘의 반짝이는 곳(glints: 날이 바뀌면 rollGlints가 새로 정한다), 오늘 판 동굴 층(caveDug)
   if(!s.relics||typeof s.relics!=='object')s.relics={};for(const k in s.relics)if(!RELICS[k])delete s.relics[k];
   if(!s.digs||typeof s.digs!=='object')s.digs={};
+  // 찾은 가구 도안(plans)과 모루와 짠 가구 수(joined)
+  if(!s.plans||typeof s.plans!=='object')s.plans={};for(const k in s.plans)if(!FURN[k]||!FURN[k].mk)delete s.plans[k];
+  s.joined=s.joined|0;
+  if(!s.party||typeof s.party!=='object')s.party={day:0,n:0,seen:{}};s.party.day=s.party.day|0;s.party.n=s.party.n|0;if(!s.party.seen||typeof s.party.seen!=='object')s.party.seen={};
+  if(s.main&&(typeof s.main!=='object'||!MAIN[s.main.k]))delete s.main;if(s.main)s.main.tier=clamp(s.main.tier|0,0,MAIN_TIERS.length);
+  if(s.antq&&(typeof s.antq!=='object'||!Array.isArray(s.antq.items)))delete s.antq;
+  if(s.antq)s.antq.items=s.antq.items.filter(it=>it&&(it.t==='plan'?FURN[it.id]&&FURN[it.id].mk:it.t==='gear'?GEAR[it.id]:it.t==='relic'?RELICS[it.id]&&RELICS[it.id].k!=='charm':false));
   if(!s.glints||typeof s.glints!=='object'||!Array.isArray(s.glints.town)||!Array.isArray(s.glints.wild)||!Array.isArray(s.glints.sea))s.glints=null;
   if(!s.caveDug||typeof s.caveDug!=='object'||!Array.isArray(s.caveDug.f))s.caveDug=null;
   // 들은 이야기(lore): 예전 저장은 이미 다 보아 온 것이므로 모두 들은 것으로 친다. 새 마을은 빈 채로 시작해 이웃에게 듣는다
@@ -1173,13 +1270,36 @@ function train(k,n){
 const courtTitle=()=>{const C=S.court;return C.rank===0?(S.sex==='f'?'궁녀':'별감'):C.mate==='princess'?(C.rank===1?'부마':'국서'):(C.rank===1?'세자빈':'왕비')};
 // 내세우는 호칭: 간택된 뒤에는 왕실의 자리, 아니면 수라간의 자리, 그도 아니면 마을에서의 이름
 // 길마다의 자리 이름. 내세울 호칭은 신분 창에서 고르고, 고르지 않았으면 왕실(간택 뒤) → 수라간 → 상인 → 궁녀·별감 → 마을 이름 순서로 정한다
-const trackTitle=k=>k==='rogue'?(S.rogue?ROGUE.ranks[S.rogue.rank]:null):k==='court'?(S.court?courtTitle():null):k==='cook'?(S.job?JOBS.cook.ranks[S.sex==='f'?'f':'m'][S.job.rank]:null):k==='merch'?(S.merch?TRADE.ranks[S.merch.rank]:null):TRACKS[k]&&S[k]?TRACKS[k].ranks[S[k].rank]:null;
-const rankName=()=>trackTitle(S.title)||(S.court&&S.court.rank>=1?courtTitle():null)||trackTitle('cook')||trackTitle('merch')||trackTitle('mil')||trackTitle('civ')||trackTitle('court')||trackTitle('rogue')||TITLES[Math.min(S.level,TITLES.length)-1];
+// 본업: 레벨 MAIN_LV부터, 걷고 있는 길 가운데 하나를 본업으로 고른다(S.main={k,tier}). 다른 길의 일과 자리는 그대로다.
+// 본업은 수고비·녹봉·자릿세를 더 받고(mainMul), 그 길의 으뜸 자리(품계 2)에 오른 뒤에는 임금에게서 더 높은 자리(tier 1~4)를 받는다.
+// 높은 자리(MAIN_TIERS): 레벨 lv, 그 길의 스탯 stat, 그 길의 일 횟수 done, 임금과의 ♥ h를 갖추고 임금 앞에서 사은숙배(예법 따라 하기)를 마치면 오른다.
+// 나쁜 길은 임금이 아니라 악명(inf)과 레벨로 저절로 오른다(mainRogueUp)
+const MAIN_LV=10;
+const MAIN_TIERS=[{lv:12,stat:15,done:20,h:3,inf:80,prize:2500},{lv:16,stat:17,done:30,h:3,inf:130,prize:5000},{lv:20,stat:19,done:42,h:4,inf:200,prize:9000},{lv:25,stat:20,done:56,h:5,inf:300,prize:15000}];
+const MAIN={
+  cook:{n:'수라간의 길',fit:['cook3','cook4','cook5','cook6'],stat:'cook',dn:'올린 수라상',done:()=>S.job.served,perk:'수라상 하사금이 늘어요',titles:()=>S.sex==='f'?['부제조상궁','제조상궁','수라간 큰어른','나라의 손맛']:['사옹원 첨정','사옹원 정','사옹원 제조','사옹원 도제조']},
+  court:{n:'왕실의 길',fit:['court3','court4','court5','court6'],stat:'grace',dn:'예법 수련',done:()=>S.court.done,perk:'내탕금이 늘어요',titles:()=>{const t=S.court&&S.court.mate==='princess'?'국서':'왕비';return['어진 '+t,'덕 높은 '+t,'백성의 어버이','성군의 짝']}},
+  merch:{n:'상인의 길',fit:['merch3','merch4','merch5','merch6'],stat:'trade',dn:'안목 겨루기',done:()=>S.merch.done,perk:'파는 값이 5% 더 올라요',titles:()=>['도고','육의전 행수','육의전 대행수','나라 으뜸 거상']},
+  mil:{n:'무관의 길',fit:['mil3','mil4','mil5','mil6'],stat:'arms',dn:'활쏘기 수련',done:()=>S.mil.done,perk:'기력 최대치가 10 더 늘어요',titles:()=>['병마절도사','훈련대장','병조판서','도원수']},
+  civ:{n:'문관의 길',fit:['civ3','civ4','civ5','civ6'],stat:'lore',dn:'글공부',done:()=>S.civ.done,perk:'경험치를 10% 더 얻어요',titles:()=>['우의정','좌의정','영의정','국로']},
+  rogue:{n:'나쁜 길',fit:['rogue3','rogue4','rogue5','rogue6'],perk:'자릿세가 늘어요',titles:()=>['큰 두목','대두목','검계 수령','밤의 임금']}
+};
+const mainTier=k=>S&&S.main&&S.main.k===k?S.main.tier|0:0;
+const rk=k=>{const A=routeOf(k);return A?A.rank+mainTier(k):0}; /* 본업의 높은 자리까지 더한 품계: 길의 혜택을 셈할 때 쓴다 */
+const mainMul=k=>S&&S.main&&S.main.k===k?1.25+.25*(S.main.tier|0):1; /* 본업의 수고비·녹봉 배수 */
+/* 신분 창: 으뜸 자리에 오른 길 옆에 붙이는 한마디 (본업 이야기를 들었거나 골랐을 때만) */
+const topMore=k=>!(S.main||heard('main')||S.level>=MAIN_LV)||mainTier(k)>=MAIN_TIERS.length?'':S.main&&S.main.k===k?' 본업이라 더 높은 자리가 열려 있어요(아래 "본업").':S.main&&S.main.tier?'':' 본업으로 삼으면 더 높은 자리가 열려요.';
+const baseTitle=k=>k==='rogue'?(S.rogue?ROGUE.ranks[S.rogue.rank]:null):k==='court'?(S.court?courtTitle():null):k==='cook'?(S.job?JOBS.cook.ranks[S.sex==='f'?'f':'m'][S.job.rank]:null):k==='merch'?(S.merch?TRADE.ranks[S.merch.rank]:null):TRACKS[k]&&S[k]?TRACKS[k].ranks[S[k].rank]:null;
+const trackTitle=k=>mainTier(k)&&routeOf(k)?MAIN[k].titles()[mainTier(k)-1]:baseTitle(k); /* 본업의 높은 자리에 올랐으면 그 이름 */
+// 길을 걷지 않을 때의 마을 이름은 레벨에 따라 오른다 (TITLE_LV[i]부터 TITLES[i])
+const villTitle=()=>{let i=0;while(i+1<TITLES.length&&S.level>=TITLE_LV[i+1])i++;return TITLES[i]};
+const rankName=()=>trackTitle(S.title)||(S.main?trackTitle(S.main.k):null)||(S.court&&S.court.rank>=1?courtTitle():null)||trackTitle('cook')||trackTitle('merch')||trackTitle('mil')||trackTitle('civ')||trackTitle('court')||trackTitle('rogue')||villTitle();
 // 파는 값: 은하와 친하면 10%, 수완 1마다 2%, 상인의 자리가 오를 때마다 5% 더 받는다
-const sellPrice=id=>Math.ceil(ITEMS[id].p*(perk('eunha')?1.1:1)*(1+sv('trade')*.02)*(1+(S.merch?S.merch.rank*.05:0))*(CROPS[id]&&workDone('mill')?1.15:1)*(1+gearFx('sell')));
-const comfort=()=>S.placed.reduce((a,f)=>a+FURN[f.id].c,0);
+const sellPrice=id=>Math.ceil(ITEMS[id].p*(perk('eunha')?1.1:1)*(1+sv('trade')*.02)*(1+rk('merch')*.05)*(CROPS[id]&&workDone('mill')?1.15:1)*(1+gearFx('sell')));
+const setHas=k=>SETS[k].ids.every(id=>S.placed.some(f=>f.id===id)),setsDone=()=>Object.keys(SETS).filter(setHas);
+const comfort=()=>S.placed.reduce((a,f)=>a+FURN[f.id].c,0)+setsDone().reduce((a,k)=>a+SETS[k].c,0);
 // 기력: 일을 하면 줄고, 음식을 먹거나 자면 찬다
-const maxEn=()=>Math.min(220,Math.min(160,100+(S.level-1)*6)+sv('arms')*2+(S.mil?S.mil.rank*10:0)+S.kids.filter(k=>k.gift==='thread').length*10+(relic('c_pouch')?10:0)+gearFx('en'));
+const maxEn=()=>Math.min(250,Math.min(190,100+(S.level-1)*6)+sv('arms')*2+rk('mil')*10+S.kids.filter(k=>k.gift==='thread').length*10+(relic('c_pouch')?10:0)+gearFx('en'));
 function useEn(n){
   if(S.en<n){toast('기력이 모자라요. 가방에서 음식을 먹거나 침대에서 자요');sfx('err');return false}
   S.en-=n;touch();hud();return true;
@@ -1193,11 +1313,11 @@ const grown=a=>a.age>=STOCK[a.k].grow;
 // 다 자란 소가 있으면 쟁기를 끌어 줘서 밭 갈기가 수월하다
 const hasOx=()=>S.stock.some(a=>a.k==='cow'&&grown(a));
 function addXp(n){
-  S.xp+=Math.round(n*(1+sv('lore')*.03)*(1+(S.civ?S.civ.rank*.1:0))*(S.wx==='rainbow'?1.25:1)*(buddy()?1.1:1)*(1+gearFx('xp')));
+  S.xp+=Math.round(n*(1+sv('lore')*.03)*(1+rk('civ')*.1)*(S.wx==='rainbow'?1.25:1)*(buddy()?1.1:1)*(1+gearFx('xp')));
   while(S.xp>=needXp(S.level)){
     S.xp-=needXp(S.level);S.level++;sfx('level');
     const pts=2+(perk('prince')?1:0);S.sp+=pts;
-    toast('레벨 '+S.level+'! 스탯 점수 +'+pts+' · 아래 "신분"에서 올려요');
+    toast('레벨 '+S.level+'! 스탯 점수 +'+pts+' · 아래 "나"의 "신분"에서 올려요');
     const seed=Object.keys(ITEMS).find(k=>ITEMS[k].lv===S.level);
     if(seed)toast('잡화점에 '+jo(ITEMS[seed].n,'이','가')+' 들어왔어요');
   }
@@ -1300,6 +1420,8 @@ function furnArt(c,id,x,y,t){
   case 'sofa':rr(c,2,6,28,14,5,'#6fa08a');rr(c,2,14,28,13,4,'#86b9a2');rr(c,1,12,6,15,3,'#5c8a76');rr(c,25,12,6,15,3,'#5c8a76');break;
   case 'tank':{rr(c,5,22,22,6,2,'#6b5a4c');rr(c,4,4,24,19,3,'#bfe6f5');rr(c,4,18,24,5,2,'#e9d8a8');const fx=16+Math.sin(t*1.2)*6;ell(c,fx,11,3.5,2,'#f08a2a');poly(c,[fx+3,11,fx+6,9,fx+6,13],'#f08a2a');c.strokeStyle='#7fa9ba';c.lineWidth=1.5;c.strokeRect(4.5,4.5,23,18);break}
   case 'stove':rr(c,6,6,20,22,3,'#4a4a50');rr(c,13,-8,6,15,1,'#3a3a40');rr(c,9,13,14,10,2,'#1f1f22');ell(c,16,19,4+Math.sin(t*9)*.8,4,'#f08a2a');ell(c,16,20,2,2.5,'#f7d24a');break;
+  case 'jori':rr(c,15,6,3,24,1,'#8a5a34');rr(c,8,28,17,3,1.5,'#6e4424');rr(c,6,7,21,2.5,1,'#8a5a34');poly(c,[4,10,13,10,11.5,21,5.5,21],'#e6cf93');poly(c,[20,10,29,10,27.5,21,21.5,21],'#dcc07c');
+    rr(c,5.5,13,6,1,.5,'#b89a58');rr(c,5.8,16.5,5.4,1,.5,'#b89a58');rr(c,21.5,13,6,1,.5,'#a88a4c');rr(c,21.8,16.5,5.4,1,.5,'#a88a4c');rr(c,7,8,3,3,1,'#d9412e');rr(c,23,8,3,3,1,'#3f6fb0');break;
   case 'agungi':rr(c,2,10,28,19,4,'#b9a58c');rr(c,4,12,24,5,2,'#cdbba2');rr(c,10,18,12,11,[5,5,0,0],'#2a2220');ell(c,16,25,4+Math.sin(t*9)*.7,3.4,'#f08a2a');ell(c,16,26,2,1.8,'#f7d24a');ell(c,16,9,11,5,'#2e2e34');ell(c,16,7.5,9,3.2,'#4a4a52');rr(c,14,2.5,4,3.5,1,'#2e2e34');break;
   case 'screen':for(let i=0;i<3;i++){const px=1+i*10,py=-10+(i%2?2:0);rr(c,px,py,10,38,1,'#6b4a2a');rr(c,px+1.5,py+2,7,34,.5,'#f3ead6');poly(c,[px+2,py+24,px+5,py+12+i*3,px+8,py+24],'#7a8a94');line(c,px+2,py+29,px+8,py+29,'#9fb3c4',1.2)}break;
   case 'jar':ell(c,16,27,9,3,'rgba(0,0,0,.18)');ell(c,16,15,11,12,'#f6f1e6');rr(c,11,1,10,5,2,'#f6f1e6');ell(c,16,2,5,1.6,'#d9d2c2');ell(c,12,11,3,5,'#ffffff');break;
@@ -1318,6 +1440,27 @@ function furnArt(c,id,x,y,t){
   case 'r_pearl':{ell(c,16,27,12,3,'rgba(0,0,0,.18)');c.fillStyle='#f1c9d6';c.beginPath();c.moveTo(4,20);c.quadraticCurveTo(16,-8,28,20);c.closePath();c.fill();c.strokeStyle='#d99ab0';c.lineWidth=1.2;for(const k of [-7,-3.5,0,3.5,7]){c.beginPath();c.moveTo(16,20);c.lineTo(16+k*1.4,6+Math.abs(k)*.9);c.stroke()}ell(c,16,23,12,5,'#f6dbe4');const s=.6+.4*Math.sin(t*3);circ(c,16,20,4.2,'#ffffff');circ(c,14.6,18.6,1.4,'rgba(200,225,255,'+s+')');break}
   case 'r_crystal':{ell(c,16,28,11,3,'rgba(0,0,0,.18)');poly(c,[7,28,9,12,13,8,16,28],'#8f7fd6');poly(c,[13,28,15,2,19,-2,22,28],'#b8a8f0');poly(c,[20,28,22,14,26,11,27,28],'#7a6ac4');poly(c,[15,2,19,-2,18,12],'#e6dcff');const s=.5+.5*Math.sin(t*3.4);c.globalAlpha=s;star(c,19,6,3,'#ffffff');c.globalAlpha=1;break}
   case 'g_eunha':{const s=Math.sin(t*1.5)*1.5;line(c,16,-8,16,2,'#8f8f9a',1);line(c,6,2,26,2,'#8f8f9a',1.5);line(c,8,2,8+s,9,'#8f8f9a',1);line(c,16,2,16+s,14,'#8f8f9a',1);line(c,24,2,24+s,8,'#8f8f9a',1);star(c,8+s,12,4.5,'#f7d24a');star(c,16+s,18,5.5,'#ffe27a');star(c,24+s,11,4,'#f7d24a');break}
+  // 모루와 함께 짜는 가구
+  case 'soban':ell(c,16,27,10,3,'rgba(0,0,0,.18)');rr(c,8,16,3,10,1,'#6b3a22');rr(c,21,16,3,10,1,'#6b3a22');ell(c,16,14,13,7,'#8a4a2a');ell(c,16,13,11,5.5,'#a85a32');ell(c,16,13,7,3,'#b96a3e');break;
+  case 'seoan':ell(c,16,28,13,3,'rgba(0,0,0,.18)');rr(c,4,15,3,12,1,'#5e3f24');rr(c,25,15,3,12,1,'#5e3f24');rr(c,1,11,30,6,2,'#7a4f2c');rr(c,2,10,28,4,2,'#9a6a3e');rr(c,7,5,10,6,1,'#f3ead6');line(c,8.5,7,15.5,7,'#6b5a4c',1);line(c,8.5,9,13.5,9,'#6b5a4c',1);line(c,21,4,25,11,'#3a2a22',1.5);break;
+  case 'deungjan':{const g=.6+.4*Math.sin(t*5);ell(c,16,28,7,2.5,'rgba(0,0,0,.18)');ell(c,16,26,6,2.5,'#5e3f24');rr(c,14.5,6,3,20,1,'#7a4f2c');ell(c,16,6,6,2.2,'#5e3f24');ell(c,16,4.5,4,1.6,'#c9a86a');circ(c,16,1,6,'rgba(255,220,120,'+(.25*g)+')');ell(c,16,1,1.6,2.6+g*.6,'#f7a531');ell(c,16,1.6,.8,1.4,'#fff3c0');break}
+  case 'bandaji':ell(c,16,29,14,3,'rgba(0,0,0,.18)');rr(c,2,6,28,22,2,'#6b3a22');rr(c,3,7,26,9,1,'#8a4a2a');rr(c,3,17,26,10,1,'#7a4226');c.fillStyle='#d9b24a';c.fillRect(14.5,13,3,7);c.fillRect(5,7,2,4);c.fillRect(25,7,2,4);c.fillRect(5,22,2,5);c.fillRect(25,22,2,5);circ(c,16,21,1.6,'#f2d86a');rr(c,2,26,3,3,1,'#4a2a18');rr(c,27,26,3,3,1,'#4a2a18');break;
+  case 'pyeongsang':ell(c,16,29,15,3,'rgba(0,0,0,.18)');rr(c,2,20,3,8,1,'#5e3f24');rr(c,27,20,3,8,1,'#5e3f24');rr(c,1,8,30,14,2,'#8a5a34');c.fillStyle='#b98a5a';for(let i=0;i<5;i++)c.fillRect(2.5+i*5.6,9,4.6,11);rr(c,1,20,30,3,1,'#6b4526');break;
+  case 'hwaro':{const g=.6+.4*Math.sin(t*6);ell(c,16,28,11,3,'rgba(0,0,0,.18)');rr(c,8,22,3,6,1,'#8a6a2a');rr(c,21,22,3,6,1,'#8a6a2a');poly(c,[4,12,28,12,24,24,8,24],'#c9a03a');ell(c,16,12,12,4.5,'#e0bc54');ell(c,16,12,9.5,3.2,'#3a2a22');circ(c,13,12,1.8,'rgba(240,138,42,'+(.6+.4*g)+')');circ(c,18,11.5,2,'rgba(247,82,42,'+(.6+.4*g)+')');circ(c,16,13,1.2,'#f7d24a');break}
+  case 'hwaetdae':ell(c,16,29,12,2.5,'rgba(0,0,0,.18)');rr(c,5,0,2.5,28,1,'#6b4526');rr(c,24.5,0,2.5,28,1,'#6b4526');rr(c,3,2,26,2.5,1,'#8a5a34');line(c,6,0,2,-6,'#e9dcc0',2);line(c,4,-3,1,-3,'#e9dcc0',1.5);line(c,26,0,30,-6,'#e9dcc0',2);line(c,28,-3,31,-3,'#e9dcc0',1.5);rr(c,10,4,12,15,2,'#c8392f');rr(c,10,4,12,4,1,'#e58a8a');rr(c,3,26,7,3,1,'#5e3f24');rr(c,22,26,7,3,1,'#5e3f24');break;
+  case 'tongmok':ell(c,16,28,10,3,'rgba(0,0,0,.18)');rr(c,7,12,18,15,3,'#7a5232');line(c,11,15,11,25,'#5e3f24',1);line(c,20,14,20,24,'#5e3f24',1);ell(c,16,12,9,4.5,'#d9b98a');ell(c,16,12,5.5,2.6,'#c9a274');ell(c,16,12,2,1,'#b08a5a');break;
+  case 'gomrug':ell(c,16,17,12,9,'#5a4030');circ(c,6,9,4,'#5a4030');circ(c,26,9,4,'#5a4030');circ(c,6,25,4,'#5a4030');circ(c,26,25,4,'#5a4030');ell(c,16,17,8,6,'#6e5040');circ(c,16,5,5,'#5a4030');circ(c,12.5,2,1.8,'#4a3224');circ(c,19.5,2,1.8,'#4a3224');circ(c,14.5,5,.8,'#1f1a18');circ(c,17.5,5,.8,'#1f1a18');ell(c,16,7.5,1.6,1,'#2a2220');break;
+  case 'hopi':ell(c,16,27,13,3,'rgba(0,0,0,.18)');rr(c,3,10,26,16,6,'#c8392f');rr(c,5,9,22,14,5,'#e0a13a');c.fillStyle='#3a2a22';for(let i=0;i<4;i++){c.fillRect(8+i*4.6,10,1.8,5);c.fillRect(6+i*4.6,18,1.8,4)}rr(c,5,21,22,2,1,'#c98a2a');break;
+  case 'seokdeung':{const g=.6+.4*Math.sin(t*2.6);ell(c,16,29,10,2.6,'rgba(0,0,0,.18)');rr(c,9,25,14,4,1,'#8f8f96');rr(c,13,14,6,12,1,'#a5a5ac');rr(c,8,4,16,11,2,'#b4b4ba');rr(c,12,6.5,8,6,1,'rgba(255,214,120,'+(.55+.4*g)+')');poly(c,[4,5,28,5,22,-3,10,-3],'#8f8f96');circ(c,16,-5,2.4,'#a5a5ac');circ(c,16,9.5,9,'rgba(255,214,120,'+(.15*g)+')');break}
+  case 'euncho':{const g=.6+.4*Math.sin(t*5.5);ell(c,16,28,7,2.4,'rgba(0,0,0,.18)');ell(c,16,26.5,6.5,2.4,'#b9c2cc');rr(c,14.8,12,2.4,14,1,'#dfe6ec');ell(c,16,18,3,1.6,'#b9c2cc');ell(c,16,12,5,1.8,'#dfe6ec');rr(c,14.2,4,3.6,8,1,'#fff7ea');circ(c,16,1,5.5,'rgba(255,220,120,'+(.25*g)+')');ell(c,16,1.5,1.5,2.6+g*.5,'#f7a531');break}
+  case 'okhyang':{const s=Math.sin(t*1.6)*2;ell(c,16,28,9,2.6,'rgba(0,0,0,.18)');rr(c,9,24,3,4,1,'#5fa58a');rr(c,20,24,3,4,1,'#5fa58a');ell(c,16,19,10,7,'#7fc7a8');ell(c,16,14,8,2.6,'#5fa58a');ell(c,16,12,6,4,'#9fdcc0');circ(c,16,7.5,1.8,'#5fa58a');ell(c,12,18,2,3.5,'#c9f0e0');c.strokeStyle='rgba(235,235,235,.75)';c.lineWidth=1.3;c.beginPath();c.moveTo(16,5);c.quadraticCurveTo(19+s,0,16-s,-4);c.quadraticCurveTo(13-s,-7,16+s,-10);c.stroke();break}
+  case 'geumham':{const s=.5+.5*Math.sin(t*3);ell(c,16,28,12,3,'rgba(0,0,0,.18)');rr(c,4,12,24,15,2,'#7a2f2a');rr(c,4,9,24,7,3,'#9a3a32');c.fillStyle='#f2c531';c.fillRect(4,15,24,1.5);c.fillRect(14.5,13,3,6);c.fillRect(6,20,3,5);c.fillRect(23,20,3,5);circ(c,16,21.5,2,'#f7d24a');c.globalAlpha=s;star(c,24,10,2.6,'#fff7c0');c.globalAlpha=1;break}
+  case 'punggyeong':{const s=Math.sin(t*2)*1.6;line(c,16,-8,16,0,'#8f8f9a',1);rr(c,7,0,18,2.5,1,'#8a5a34');for(let i=0;i<4;i++){const x=9+i*4.7,l=8+(i%2)*5,dx=s*(.6+i*.15);line(c,x,2,x+dx,2+l,'#b9c2cc',1);ell(c,x+dx,4+l,2.2,2.8,i%2?'#f1c9d6':'#f6f1e6')}break}
+  case 'baegwe':ell(c,16,29,14,3,'rgba(0,0,0,.18)');rr(c,2,10,28,18,2,'#5e4a3a');rr(c,2,8,28,8,3,'#7a6048');c.fillStyle='#3a3a40';c.fillRect(7,8,3,20);c.fillRect(22,8,3,20);rr(c,13.5,14,5,5,1,'#b9c2cc');circ(c,16,17.5,1,'#3a3a40');break;
+  case 'jagae':{const s=.6+.4*Math.sin(t*2.2);ell(c,16,29,14,3,'rgba(0,0,0,.18)');rr(c,1,10,30,17,2,'#1f1a20');rr(c,2,11,28,15,1,'#2e2630');line(c,11,11,11,26,'#16121a',1);line(c,21,11,21,26,'#16121a',1);for(const q of [[6,16,'#bfe6f5'],[16,15,'#f1c9d6'],[26,16,'#c9f0e0'],[6,22,'#f1c9d6'],[16,22,'#bfe6f5'],[26,22,'#f6f1e6']])circ(c,q[0],q[1],1.8,q[2]);c.globalAlpha=s;star(c,16,18.5,2.2,'#ffffff');c.globalAlpha=1;rr(c,2,26,3,3,1,'#16121a');rr(c,27,26,3,3,1,'#16121a');break}
+  case 'kkotsal':for(let i=0;i<2;i++){const px=2+i*14.5;rr(c,px,-8,13.5,36,1,'#7a4f2c');rr(c,px+1.5,-6,10.5,24,.5,'#f3ead6');for(let j=0;j<3;j++){line(c,px+1.5,-6+j*8,px+12,2+j*8,'#9a6a3e',1);line(c,px+12,-6+j*8,px+1.5,2+j*8,'#9a6a3e',1);circ(c,px+6.75,-2+j*8,1.7,j%2?'#f6a3c4':'#f2a531')}rr(c,px+1.5,20,10.5,6,.5,'#8a5a34')}break;
+  case 'gyeongdae':ell(c,16,29,11,2.6,'rgba(0,0,0,.18)');rr(c,5,16,22,12,2,'#7a2f2a');rr(c,7,19,18,6,1,'#9a3a32');circ(c,16,22,1.4,'#f2c531');rr(c,8,-4,16,19,2,'#5e3f24');rr(c,10,-2,12,15,1,'#cfe6ee');poly(c,[11,-1,15,-1,11,6],'rgba(255,255,255,.7)');break;
+  case 'hwachojang':ell(c,16,29,13,3,'rgba(0,0,0,.18)');rr(c,3,-8,26,36,2,'#7a2f2a');rr(c,5,-6,10.5,15,1,'#f3ead6');rr(c,16.5,-6,10.5,15,1,'#f3ead6');rr(c,5,11,22,14,1,'#f3ead6');line(c,10,6,10,-1,'#4f9d52',1.2);circ(c,10,-2,2.4,'#f6a3c4');circ(c,8,2,1.4,'#6fbf6a');line(c,22,6,22,0,'#4f9d52',1.2);circ(c,22,-1,2.4,'#c8392f');circ(c,24,3,1.4,'#6fbf6a');line(c,9,22,23,22,'#6b5a4c',1);circ(c,12,17,2.2,'#f7d24a');circ(c,20,18,2.2,'#f6a3c4');circ(c,16,15.5,1.8,'#7fb3e6');c.fillStyle='#f2c531';c.fillRect(15,0,2,4);rr(c,3,26,3,3,1,'#4a2018');rr(c,26,26,3,3,1,'#4a2018');break;
   }
   c.restore();
 }
@@ -1333,8 +1476,10 @@ const PXFW=['....oppooppo....','....offooppo....','.....oo.offo....','.........o
 const PXSW=['....oppoppo.....','...oppo.oppo....','...offo.offo....','....oo...oo.....'];
 const shade=(hex,f)=>{const n=parseInt(hex.slice(1),16);return'rgb('+Math.round((n>>16&255)*f)+','+Math.round((n>>8&255)*f)+','+Math.round((n&255)*f)+')'};
 const sprCache={};
+// 쓰개 모양마다의 바탕 빛깔 (도트의 x). 장비가 hatC를 주면 그 빛깔로 바뀐다
+const HAT_COL={helm:'#9aa3aa',helmL:'#9aa3aa',antler:'#9aa3aa',helmG:'#e9b930',crown:'#e9b930',gat:'#1f1f24',ikseon:'#1f1f24',samo:'#1f1f24',jeonrip:'#1f1f24',jokduri:'#1f1f24',cap:'#5a4a3e',goggles:'#5a4a3e',straw:'#edd58c',ear:'#ffffff',fur:'#8a8f98',band:'#c8392f'};
 function charSprite(o,view,fr){
-  const key=[o.hair,o.shirt,o.bot,o.rib,o.sex,o.skin,o.hat,view,fr,o.shoe||'',o.bow||'',o.gem||''].join('|');if(sprCache[key])return sprCache[key];
+  const key=[o.hair,o.shirt,o.bot,o.rib,o.sex,o.skin,o.hat,view,fr,o.shoe||'',o.bow||'',o.gem||'',o.hatC||''].join('|');if(sprCache[key])return sprCache[key];
   const rows={},side=view==='side',back=view==='back',put=(r,s)=>{rows[r]=s};
   (side?PXS:PXF).forEach((s,i)=>put(i+1,s));
   if(back)PXB.forEach((s,i)=>put(i+5,s));
@@ -1353,7 +1498,7 @@ function charSprite(o,view,fr){
   case 'cap':put(2,'....oxxxxxxo....');put(3,'...oxxxxxxxxo...');put(4,side?'...oxxxxxxXXXo..':back?'...oxxxxxxxxo...':'...oXXXXXXXXo...');break;
   case 'chef':put(-3,'.....oooooo.....');put(-2,'....owwwwwwo....');put(-1,'....owwwwwwo....');put(0,'.....owwwwo.....');put(1,'....owwwwwwo....');
     if(!side&&!back){put(12,'...osbwwwwbso...');put(13,'...osbwwwwbso...');put(14,'....oBwwwwBo....')}break;
-  case 'straw':put(2,'....oyyyyyyo....');put(3,'.oyyyyyyyyyyyyo.');break;
+  case 'straw':put(2,'....oxxxxxxo....');put(3,'.oxxxxxxxxxxxxo.');break;
   case 'goggles':put(5,side?'...oxxxxxggxo...':back?'...oxxxxxxxxo...':'...oxggxxggxo...');break;
   case 'bun':put(-1,'......oooo......');put(0,'.....ohhhho.....');break;
   case 'gat':put(-1,'.....xxxxxx.....');put(0,'.....xxxxxx.....');put(1,'.....xxxxxx.....');put(2,'.xxxxxxxxxxxxxx.');break;
@@ -1365,15 +1510,27 @@ function charSprite(o,view,fr){
   // 화관: 머리에 두른 꽃 띠 (꽃놀이 한복)
   case 'hwagwan':put(1,'....owrwywro....');put(2,'...oywrwywrwo...');break;
   // 토끼털 귀마개: 이마의 흰 털 띠와 양옆 털 뭉치
-  case 'ear':put(3,'...owwwwwwwwo...');if(!side&&!back)put(5,'..owhhsssshhwo..');else put(5,side?'..owhhhhhssso...':'..owhhhhhhhhwo..');break;
+  case 'ear':put(3,'...oxxxxxxxxo...');if(!side&&!back)put(5,'..oxhhsssshhxo..');else put(5,side?'..oxhhhhhssso...':'..oxhhhhhhhhxo..');break;
   // 전립: 갓처럼 생긴 무관의 벙거지. 붉은 술과 꿩 깃을 달았다
   case 'jeonrip':put(-1,'.....xxxxxy.....');put(0,'.....xxxxxx.....');put(1,'....rxxxxxxr....');put(2,'.xxxxxxxxxxxxxx.');break;
   // 투구(쇠·금): 둥근 머리 덮개에 꼭지와 테
-  case 'helm':case 'helmG':put(-1,'.......xx.......');put(0,'.....oxxxxo.....');put(1,'....oxxxxxxo....');put(2,'...oxxxxxxxxo...');put(3,'...oXXXXXXXXo...');put(4,side?'...oXXXXXssso...':back?'...oXXXXXXXXo...':'...oXXssssXXo...');break;
+  case 'helm':case 'helmG':case 'helmL':case 'antler':put(-1,'.......xx.......');put(0,'.....oxxxxo.....');put(1,'....oxxxxxxo....');put(2,'...oxxxxxxxxo...');put(3,'...oXXXXXXXXo...');put(4,side?'...oXXXXXssso...':back?'...oXXXXXXXXo...':'...oXXssssXXo...');
+    // 등 달린 투구: 이마에 등(y)과 불빛(w). 사슴뿔 투구: 양옆으로 뻗은 뿔(y)
+    if(o.hat==='helmL'&&!back){put(1,side?'....oxxxxxyyo...':'....oxxyyxxo....');put(2,side?'...oxxxxxxywyo..':'...oxxxywyxxo...')}
+    if(o.hat==='antler'){put(-3,'..y..........y..');put(-2,'..yy.y....y.yy..');put(-1,'...yyy.xx.yyy...');put(0,'....yoxxxxoy....')}break;
+  // 족두리: 정수리에 얹는 작은 관. 옥(g)과 진주(w)를 달고 꼭대기에 금 장식(y)
+  case 'jokduri':put(-1,'.......yy.......');put(0,'.....oxxxxo.....');put(1,back?'....oxxxxxxo....':'....oxwggwxo....');break;
+  // 금관: 띠 위로 세 갈래 세움 장식이 솟고 곱은옥(g)을 달았다
+  case 'crown':put(-2,'.......xx.......');put(-1,'....x..xx..x....');put(0,'....xx.xx.xx....');put(1,'....xxxxxxxx....');put(2,'....oxxxxxxo....');put(3,back?'...oXXXXXXXXo...':'...oXgXXXXgXo...');break;
+  // 털모자: 둥근 털벙거지에 귀를 덮는 드림
+  case 'fur':put(1,'....oxxxxxxo....');put(2,'...oxxxxxxxxo...');put(3,'..oxxxxxxxxxxo..');put(4,'..oXXXXXXXXXXo..');
+    if(back){put(5,'..oxxxxxxxxxxo..');put(6,'..oxxxxxxxxxxo..')}else if(side){put(5,'..oxxxxxxssso...');put(6,'..oxxxxx'+rows[6].slice(8))}else{put(5,'..oxxxssssxxxo..');put(6,'..oxx'+rows[6].slice(5,11)+'xxo..')}break; /* 눈 줄은 깜빡임을 살려 둔다 */
+  // 머리띠: 이마에 질끈 동여맨 띠. 옆과 뒤로 매듭 끝이 늘어진다
+  case 'band':put(4,'...oxxxxxxxxo...');if(back)put(5,'...ohhhhXXhho...');else if(side)put(5,'..oXhhhhhssso...');break;
   }
   const list=[];for(let r=-3;r<=19;r++)if(!(o.small&&(r===13||r===16)))list.push(rows[r]||'');
   const cvs=document.createElement('canvas');cvs.width=16;cvs.height=24;const c=cvs.getContext('2d');
-  const hat=o.hat==='helm'?'#9aa3aa':o.hat==='helmG'?'#e9b930':o.hat==='gat'||o.hat==='ikseon'||o.hat==='samo'||o.hat==='jeonrip'?'#1f1f24':o.hat==='cap'||o.hat==='goggles'?'#5a4a3e':'#888888',bot=o.bot||'#4a3b32';
+  const hat=o.hatC||HAT_COL[o.hat]||'#888888',bot=o.bot||'#4a3b32'; /* hatC: 같은 모양의 빛깔만 다른 쓰개 */
   const pal={o:'#3a2a22',h:o.hair,s:o.skin,e:'#2a2220',E:shade(o.skin,.66),c:'#ff9fa8',b:o.shirt,B:shade(o.shirt,.8),p:bot,k:bot,r:o.rib||'#d9412e',f:o.shoe||'#2e2420',w:'#ffffff',x:hat,X:shade(hat,.72),y:'#edd58c',g:'#7fd0e6'};
   const y0=24-list.length;
   list.forEach((s,y)=>{for(let x=0;x<s.length;x++){const col=pal[s[x]];if(col){c.fillStyle=col;c.fillRect(x,y0+y,1,1)}}});
@@ -1430,13 +1587,13 @@ function blit(c,spr,x,y,flip){
 const spr=(key,make)=>SPR[key]||(SPR[key]=make());
 const itemSpr=id=>spr('i'+id,()=>bake(28,28,14,14,0,0,c=>drawItem(c,id,0,0,1)));
 const shadowSpr=r=>spr('s'+r,()=>bake(r*2+4,10,r+2,5,0,0,c=>ell(c,0,0,r,3.5,'rgba(0,0,0,.2)'),false));
-const lookOf=(outfit,sex)=>{const f=OUTFITS[outfit]||OUTFITS.plain;return{skin:'#f3cfb0',hair:'#2e2a2a',shirt:f.top,bot:f.bot,rib:f.rib,sex,hat:(sex==='f'?f.hatF:f.hatM)||f.hat||(sex==='m'?'bun':'none')}};
+const lookOf=(outfit,sex)=>{const f=OUTFITS[outfit]||OUTFITS.plain;return{skin:'#f3cfb0',hair:'#2e2a2a',shirt:f.top,bot:f.bot,rib:f.rib,sex,hat:(sex==='f'?f.hatF:f.hatM)||f.hat||(sex==='m'?'bun':'none'),hatC:f.hatC||''}};
 // 내 모습: 옷장에서 고른 옷 위에, 걸친 갑옷(저고리 색)과 쓰개가 덧보인다 (장비 창에서 숨길 수 있다)
 const playerLook=()=>{
   const L=lookOf(S&&S.outfit,S&&S.sex||'m');
   if(S&&S.gear&&S.gear.show){
     const lk=s=>{const G=GEAR[S.gear.on[s]];return(G&&G.look)||{}},a=lk('a'),h=lk('h');
-    if(a.top)L.shirt=a.top;if(a.rib)L.rib=a.rib;if(h.hat)L.hat=h.hat;
+    if(a.top)L.shirt=a.top;if(a.rib)L.rib=a.rib;if(h.hat){L.hat=h.hat;L.hatC=h.hatC||''}
     L.shoe=lk('s').shoe||'';L.bow=lk('w').bow||'';L.gem=lk('t').gem||'';
   }
   return L;
@@ -1762,6 +1919,14 @@ function forgeArt(c){
 function drawForge(c){const x=FORGE_AT[0]*T,y=FORGE_AT[1]*T;blit(c,spr('forge',()=>bake(40,52,4,18,x,y,forgeArt)),x,y)}
 // 장날 좌판: 뒤쪽(기둥과 줄무늬 차양)과 앞쪽(좌판과 물건)을 따로 그려서 그 사이에 상인을 세운다. (0,0)은 칸의 왼쪽 위
 function stallArt(c,k,front){
+  if(k==='antique'){ /* 좌판 없이 돗자리를 펴고 옛 물건을 늘어놓는다: 청자 병, 함, 거울과 두루마리 */
+    if(!front)return;
+    rr(c,-2,14,36,14,2,'#d9c08a');c.fillStyle='rgba(120,90,40,.35)';for(let i=0;i<4;i++)c.fillRect(-2,16+i*3.4,36,1);
+    ell(c,6,19,4,5.5,'#7fb8a8');rr(c,4,11.5,4,3,1,'#7fb8a8');ell(c,6,12,2.6,1,'#5a9a8a');
+    rr(c,13,16,9,7,1.5,'#7a2f2a');rr(c,13,18.5,9,1.2,.5,'#f2c531');circ(c,17.5,20.5,1,'#f2c531');
+    circ(c,27,18,4,'#b9a58c');circ(c,27,18,2.6,'#dfe9ee');rr(c,23,24,9,2.5,1,'#f3ead6');
+    return;
+  }
   if(!front){
     c.fillStyle='#8a5a34';c.fillRect(0,-30,3,58);c.fillRect(29,-30,3,58);
     poly(c,[-5,-21,37,-21,33,-36,-1,-36],'#f3ead6');c.fillStyle=k==='peddler'?'#d9412e':'#3f6fb0';for(let i=0;i<4;i++)c.fillRect(1+i*9,-36,4.5,15);
@@ -1940,11 +2105,12 @@ function renderTown(c){
       if(!mg)labels.push(()=>label(c,X+16,Y-58,f.n+' 잔치'));
     }
     if(isMarket())for(const s of STALLS){
+      if(!stallOn(s))continue;
       const X=s.x*T,Y=s.y*T;
       list.push([s.y-.3,()=>blit(c,spr('stb'+s.k,()=>bake(48,72,8,40,0,0,c2=>stallArt(c2,s.k,false))),X,Y)]);
       list.push([s.y-.2,()=>drawChar(c,X+16,Y+13,MERCH[s.k],[0,1],false,0)]);
       list.push([s.y,()=>blit(c,spr('stf'+s.k,()=>bake(48,40,8,4,0,0,c2=>stallArt(c2,s.k,true))),X,Y)]);
-      if(!mg&&Math.abs(s.x-rx(P))+Math.abs(s.y-ry(P))<3.2)labels.push(()=>label(c,X+16,Y-44,s.n));
+      if(!mg&&Math.abs(s.x-rx(P))+Math.abs(s.y-ry(P))<3.2)labels.push(()=>label(c,X+16,Y-(s.k==='antique'?62:44),s.n)); /* 가운데 장수의 이름표는 양옆과 겹치지 않게 한 줄 위로 */
     }
     for(const k in S.pens){
       const p=S.pens[k];list.push([p.y+.5,()=>drawPen(c,k)]);
@@ -2459,12 +2625,12 @@ function act(tg,x,y){
   case 'kid':kidMenu(tg.i);break;
   case 'pen':penAct(tg.k);break;
   case 'forge':openForge();break;
-  case 'stall':if(tg.k==='peddler')openPeddler();else openBroker();break;
+  case 'stall':if(tg.k==='peddler')openPeddler();else if(tg.k==='antique')openAntique();else openBroker();break;
   case 'fest':festTalk();break;
   case 'work':if(workDone(tg.k))workUse(tg.k);else openWork(tg.k);break;
   case 'shoal':startFishing(x,y);if(fishing)fishing.deep=tg;break;
   case 'bed':askSleep();break;
-  case 'furn':if(tg.f.id==='agungi'){openCook(true);break}toast(FURN[tg.f.id].n+' · 아늑함 +'+FURN[tg.f.id].c);break;
+  case 'furn':if(tg.f.id==='agungi'){openCook(true);break}if(PARTY_AT[tg.f.id]&&!S.inQ){partyTalk(tg.f);break}toast(FURN[tg.f.id].n+' · 아늑함 +'+FURN[tg.f.id].c);break;
   }
 }
 function interact(){
@@ -2586,7 +2752,7 @@ function dropFruit(m){
 function mgPress(){
   const m=mg;if(!m)return;
   if(m.kind==='kindle'){m.p=Math.min(1,m.p+.12);sfx('chop');if(m.p>=1){mg=null;finishArson(m.b)}return} /* 불씨 살리기: 연타 */
-  if(m.kind==='pee')return;
+  if(m.kind==='pee'||m.kind==='plane'||m.kind==='pour')return; /* 대패질과 식혜 따르기는 누르고 있는 동안 움직인다 (updPlane, updPour) */
   if(m.kind==='forge'){forgeHit(m);return}
   if(m.kind==='milk'){milkPress(m);return}
   if(m.kind==='cook'){cookPress(m);return}
@@ -2624,6 +2790,8 @@ function mgEnd(){
   const m=mg;if(!m)return;mg=null;
   if(m.vein){veinEnd(m);return}
   if(m.kind==='hunt')return;
+  if(m.kind==='plane'){joinEnd(m);return}
+  if(m.kind==='pour'){partyEnd(m);return}
   if(m.kind==='forge'){
     if(!m.fin)return;
     if(m.gear){smithEnd(m);return} /* 장비 짓기 */
@@ -2650,7 +2818,7 @@ function mgEnd(){
     if(!m.exam){
       // 날마다 하는 안목 겨루기
       if(!m.ok){toast('눈썰미가 흐려졌어요. 물건 값을 더 익히고 다시 해 봐요');sfx('err');return}
-      const pay=TRADE.pay[M.rank]+m.good*10;M.done++;M.day=S.day;addCoins(pay);addXp(12);addFriend('eunha',4);train('trade',Math.max(1,m.good-1));sfx('coin');saveAll();
+      const pay=Math.round(TRADE.pay[M.rank]*mainMul('merch'))+m.good*10;M.done++;M.day=S.day;addCoins(pay);addXp(12);addFriend('eunha',4);train('trade',Math.max(1,m.good-1));sfx('coin');saveAll();
       say((m.bad?'제법이에요. 물건 보는 눈이 늘고 있어요.':'하나도 안 틀렸네요! 타고난 장사꾼이에요.')+'\n(수고비 '+won(pay)+'을 받았어요. 지금까지 안목 겨루기 '+M.done+'번)');return;
     }
     if(!m.ok){say('아직은 눈이 덜 여물었어요. 물건을 더 다뤄 보고 다시 와요.');return}
@@ -2660,6 +2828,7 @@ function mgEnd(){
     return;
   }
   if(m.kind==='haggle'){
+    if(m.buy){bargainEnd(m);return}
     if(!m.fin)return;
     // 부른 값(또는 깨진 흥정의 헐값)에 인기 품목 웃돈을 얹어 판다
     const n=Math.min(m.n,have(m.id));if(n<1)return;
@@ -2669,6 +2838,7 @@ function mgEnd(){
     openBroker();return;
   }
   if(m.kind==='rite'&&m.wed){wedEnd(m);return}
+  if(m.kind==='rite'&&m.tier){mainEnd(m);return}
   if(m.kind==='rite'){
     N.queen.hold=0;if(!m.fin)return;
     S.min=Math.min(1380,S.min+30);
@@ -2676,7 +2846,7 @@ function mgEnd(){
     if(!m.exam){
       // 날마다 하는 예법 수련
       if(!m.ok){toast('예법이 흐트러졌어요. 숨을 고르고 다시 해 봐요');sfx('err');return}
-      const pay=COURT.pay[C.rank];C.done++;C.day=S.day;addCoins(pay);addXp(15);addFriend('queen',5);train('grace',m.miss?3:5);sfx('coin');saveAll();
+      const pay=Math.round(COURT.pay[C.rank]*mainMul('court'));C.done++;C.day=S.day;addCoins(pay);addXp(15);addFriend('queen',5);train('grace',m.miss?3:5);sfx('coin');saveAll();
       say((m.miss?'잘했어요. 조금만 더 익히면 되겠어요.':'흐트러짐이 하나도 없군요. 훌륭해요.')+'\n(수고비 '+won(pay)+'을 받았어요. 지금까지 수련 '+C.done+'번)');return;
     }
     if(!m.ok){say('아직은 때가 아닌 듯해요. 마음을 가다듬고 다시 오세요.');return}
@@ -2723,7 +2893,7 @@ function mgEnd(){
     else toast('한 단계 완성! ('+S.diy.step+'/3) 문 앞에서 이어서 지어요');
     saveAll();return;
   }
-  if(m.kind==='shake'){if(m.dropped){S.trees[m.o.i].d=S.day+2;tip('fruit','떨어진 열매는 그 위를 지나가면 주워요');gearFind('shake',.04,'나뭇가지에 걸려 있던')}}
+  if(m.kind==='shake'){if(m.dropped){S.trees[m.o.i].d=S.day+2;tip('fruit','떨어진 열매는 그 위를 지나가면 주워요');gearFind('shake',.04,'나뭇가지에 걸려 있던');if(scene==='town')planFind('town',.05,'나무 옹이구멍에서')}}
   else if(m.i>0){
     const wood=m.kind==='chop',id=wood?'wood':'stone';
     if(wood)S.trees[m.o.i].h=1;else S.rocks[m.o.i].h=1;
@@ -2744,6 +2914,8 @@ function updMg(dt){
   if(m.kind==='kindle'){m.t+=dt;m.p=Math.max(0,m.p-.32*dt);if(m.t>7){mg=null;toast('불씨가 꺼져 버렸어요')}return}
   if(m.kind==='pee'){m.t+=dt;if(m.t>=2.2){mg=null;finishPee(m)}return}
   if(m.kind==='forge'){updForge(m,dt);return}
+  if(m.kind==='plane'){updPlane(m,dt);return}
+  if(m.kind==='pour'){updPour(m,dt);return}
   if(m.kind==='milk'){updMilk(m,dt);return}
   if(m.kind==='cook'){updCook(m,dt);return}
   if(m.kind==='rite'){updRite(m,dt);return}
@@ -2851,6 +3023,33 @@ function drawMg(c,labels){
     DOL_IDS.forEach((g,i)=>{const x=bx-68+i*34,y=by+20;rr(c,x-14,y-14,28,28,6,i===m.cur?'#f7c531':'#f6f1e6');dolIcon(c,g,x,y)});
     labels.push(()=>{c.font='12px '+FONT;c.textAlign='center';c.textBaseline='middle';c.fillStyle='#fffbe8';c.fillText(m.note||'마음에 드는 것에 왔을 때 행동!',bx,by+49)});return;
   }
+  if(m.kind==='pour'){
+    // 왼쪽에 손님, 가운데 사발(초록 띠가 바라는 만큼), 오른쪽에 주전자. 누르고 있으면 주전자가 기울고 식혜가 차오른다
+    const p=ritePad(),w=176,h=84,x0=p.cx-w/2,y0=p.cy-h/2,gid=m.g[Math.min(m.i,m.g.length-1)],cw=40,ih=50,cx=p.cx+6,iy=y0+h-14,on=m.on&&!m.next&&holding();
+    rr(c,x0,y0,w,h,12,'rgba(20,40,20,.84)');
+    c.drawImage(charSprite(NPCS[gid],'front',0),x0+14,y0+20,32,48);
+    rr(c,cx-cw/2-4,iy-ih-3,cw+8,ih+8,[3,3,10,10],'#f6f1e6');rr(c,cx-cw/2,iy-ih,cw,ih,2,'#33423a');
+    c.fillStyle=m.lv>=1?'#d9412e':'#f3e2b0';if(m.lv>0)c.fillRect(cx-cw/2,iy-m.lv*ih,cw,m.lv*ih);
+    c.fillStyle='rgba(143,208,106,.5)';c.fillRect(cx-cw/2,iy-m.hi*ih,cw,(m.hi-m.lo)*ih);
+    c.fillStyle='#8fd06a';c.fillRect(cx-cw/2-4,iy-m.hi*ih,cw+8,1.5);c.fillRect(cx-cw/2-4,iy-m.lo*ih-1.5,cw+8,1.5);
+    if(on){c.fillStyle='#f3e2b0';c.fillRect(cx+10,y0+13,3,iy-m.lv*ih-y0-13)}
+    c.save();c.translate(cx+36,y0+(on?16:30));c.rotate(on?-.8:0);rr(c,-10,-12,20,24,6,'#c9a86a');rr(c,-5,-17,10,6,2,'#a8894e');poly(c,[-9,-9,-19,-13,-9,-2],'#c9a86a');rr(c,9,-7,5,13,2,'#a8894e');c.restore();
+    labels.push(()=>label(c,p.cx,y0-11,NPCS[gid].name+' ('+Math.min(m.g.length,m.i+1)+'/'+m.g.length+') · 바라는 만큼: '+m.want[0]));
+    labels.push(()=>label(c,p.cx,y0+h+11,m.note||'누르고 있으면 따라져요 · 초록 띠에서 손 떼기'));return;
+  }
+  if(m.kind==='plane'){
+    // 널판과 대패. 깎인 곳은 밝아지고, 옹이는 짙은 마디(걸리면 붉게). 대패는 누르고 있을 때 널에 붙는다
+    const p=ritePad(),w=196,h=26,x0=p.cx-w/2,y0=p.cy-h/2,cw=w/PLANE_N;
+    rr(c,x0-10,y0-24,w+20,h+36,12,'rgba(20,40,20,.84)');rr(c,x0,y0,w,h,3,'#a8763f');
+    c.fillStyle='#f0d9a8';for(let i=0;i<PLANE_N;i++)if(m.cells[i])c.fillRect(x0+i*cw,y0+2,cw+.6,h-4);
+    c.fillStyle='rgba(90,60,30,.22)';c.fillRect(x0,y0+8,w,1);c.fillRect(x0,y0+17,w,1);
+    for(const k of m.knots){const kx=x0+(k[0]+k[1])/2*w,kr=(k[1]-k[0])*w/2;ell(c,kx,y0+h/2,kr,h/2-2,k[2]?'#d9412e':'#5a3a20');ell(c,kx,y0+h/2,kr*.5,h/4,k[2]?'#8a2a22':'#33200f')}
+    const px=x0+clamp(m.x,-.12,1.04)*w,py=y0-(m.down?1:9)+(m.jolt>0?Math.sin(m.jolt*70)*2:0);
+    rr(c,px-20,py-10,24,10,2,'#7a4f2c');rr(c,px-17,py-15,5,6,1,'#5e3f24');rr(c,px-4,py-14,3,5,1,'#5e3f24');poly(c,[px,py,px+4,py,px+1,py-7],'#cfd6dc');
+    if(m.down&&!m.fin&&m.x>0&&m.x<1&&!planeKnot(m,m.x,.012)){c.strokeStyle='#f6e6c0';c.lineWidth=2;c.beginPath();c.arc(px+6,py-6,4+Math.sin(performance.now()/40),-2.6,1.2);c.stroke()}
+    labels.push(()=>label(c,p.cx,y0-35,FURN[m.id].n+' · 널판 '+Math.min(m.n,m.pass+1)+'/'+m.n));
+    labels.push(()=>label(c,p.cx,y0+h+24,m.note||'누르고 있으면 깎여요 · 옹이에서는 손 떼기'));return;
+  }
   if(m.kind==='salt'){
     // 소금 눈금: 초록 띠가 알맞은 간. 손을 떼면 아래 가는 줄이 줄어들고, 다 줄면 뚜껑을 덮는다
     const bx=(rx(P)+.5)*T,by=(ry(P)+.9)*T+12,w=120,x0=bx-w/2,over=m.amt>m.hi; // 독이 가리지 않게 발 아래에 그린다
@@ -2898,10 +3097,10 @@ function drawMg(c,labels){
   }
   if(m.kind==='haggle'){
     // 값 눈금(100%~160%). 객주가 망설이기 시작하면 눈금이 떨린다
-    const warn=!m.fin&&m.mult>m.lim-m.warn,sh=warn?Math.sin(now*60)*2.2:0,bx=(rx(P)+.5)*T+sh,by=(ry(P)+.9)*T+12,w=120,x0=bx-w/2,u=clamp((m.mult-1)/.6,0,1); // 좌판과 객주가 가리지 않게 발 아래에 그린다
+    const buy=!!m.buy,warn=!m.fin&&(buy?m.mult<m.lim+m.warn:m.mult>m.lim-m.warn),sh=warn?Math.sin(now*60)*2.2:0,bx=(rx(P)+.5)*T+sh,by=(ry(P)+.9)*T+12,w=120,x0=bx-w/2,u=buy?clamp((m.mult-.4)/.6,0,1):clamp((m.mult-1)/.6,0,1); /* 깎기는 100%에서 40%까지 줄어드는 눈금 */ // 좌판과 객주가 가리지 않게 발 아래에 그린다
     rr(c,x0-4,by-4,w+8,22,10,'rgba(20,40,20,.8)');rr(c,x0,by,w,14,7,'#f3ead6');rr(c,x0,by,Math.max(8,w*u),14,7,warn?'#f08a2a':m.fin&&!m.ok?'#9aa3a8':'#f7c531');
     for(let i=1;i<6;i++)line(c,x0+w*i/6,by+9,x0+w*i/6,by+14,'rgba(60,40,20,.45)',1);
-    labels.push(()=>label(c,bx,by+32,m.note||(warn?'객주가 망설여요! 지금 불러요':'값 '+Math.round(m.mult*100)+'%'+(m.want?' (+인기 30%)':'')+' · 행동으로 값 부르기')));return;
+    labels.push(()=>label(c,bx,by+32,m.note||(warn?(buy?'장수가 언짢아해요! 지금 불러요':'객주가 망설여요! 지금 불러요'):'값 '+Math.round(m.mult*100)+'%'+(m.want?' (+인기 30%)':'')+' · 행동으로 값 부르기')));return;
   }
   if(m.kind==='rite'){
     // 네 방향 화살표 판: 보여 줄 때는 차례대로 노랗게 켜지고, 따라 할 때는 누른 것이 잠깐 켜진다
@@ -2964,17 +3163,39 @@ function till(x,y,d){
   // d: 발밑 칸을 갈 때는 나와 그 칸 사이에 방향이 없으므로 바라보는 쪽을 따로 받는다
   const dx=d?d[0]:Math.sign(x-P.x),dy=d?d[1]:Math.sign(y-P.y),n=[1,2,3,5][tl('hoe')],ox=hasOx();
   if(!useEn(ox?1:3))return;
-  let made=0;
+  let made=0;const cells=[];
   for(let i=0;i<n;i++){
     const a=x+dx*i,b=y+dy*i,k=a+','+b;
     if(S.farm[k])continue;
     if(!inFarm(a,b)||npcOn(a,b)||herdOn(a,b)||S.pickups.some(p=>p.x===a&&p.y===b))break;
-    S.farm[k]={c:null,g:0,w:S.weather==='rain',e:0};made++;
+    S.farm[k]={c:null,g:0,w:S.weather==='rain',e:0};made++;cells.push(k);
     if(!dx&&!dy)break;
   }
-  float(made>1?'밭 '+made+'칸 갈기':'밭 갈기',(x+.5)*T,y*T);sfx('chop');addXp(Math.max(1,made));touch();
+  /* 되돌린 밭을 다시 갈 때는 경험치를 또 주지 않는다 (tillDebt) */
+  float(made>1?'밭 '+made+'칸 갈기':'밭 갈기',(x+.5)*T,y*T);sfx('chop');{const xp=Math.max(1,made),d=Math.min(tillDebt,xp);tillDebt-=d;if(xp>d)addXp(xp-d)}touch();
+  if(made)lastTill={cells,en:ox?1:3,t:performance.now()};
+  if(S.tips.till)tip('untill','잘못 갈았으면 행동 단추 위의 "되돌리기"(Z 키)로 바로 물릴 수 있어요');
   tip('till','간 밭에 씨앗을 심어요. 나흘 동안 비워 두면 다시 풀밭이 돼요');
   if(ox)tip('ox','소가 쟁기를 끌어 줘서 밭 갈기가 한결 수월해요 (기력 1)');
+}
+// 간 밭 되돌리기: 방금 간 밭(12초 안)은 한꺼번에 되돌리고 든 기력을 돌려준다. 그 밖에는 흰 테두리가 놓인 빈 밭 한 칸을 풀밭으로 메운다.
+// 행동 단추 위의 작은 단추(undoBtn, updAct가 보이고 감춤)나 Z 키로 한다. 무엇이 심긴 밭은 건드리지 않는다
+let lastTill=null,tillDebt=0;
+function undoWhat(){
+  if(!S||scene!=='town'||mg||fishing||busy()||garden||placing)return null;
+  const L=lastTill;
+  if(L){const cells=L.cells.filter(k=>S.farm[k]&&!S.farm[k].c);if(cells.length&&performance.now()-L.t<12000)return{cells,en:Math.round(L.en*cells.length/L.cells.length),txt:'되돌리기'};lastTill=null}
+  if(P.t<1)return null;
+  const f=faceTarget(),tg=f&&f.tg;
+  if(tg&&tg.t==='soil'){const k=tg.x+','+tg.y,p=S.farm[k];if(p&&!p.c)return{cells:[k],en:0,txt:'밭 메우기'}}
+  return null;
+}
+function undoTill(){
+  const u=undoWhat();if(!u)return;
+  for(const k of u.cells)delete S.farm[k];
+  if(lastTill){S.en=Math.min(maxEn(),S.en+u.en);tillDebt+=u.cells.length}
+  const back=!!lastTill;lastTill=null;touch();hud();sfx('chop');
+  toast(back?'방금 간 밭 '+u.cells.length+'칸을 되돌렸어요'+(u.en?' · 기력 +'+u.en:''):'밭을 메워 풀밭으로 되돌렸어요');
 }
 function soilAct(x,y){
   const i=x+','+y,p=S.farm[i],fx=(x+.5)*T,fy=y*T;if(!p)return;
@@ -3042,7 +3263,7 @@ function reel(){
   f.prog++;sfx('cast');
   if(f.prog>=f.need){
     const it=f.fish;gain(it[0],1);addXp(it[2]);float('+1 '+ITEMS[it[0]].n);sfx(f.hard===2?'level':'pick');
-    gearFind(f.deep?'deep':f.sea?'sea':'fresh',f.deep?.07:.045,'낚싯줄에 걸려 올라온'); /* 가끔 장비가 딸려 올라온다 */
+    gearFind(f.deep?'deep':f.sea?'sea':'fresh',f.deep?.05:.035,'낚싯줄에 걸려 올라온'); /* 가끔 장비가 딸려 올라온다 */
     if(f.deep&&--f.deep.left<=0){SEA.objAt[f.deep.y][f.deep.x]=null;toast('물고기 떼가 흩어졌어요')}
     if(f.hard===2)toast('대물이다! '+jo(ITEMS[it[0]].n,'을','를')+' 낚았어요');
     fishing=null;
@@ -3332,7 +3553,7 @@ function updCook(m,dt){
   else if(m.burn>=1){m.fin=true;m.ok=false;m.burnt=true;m.end=.6;m.note='탔어요…'}
   else if(m.t>30){m.fin=true;m.ok=false;m.end=.4;m.note='불이 약해 설익었어요'}
 }
-const servePay=sel=>Math.round((JOBS.cook.pay[S.job.rank]+sel.reduce((a,k)=>a+ITEMS[k].p*.5,0))*(perk('king')?1.3:1));
+const servePay=sel=>Math.round((JOBS.cook.pay[S.job.rank]*mainMul('cook')+sel.reduce((a,k)=>a+ITEMS[k].p*.5,0))*(perk('king')?1.3:1));
 function openServe(sel){
   sel=sel||[];const n=JOBS.cook.dishes[S.job.rank];
   openModal('수라상 올리기',body=>{
@@ -3511,7 +3732,7 @@ function hitRock(o){
 function veinEnd(m){
   const o=m.o;if(m.i<1||!cave)return; // 한 번도 내리치지 않고 그만뒀으면 그대로 둔다
   const n=m.got?Math.ceil(m.got/2)+(tl('pick')>=2?1:0):0;clearRock(o);
-  if(n){gain(o.ore,n);addXp(4+n*2);float('+'+n+' '+ITEMS[o.ore].n,o.x*T+16,o.y*T-10);sfx('pick');gearFind('vein',.07,'광맥 속에서')}
+  if(n){gain(o.ore,n);addXp(4+n*2);float('+'+n+' '+ITEMS[o.ore].n,o.x*T+16,o.y*T-10);sfx('pick');gearFind('vein',.07,'광맥 속에서');planFind('cave',.06,'광맥 틈에서')}
   else{gain('stone',1);toast('광맥이 부서져 돌만 남았어요')}
   touch();
 }
@@ -3611,13 +3832,16 @@ function updYut(m,dt){
 }
 // ───────── 5일장 ─────────
 const isMarket=()=>!!S&&S.day%5===0;
+// 골동품 장수: 열흘에 한 번(10·20·30…일) 큰 장날에 온다. 그 자리가 잔치 장대 앞이라, 잔치와 겹치는 날에는 오지 않는다
+const antiqueIn=()=>!!S&&S.day%10===0&&!fest(),stallOn=s=>s.k!=='antique'||antiqueIn();
 const marketIn=()=>(5-S.day%5)%5; // 다음 장날까지 남은 날 (오늘이 장날이면 0)
 // 장날에만 좌판을 지도에 얹는다
 function applyMarket(){
   const oa=TOWN.objAt;
   for(const s of STALLS){const o=oa[s.y][s.x];if(o&&o.t==='stall')oa[s.y][s.x]=null}
   if(!isMarket())return;
-  for(const s of STALLS)oa[s.y][s.x]={t:'stall',k:s.k,x:s.x,y:s.y};
+  for(const s of STALLS)if(stallOn(s))oa[s.y][s.x]={t:'stall',k:s.k,x:s.x,y:s.y};
+  if(antiqueIn()&&(!S.antq||S.antq.day!==S.day)){S.antq={day:S.day,items:antiqueStock()};touch()}
   if(scene!=='wild'&&scene!=='palace')S.pickups=S.pickups.filter(p=>!STALLS.some(s=>s.x===p.x&&s.y===p.y));
   if(!S.mkt||S.mkt.day!==S.day){
     // 오늘 장의 물건: 가구는 셋 가운데 둘, 인기 품목은 지금 구할 수 있는 것 가운데 셋
@@ -3663,17 +3887,71 @@ function openBroker(){
 function startHaggle(id,n){
   if(!isMarket()||have(id)<n||n<1||!useEn(1))return;
   const tr=sv('trade');
-  mg={kind:'haggle',o:{x:P.x,y:P.y,sh:0},id,n,want:S.mkt.want.includes(id),mult:1,lim:Math.min(1.58,rnd(1.15,1.45)+tr*.008+(S.merch?S.merch.rank*.03:0)),warn:.05+tr*.004,t:0,note:'',cool:0,fin:false,ok:false,end:0};P.path=[];P.after=null;
+  mg={kind:'haggle',o:{x:P.x,y:P.y,sh:0},id,n,want:S.mkt.want.includes(id),mult:1,lim:Math.min(1.58,rnd(1.15,1.45)+tr*.008+rk('merch')*.03),warn:.05+tr*.004,t:0,note:'',cool:0,fin:false,ok:false,end:0};P.path=[];P.after=null;
   tip('haggle','값이 오르는 동안 기다리다가 행동으로 값을 불러요. 눈금이 떨리면 객주가 망설인다는 뜻이니 얼른 불러요');
 }
 function hagglePress(m){
   if(m.fin||m.t<.25)return;
-  m.fin=true;m.ok=true;m.end=.7;m.note='좋소, 그 값에 사겠소!';sfx('coin');
+  m.fin=true;m.ok=true;m.end=.7;m.note=m.buy?'허허, 그 값에 가져가게!':'좋소, 그 값에 사겠소!';sfx('coin');
 }
 function updHaggle(m,dt){
   if(m.fin){m.end-=dt;if(m.end<=0)mgEnd();return}
-  m.t+=dt;m.mult+=dt*.11;
+  m.t+=dt;
+  if(m.buy){m.mult-=dt*.07;if(m.mult<=m.lim){m.fin=true;m.ok=false;m.mult=1;m.end=.9;m.note='그 값엔 못 파네!';sfx('err')}return} /* 깎기: 값이 내려가다가 장수가 참는 값(lim) 아래로 가면 깨진다 */
+  m.mult+=dt*.11;
   if(m.mult>=m.lim){m.fin=true;m.ok=false;m.mult=.9;m.end=.9;m.note='그 값엔 못 사오!';sfx('err')}
+}
+// 골동품 장수의 물건은 넷: 못 찾은 도안 하나, 일하거나 사냥하다 얻는 장비 둘(쓸 만한~으뜸), 옛 보물 하나. 이미 가진 것은 가져오지 않는다.
+// 전설의 장비, 부적, 상으로 받는 장비는 팔지 않는다. 값은 아주 비싸고, 물건마다 한 번씩 흥정(깎기)할 수 있다
+const ANTQ_GEAR=[0,700,2000,5500],ANTQ_PLAN=[300,600,1000],ANTQ_FIND={fresh:1,sea:1,deep:1,mine:1,vein:1,chop:1,shake:1};
+function antiqueStock(){
+  const out=[],take=a=>a.length?a.splice(Math.floor(Math.random()*a.length),1)[0]:null,plan=id=>out.push({t:'plan',id,price:ANTQ_PLAN[FURN[id].mk.g]}),gear=id=>out.push({t:'gear',id,price:ANTQ_GEAR[GEAR[id].g]});
+  const plans=Object.keys(FURN).filter(k=>FURN[k].mk&&!S.plans[k]),rel=Object.keys(RELICS).filter(k=>RELICS[k].k!=='charm'&&!relic(k));
+  const gs=Object.keys(GEAR).filter(k=>{const G=GEAR[k];return G.g>=1&&G.g<=3&&!G.cost&&!G.route&&!S.gear.own[k]&&(G.dig||G.drop||ANTQ_FIND[G.find])});
+  const p=take(plans);if(p)plan(p);
+  const a=take(gs.filter(k=>GEAR[k].g<=2));if(a)gear(a);
+  const b=take(gs.filter(k=>GEAR[k].g>=2&&k!==a));if(b)gear(b);
+  const r=take(rel);if(r)out.push({t:'relic',id:r,price:RELICS[r].k==='fit'?2500:FURN[r].c*300});
+  while(out.length<4){const q=take(plans);if(!q)break;plan(q)}
+  return out;
+}
+const antqPrice=it=>Math.round(it.price*(it.off||1)),antqHave=it=>it.t==='plan'?!!S.plans[it.id]:it.t==='gear'?!!S.gear.own[it.id]:relic(it.id);
+function openAntique(){
+  const A=S.antq;if(!A||A.day!==S.day)return;
+  hear('antique',true);
+  openModal('골동품 장수',body=>{
+    body.appendChild(el('p','note','열흘에 한 번, 큰 장날에만 오는 골동품 장수예요. 멀리서 구해 온 귀한 것들이라 값이 비싸요. 물건마다 한 번씩 흥정해서 깎을 수 있지만, 너무 욕심내면 그 물건은 제값을 다 줘야 해요. 가진 돈 '+won(S.coins)));
+    if(!A.items.length)body.appendChild(el('p',null,'"허허, 자네는 내 보따리에 든 것을 이미 다 가졌구먼."'));
+    for(const it of A.items){
+      const G=GEAR[it.id],F=FURN[it.id],R=RELICS[it.id],price=antqPrice(it),have2=it.sold||antqHave(it),acts=[];
+      const ic=it.t==='gear'?gearBadge(it.id):it.t==='relic'&&R.k==='fit'?lookIcon(it.id,S.sex):icon('furn',it.id);
+      const name=it.t==='plan'?F.n+' 도안':it.t==='gear'?G.n:R.n;
+      const sub=it.t==='plan'?PLAN_AT[F.mk.at]+'의 도안 · 아늑함 +'+F.c+' · 모루와 함께 짜요':it.t==='gear'?GEAR_GRADE[G.g]+' '+gearSlot(G.s)+' · 레벨 '+G.lv+'부터 · '+gearTxt(it.id):R.k==='fit'?'옛 옷 · 옷장에서 입어요':'옛 보물 · 아늑함 +'+F.c;
+      if(have2)acts.push([it.sold?'샀어요':'이미 있어요',()=>{},true]);
+      else{if(!it.off&&!it.no)acts.push(['흥정',()=>{closeModal();startBargain(it)}]);acts.push([won(price),()=>antqBuy(it),S.coins<price])}
+      row(body,ic,name,[sub,have2?'':it.off?'흥정해서 '+Math.round(it.off*100)+'%로 깎았어요 (제값 '+won(it.price)+')':it.no?'흥정이 깨져서 제값을 다 줘야 해요':'아직 흥정하지 않았어요'].filter(Boolean),acts);
+    }
+  });
+}
+function antqBuy(it){
+  const p=antqPrice(it);if(it.sold||antqHave(it)||S.coins<p)return;
+  addCoins(-p);it.sold=1;
+  if(it.t==='plan')S.plans[it.id]=1;
+  else if(it.t==='gear')gearGet(it.id);
+  else{const R=RELICS[it.id];S.relics[it.id]=1;if(R.k==='fit'){if(!S.owned.includes(it.id))S.owned.push(it.id)}else S.furn[it.id]=(S.furn[it.id]||0)+1}
+  sfx('coin');saveAll();openAntique();
+}
+function startBargain(it){
+  if(!antiqueIn()||it.sold||it.off||it.no||!useEn(1))return;
+  const tr=sv('trade');
+  mg={kind:'haggle',buy:it,o:{x:P.x,y:P.y,sh:0},mult:1,lim:Math.max(.5,rnd(.6,.86)-tr*.006-rk('merch')*.02),warn:.04+tr*.003,t:0,note:'',cool:0,fin:false,ok:false,end:0};P.path=[];P.after=null;
+  tip('bargain','값이 내려가는 동안 기다리다가 행동으로 값을 불러요. 눈금이 떨리면 장수가 언짢다는 뜻이니 얼른 불러요. 너무 깎으려 들면 흥정이 깨져요');
+}
+function bargainEnd(m){
+  const it=m.buy;if(!m.fin){openAntique();return}
+  if(m.ok){it.off=Math.round(m.mult*100)/100;train('trade',3);addXp(4);toast(Math.round(it.off*100)+'%까지 깎았어요 · '+won(antqPrice(it)))}
+  else{it.no=1;toast('흥정이 깨졌어요. 이 물건은 제값을 다 줘야 해요')}
+  S.min=Math.min(1380,S.min+15);touch();openAntique();
 }
 // ───────── 무관·문관의 길 ─────────
 // 스승에게 말을 걸었을 때: 입문, 날마다 하는 수련, 시험 청하기
@@ -3681,7 +3959,7 @@ function trackTalk(k){
   const D=TRACKS[k],d=NPCS[D.npc],say=(text,choices)=>dialog({npc:D.npc,who:d.name,text,choices}),A=S[k];
   hear(k,true);
   if(!A){
-    if(sv(D.stat)<D.need[0].stat){say(D.t.low+'\n(지금 '+STATS[D.stat].n+' '+sv(D.stat)+' · 아래 "신분"에서 스탯 점수로 올려요.)');return}
+    if(sv(D.stat)<D.need[0].stat){say(D.t.low+'\n(지금 '+STATS[D.stat].n+' '+sv(D.stat)+' · 아래 "나"의 "신분"에서 스탯 점수로 올려요.)');return}
     say(D.t.invite,[[D.t.yes,()=>{
       S[k]={rank:0,done:0,day:0};if(!S.owned.includes(D.fit[0]))S.owned.push(D.fit[0]);sfx('level');saveAll();
       say(D.t.joined(D.ranks[0])+'\n('+jo(OUTFITS[D.fit[0]].n,'을','를')+' 받았어요. 옷장에서 입을 수 있어요.)');
@@ -3707,7 +3985,7 @@ function trackEnd(k,m){
   S.min=Math.min(1380,S.min+30);
   if(!m.exam){
     if(!m.ok){toast(D.t.fail);sfx('err');return}
-    const pay=D.pay[A.rank]+(m.bonus|0);A.done++;A.day=S.day;addCoins(pay);addXp(15);addFriend(D.npc,5);train(D.stat,m.fine?5:3);sfx('coin');saveAll();
+    const pay=Math.round(D.pay[A.rank]*mainMul(k))+(m.bonus|0);A.done++;A.day=S.day;addCoins(pay);addXp(15);addFriend(D.npc,5);train(D.stat,m.fine?5:3);sfx('coin');saveAll();
     say((m.fine?D.t.great:D.t.good)+'\n(수고비 '+won(pay)+'을 받았어요. 지금까지 '+D.work+' '+A.done+'번)');return;
   }
   if(!m.ok){say(D.t.examFail);return}
@@ -3786,7 +4064,7 @@ function tradeTalk(){
   const d=NPCS.eunha,say=(text,choices)=>dialog({npc:'eunha',who:d.name,text,choices}),M=S.merch;
   hear('merch',true);
   if(!M){
-    if(sv('trade')<TRADE.need[0].stat){say('장사를 배워 보고 싶어요? 수완이 적어도 '+TRADE.need[0].stat+' 이상은 되어야 맡길 수 있어요.\n(지금 수완 '+sv('trade')+' · 아래 "신분"에서 스탯 점수로 올려요.)');return}
+    if(sv('trade')<TRADE.need[0].stat){say('장사를 배워 보고 싶어요? 수완이 적어도 '+TRADE.need[0].stat+' 이상은 되어야 맡길 수 있어요.\n(지금 수완 '+sv('trade')+' · 아래 "나"의 "신분"에서 스탯 점수로 올려요.)');return}
     say('눈썰미가 있어 보여요. 내 밑에서 장사를 배워 볼래요? 물건 보는 눈을 기르고, 주문받은 물건을 대 주는 일이에요.',[['해 볼게요',()=>{
       S.merch={rank:0,done:0,sold:0,day:0,order:null};grantTradeFit(0);rollOrder();sfx('level');saveAll();
       say('오늘부터 {name} 씨는 '+jo(TRADE.ranks[0],'이에요','예요')+'. 날마다 주문을 하나씩 줄게요. 물건을 모아 오면 가게 값보다 후하게 쳐 줄게요.\n('+OUTFITS.bobu.n+'을 받았어요. 옷장에서 입을 수 있어요.)');
@@ -3846,6 +4124,45 @@ function updEye(m,dt){
   }
   m.t+=dt;if(m.t>=m.time)eyePick(-1);
 }
+// ───────── 본업과 높은 자리 ─────────
+function pickMain(k){
+  if(S.level<MAIN_LV||!routeOf(k)||(S.main&&(S.main.tier||S.main.k===k)))return;
+  closeModal();
+  dialog({who:'본업',text:jo(MAIN[k].n,'을','를')+' 본업으로 삼을까요?\n본업은 수고비와 녹봉을 더 받고, 그 길의 으뜸 자리에 오른 뒤에는 더 높은 자리가 열려요. 높은 자리에 한 번 오르면 본업을 바꿀 수 없어요. 다른 길의 일은 그대로 할 수 있어요.',
+    choices:[['본업으로 삼는다',()=>{S.main={k,tier:0};S.title=k;hear('main',true);mainRogueUp();sfx('level');hud();saveAll();openStatus()}],['좀 더 생각해 볼게요',()=>openStatus()]]});
+}
+/* 나쁜 길이 본업이면 임금을 거치지 않고 악명과 레벨로 저절로 오른다 */
+function mainRogueUp(){
+  const M=S.main,R=S.rogue;if(!M||M.k!=='rogue'||!R||R.rank<2)return;let up=false;
+  while(M.tier<MAIN_TIERS.length&&R.inf>=MAIN_TIERS[M.tier].inf&&S.level>=MAIN_TIERS[M.tier].lv){M.tier++;up=true}
+  if(up)setTimeout(()=>{if(S){sfx('level');toast('악명이 온 고을에 퍼져 이제 【'+trackTitle('rogue')+'】라 불려요. 자릿세가 늘고 새 옷을 얻었어요 (옷장)')}},1900);
+}
+function mainTalk(){
+  const M=S.main;if(!M)return;
+  const k=M.k,D=MAIN[k],A=routeOf(k),t=M.tier,q=MAIN_TIERS[t],kn=NPCS.king.name,say=(text,choices)=>dialog({npc:'king',who:kn,text,choices}),m=v=>v?'✓ ':'✗ ';
+  if(!A||A.rank<2){say('그대의 본업은 '+jo(D.n,'이로구나','로구나')+'. 먼저 그 길의 으뜸 자리에 오르라. 더 높은 자리는 그 뒤에 의논하겠노라.');return}
+  if(!q){say('그대는 이미 그 길의 맨 꼭대기에 섰노라. 더 내릴 자리가 없구나. 과인은 그대가 자랑스럽도다.');return}
+  tell('main',t+1);
+  const ok=[S.level>=q.lv,sv(D.stat)>=q.stat,D.done()>=q.done,hearts('king')>=q.h],nm=D.titles()[t];
+  const list=m(ok[0])+'레벨 '+q.lv+' (지금 '+S.level+')\n'+m(ok[1])+STATS[D.stat].n+' '+q.stat+' (지금 '+sv(D.stat)+')\n'+m(ok[2])+D.dn+' '+q.done+'번 (지금 '+D.done()+'번)\n'+m(ok[3])+kn+' ♥'+q.h+' (지금 ♥'+hearts('king')+')';
+  if(!ok.every(Boolean)){say('【'+nm+'】의 자리를 바라는가. 이만큼은 갖추고 오라.\n'+list);return}
+  say('【'+nm+'】의 자리를 내리겠노라. 먼저 예를 갖추어 사은숙배를 올리라. 절은 세 번이고, 동작의 차례는 두 번까지만 틀려도 되느니라.',[['예를 올릴게요',startTierRite],['다음에요',null]]);
+}
+/* 사은숙배: 예법 따라 하기를 그대로 쓴다(tier 표시). 자리가 높을수록 차례가 길다 */
+function startTierRite(){
+  const M=S.main;if(!M||!MAIN_TIERS[M.tier]||!useEn(3))return;
+  mg={kind:'rite',o:{x:P.x,y:P.y,sh:0},rounds:[[4,5,5],[4,5,6],[5,6,6],[5,6,7]][M.tier],maxMiss:2,exam:1,tier:1,names:['첫째 절','둘째 절','셋째 절'],r:0,seq:[],i:0,t:0,k:-1,miss:0,flash:0,lit:-1,nt:0,note:'',cool:0,fin:false,ok:false,end:0};
+  riteRound(mg);P.path=[];P.after=null;keys.length=0;N.king.hold=120;
+  tip('rite','동작의 차례를 잘 본 뒤, 방향키나 화면의 화살표로 그대로 따라 해요. 그만두려면 Esc');
+}
+function mainEnd(m){
+  N.king.hold=0;const M=S.main;if(!m.fin||!M||!MAIN_TIERS[M.tier])return;
+  S.min=Math.min(1380,S.min+30);
+  const say=text=>dialog({npc:'king',who:NPCS.king.name,text});
+  if(!m.ok){say('예가 흐트러졌구나. 마음을 가다듬고 다시 오라.');return}
+  const D=MAIN[M.k],q=MAIN_TIERS[M.tier];M.tier++;S.title=M.k;addCoins(q.prize);addXp(200);addFriend('king',10);sfx('level');hud();saveAll();
+  say('오늘부터 그대는 【'+D.titles()[M.tier-1]+'】이니라. 백성을 위해 더욱 힘쓰라.\n('+jo(D.titles()[M.tier-1],'이','가')+' 되었어요! '+OUTFITS[D.fit[M.tier-1]].n+'과 '+won(q.prize)+'을 받았고, 본업의 수고비와 녹봉이 '+mainMul(M.k)+'배가 돼요. '+D.perk+'.)');
+}
 // ───────── 왕실의 길 ─────────
 function grantCourtFit(r){const k=COURT.fit[r];if(!S.owned.includes(k))S.owned.push(k)}
 // 책봉을 마치면 임금이 자리를 물려준다: 임금→상왕, 중전→대비, 배필→임금(또는 여왕). 그 전이면 처음 이름으로 되돌린다
@@ -3861,7 +4178,7 @@ function courtTalk(){
   const d=NPCS.queen,say=(text,choices)=>dialog({npc:'queen',who:d.name,text,choices}),C=S.court;
   hear('court',true);
   if(!C){
-    if(sv('grace')<COURT.need[0].stat){say('궁중의 법도를 익히고 싶은가요? 기품이 적어도 '+COURT.need[0].stat+' 이상은 되어야 가르칠 수 있어요.\n(지금 기품 '+sv('grace')+' · 아래 "신분"에서 스탯 점수로 올려요.)');return}
+    if(sv('grace')<COURT.need[0].stat){say('궁중의 법도를 익히고 싶은가요? 기품이 적어도 '+COURT.need[0].stat+' 이상은 되어야 가르칠 수 있어요.\n(지금 기품 '+sv('grace')+' · 아래 "나"의 "신분"에서 스탯 점수로 올려요.)');return}
     say('몸가짐이 단정하군요. 내 곁에서 궁중의 법도를 익혀 보겠어요?',[['그리하겠어요',()=>{
       S.court={rank:0,done:0,day:0,mate:null};grantCourtFit(0);sfx('level');saveAll();
       say('오늘부터 그대는 '+jo(courtTitle(),'이에요','예요')+'. 날마다 내게 와서 예법을 수련하세요.\n('+OUTFITS[COURT.fit[0]].n+'을 받았어요. 옷장에서 입을 수 있어요.)');
@@ -3932,7 +4249,7 @@ function kitchenTalk(){
   const J=JOBS.cook,d=NPCS.yeon,say=(text,choices)=>dialog({npc:'yeon',who:d.name,text,choices});
   hear('cook',true);
   if(!S.job){
-    if(sv('cook')<J.need[0].stat){say('수라간은 임금님 수라를 짓는 곳일세. 손맛이 적어도 '+J.need[0].stat+' 이상은 되어야 받아 줄 수 있네.\n(지금 손맛 '+sv('cook')+' · 아래 "신분"에서 스탯 점수로 올려요.)');return}
+    if(sv('cook')<J.need[0].stat){say('수라간은 임금님 수라를 짓는 곳일세. 손맛이 적어도 '+J.need[0].stat+' 이상은 되어야 받아 줄 수 있네.\n(지금 손맛 '+sv('cook')+' · 아래 "나"의 "신분"에서 스탯 점수로 올려요.)');return}
     say('손끝이 야무져 보이는구먼. 수라간에서 일해 보겠나? 날마다 음식을 지어 수라상을 올리는 일일세.',[['들어갈게요',()=>{
       S.job={k:'cook',rank:0,served:0,day:0};grantFit(0);sfx('level');saveAll();
       say('오늘부터 자네는 '+rankName()+'일세. 수라간 문 앞에서 음식을 짓고, 다 되면 내게 와서 수라상을 올리게.\n('+OUTFITS[J.fit[0]].n+'을 받았어요. 옷장에서 입을 수 있어요.)');
@@ -3993,7 +4310,7 @@ function openStatus(){
     if(S.lore.bowon||S.seenRoyal)note('금원: 궁궐 북서쪽 담 끝의 작은 문 너머에 임금의 사냥터 금원이 있다고 들었어요. 사슴이 많고 약수가 솟아요.'+(S.bag.wdeer?' (흰 사슴을 잡은 적이 있어요)':' 가끔 흰 사슴이 나타난대요.'));
     if(S.lore.qtr||quarterTier())note('내 처소: '+(quarterTier()?'궁궐 큰길 서쪽의 전각이 내 처소예요. 꾸미기로 가구를 놓고, 침대에서 자면 다음 날 처소에서 눈을 떠요.'+(quarterTier()<2?' 자리가 더 오르면 방이 넓어져요.':''):'궁궐에서 자리가 오르면 큰길 서쪽의 빈 전각을 처소로 내어 준다고 들었어요.'));
     if(S.lore.trib)note('진상: 궁궐 정전 앞에서 철마다 궁에서 찾는 물건을 바치면 공이 쌓이고, 공이 차면 임금이 귀한 물건을 내린다고 들었어요. (쌓은 공 '+S.merit+')');
-    if(S.lore.gear)note('장비: 모루에게 재료를 가져가면 몸에 걸칠 장비를 지어 주고, 짐승을 잡거나 낚시·나무 베기·바위 캐기 같은 일을 하다 보면 가끔 나온다고 들었어요. 아래 "장비"에서 걸쳐요. (모은 장비 '+Object.keys(S.gear.own).length+'/'+Object.keys(GEAR).length+')');
+    if(S.lore.gear)note('장비: 모루에게 재료를 가져가면 몸에 걸칠 장비를 지어 주고, 짐승을 잡거나 낚시·나무 베기·바위 캐기 같은 일을 하다 보면 가끔 나온다고 들었어요. 아래 "나"의 "장비"에서 걸쳐요. (모은 장비 '+Object.keys(S.gear.own).length+'/'+Object.keys(GEAR).length+')');
     if(!ROUTES.some(heard)&&!S.lore.pal&&!S.lore.gl&&!S.lore.gear&&!S.camp)note('아직 들은 이야기가 없어요. 이웃에게 자주 말을 걸어 보세요. 가까워질수록 마을 안팎의 일을 들려줘요.');
     if(S.lore.gl)note('반짝이는 곳: 그 위에 서서 행동을 세 번 하면 묻힌 것을 파낼 수 있다고 들었어요. 사냥터 깊은 숲과 먼바다 섬, 동굴 바닥에는 더 귀한 것이 묻혀 있대요. (찾은 보물 '+Object.keys(S.relics).length+'/'+Object.keys(RELICS).length+')');
     {const cs=Object.keys(S.relics).filter(k=>RELICS[k].k==='charm');if(cs.length)note('지닌 부적: '+cs.map(k=>RELICS[k].n+'('+RELICS[k].d+')').join(' · '))}
@@ -4001,37 +4318,59 @@ function openStatus(){
     if(!S.job){if(heard('cook'))note('수라간: 궁궐 수라간에서 손끝 야무진 사람을 찾는다고 들었어요. 수라간 앞의 연 상궁을 찾아가 봐요.')}
     else{
       const r=S.job.rank,q=J.need[r+1];
-      note('수라간의 길: 【'+J.ranks[sx][r]+'】 · 올린 수라상 '+S.job.served+'번');
-      body.appendChild(el('p','note',q&&!told('cook',r+1)?'다음 자리로 가는 길은 연 상궁에게 "승급 시험"을 물어봐요.':q?'연 상궁에게 들은 다음 자리의 조건: 손맛 '+q.stat+' (지금 '+sv('cook')+') · 수라상 '+q.served+'번 (지금 '+S.job.served+'번) · '+NPCS[q.npc].name+' ♥'+q.h+' (지금 ♥'+hearts(q.npc)+') · 다 갖추면 연 상궁에게 승급 시험을 청해요':'수라간에서 가장 높은 자리에 올랐어요.'));
+      note('수라간의 길: 【'+trackTitle('cook')+'】 · 올린 수라상 '+S.job.served+'번');
+      body.appendChild(el('p','note',q&&!told('cook',r+1)?'다음 자리로 가는 길은 연 상궁에게 "승급 시험"을 물어봐요.':q?'연 상궁에게 들은 다음 자리의 조건: 손맛 '+q.stat+' (지금 '+sv('cook')+') · 수라상 '+q.served+'번 (지금 '+S.job.served+'번) · '+NPCS[q.npc].name+' ♥'+q.h+' (지금 ♥'+hearts(q.npc)+') · 다 갖추면 연 상궁에게 승급 시험을 청해요':'수라간에서 가장 높은 자리에 올랐어요.'+topMore('cook')));
     }
     const C=S.court;
     if(!C){if(heard('court'))note('궁중 예법: 중전마마께서 몸가짐 바른 이에게 궁중의 법도를 가르치신다고 들었어요. 궁궐의 중전을 찾아가 봐요.')}
     else{
       const q=COURT.need[C.rank+1],mates=C.rank?[C.mate]:['prince','princess'];
-      body.appendChild(el('p','note','왕실의 길: 【'+courtTitle()+'】 · 예법 수련 '+C.done+'번'+(C.rank?' · 날마다 내탕금 '+COURT.stipend[C.rank]+'냥':'')));
+      body.appendChild(el('p','note','왕실의 길: 【'+trackTitle('court')+'】 · 예법 수련 '+C.done+'번'+(C.rank?' · 날마다 내탕금 '+Math.round(COURT.stipend[C.rank]*mainMul('court'))+'냥':'')));
       body.appendChild(el('p','note',q&&!told('court',C.rank+1)?'다음 자리로 가는 길은 중전에게 물어봐요.':q?'중전에게 들은 다음 자리의 조건: 기품 '+q.stat+' (지금 '+sv('grace')+') · 예법 수련 '+q.done+'번 (지금 '+C.done+'번) · '+mates.map(id=>NPCS[id].name+' ♥'+q.mate+' (지금 ♥'+hearts(id)+')').join(' 또는 ')
-        +' · '+NPCS[q.npc].name+' ♥'+q.h+' (지금 ♥'+hearts(q.npc)+') · 다 갖추면 중전에게 '+(C.rank?'책봉 의식을':'간택을')+' 청해요':'왕실에서 가장 높은 자리에 올랐어요.'));
+        +' · '+NPCS[q.npc].name+' ♥'+q.h+' (지금 ♥'+hearts(q.npc)+') · 다 갖추면 중전에게 '+(C.rank?'책봉 의식을':'간택을')+' 청해요':'왕실에서 가장 높은 자리에 올랐어요.'+topMore('court')));
     }
     const M=S.merch;
     if(!M){if(heard('merch'))note('장사: 은하가 가게 일을 거들 눈썰미 있는 사람을 찾는다고 들었어요. 만물상의 은하에게 물어봐요.')}
     else{
       const q=TRADE.need[M.rank+1],o=M.order;
-      body.appendChild(el('p','note','상인의 길: 【'+TRADE.ranks[M.rank]+'】 · 안목 겨루기 '+M.done+'번 · 납품 '+M.sold+'번'+(M.rank?' · 파는 값 +'+M.rank*5+'%':'')));
+      body.appendChild(el('p','note','상인의 길: 【'+trackTitle('merch')+'】 · 안목 겨루기 '+M.done+'번 · 납품 '+M.sold+'번'+(rk('merch')?' · 파는 값 +'+rk('merch')*5+'%':'')));
       if(o)body.appendChild(el('p','note','오늘 주문: '+(o.done?'납품을 마쳤어요':(o.royal?'[왕실] ':'')+ITEMS[o.item].n+' '+o.n+'개 → '+won(o.pay)+' (가진 것 '+have(o.item)+'개)')));
-      body.appendChild(el('p','note',q&&!told('merch',M.rank+1)?'다음 자리로 가는 길은 은하에게 "승급 겨루기"를 물어봐요.':q?'은하에게 들은 다음 자리의 조건: 수완 '+q.stat+' (지금 '+sv('trade')+') · 안목 겨루기 '+q.done+'번 (지금 '+M.done+'번) · 납품 '+q.sold+'번 (지금 '+M.sold+'번) · '+NPCS[q.npc].name+' ♥'+q.h+' (지금 ♥'+hearts(q.npc)+') · 다 갖추면 은하에게 승급 겨루기를 청해요':'상인으로서 가장 높은 자리에 올랐어요.'));
+      body.appendChild(el('p','note',q&&!told('merch',M.rank+1)?'다음 자리로 가는 길은 은하에게 "승급 겨루기"를 물어봐요.':q?'은하에게 들은 다음 자리의 조건: 수완 '+q.stat+' (지금 '+sv('trade')+') · 안목 겨루기 '+q.done+'번 (지금 '+M.done+'번) · 납품 '+q.sold+'번 (지금 '+M.sold+'번) · '+NPCS[q.npc].name+' ♥'+q.h+' (지금 ♥'+hearts(q.npc)+') · 다 갖추면 은하에게 승급 겨루기를 청해요':'상인으로서 가장 높은 자리에 올랐어요.'+topMore('merch')));
     }
     // 걷는 길이 둘 이상이면 어느 이름을 내세울지 고른다
     for(const k in TRACKS){
       const D=TRACKS[k],A=S[k];
       if(!A){if(heard(k))note(k==='mil'?'무예: 궁궐 궐문을 지키는 무진이 활 잘 쏘는 사람을 눈여겨본다고 들었어요. 무진을 찾아가 봐요.':'글공부: 서당의 훈장이 글 배울 제자를 찾는다고 들었어요. 훈장을 찾아가 봐요.');continue}
       const q=D.need[A.rank+1];
-      body.appendChild(el('p','note',D.n+': 【'+D.ranks[A.rank]+'】 · '+D.work+' '+A.done+'번'+(A.rank?' · 날마다 녹봉 '+D.stipend[A.rank]+'냥':'')));
-      body.appendChild(el('p','note',q&&!told(k,A.rank+1)?'다음 자리로 가는 길은 '+NPCS[D.npc].name+'에게 물어봐요.':q?NPCS[D.npc].name+'에게 들은 다음 자리의 조건: '+STATS[D.stat].n+' '+q.stat+' (지금 '+sv(D.stat)+') · '+D.work+' '+q.done+'번 (지금 '+A.done+'번) · '+q.ex[0]+' '+q.ex[1]+' (지금 '+q.ex[2]()+') · '+NPCS[q.npc].name+' ♥'+q.h+' (지금 ♥'+hearts(q.npc)+') · 다 갖추면 '+NPCS[D.npc].name+'에게 '+jo(D.test[A.rank+1],'을','를')+' 청해요':'이 길에서 가장 높은 자리에 올랐어요.'));
+      body.appendChild(el('p','note',D.n+': 【'+trackTitle(k)+'】 · '+D.work+' '+A.done+'번'+(A.rank?' · 날마다 녹봉 '+Math.round(D.stipend[A.rank]*mainMul(k))+'냥':'')));
+      body.appendChild(el('p','note',q&&!told(k,A.rank+1)?'다음 자리로 가는 길은 '+NPCS[D.npc].name+'에게 물어봐요.':q?NPCS[D.npc].name+'에게 들은 다음 자리의 조건: '+STATS[D.stat].n+' '+q.stat+' (지금 '+sv(D.stat)+') · '+D.work+' '+q.done+'번 (지금 '+A.done+'번) · '+q.ex[0]+' '+q.ex[1]+' (지금 '+q.ex[2]()+') · '+NPCS[q.npc].name+' ♥'+q.h+' (지금 ♥'+hearts(q.npc)+') · 다 갖추면 '+NPCS[D.npc].name+'에게 '+jo(D.test[A.rank+1],'을','를')+' 청해요':'이 길에서 가장 높은 자리에 올랐어요.'+topMore(k)));
     }
     // 나쁜 길
-    if(S.rogue){const R=S.rogue,nx=ROGUE.need[R.rank+1];body.appendChild(el('p','note','나쁜 길: 【'+ROGUE.ranks[R.rank]+'】 · 악명 '+R.inf+(nx?' · 다음 자리 【'+ROGUE.ranks[R.rank+1]+'】까지 악명 '+(nx-R.inf):' · 이 길에서 가장 높은 자리예요')+(ROGUE.rent[R.rank]?' · 날마다 자릿세 '+ROGUE.rent[R.rank]+'냥':'')+(S.wanted?' · 수배 '+S.wanted:'')+(S.jail?' · 옥살이 '+S.jail+'번':'')))}
+    if(S.rogue){const R=S.rogue,nx=ROGUE.need[R.rank+1];body.appendChild(el('p','note','나쁜 길: 【'+trackTitle('rogue')+'】 · 악명 '+R.inf+(nx?' · 다음 자리 【'+ROGUE.ranks[R.rank+1]+'】까지 악명 '+(nx-R.inf):' · 이 길에서 가장 높은 자리예요')+(ROGUE.rent[R.rank]?' · 날마다 자릿세 '+Math.round(ROGUE.rent[R.rank]*mainMul('rogue'))+'냥':'')+(S.wanted?' · 수배 '+S.wanted:'')+(S.jail?' · 옥살이 '+S.jail+'번':'')))}
     else if(S.lore.rogue)note('못된 짓: 이웃집 문 앞에서 못된 짓을 하고 달아나는 이들이 있다고 들었어요. 포졸에게 잡히면 옥에 갇힌대요.');
     const mine=['court','cook','merch','mil','civ','rogue'].filter(k=>trackTitle(k));
+    // 본업: 레벨 MAIN_LV부터 걷는 길 가운데 하나를 고른다. 높은 자리에 오르기 전까지는 바꿀 수 있다
+    if(mine.length&&(S.main||S.level>=MAIN_LV||heard('main'))){
+      body.appendChild(el('p','sub','본업'));
+      const M=S.main,kn=NPCS.king.name;
+      if(!M&&S.level<MAIN_LV)note('레벨 '+MAIN_LV+'이 되면 걷는 길 가운데 하나를 본업으로 고를 수 있어요. (지금 레벨 '+S.level+')');
+      else{
+        if(M){
+          const D=MAIN[M.k],q=MAIN_TIERS[M.tier],A=routeOf(M.k);
+          note('본업: '+D.n+' 【'+trackTitle(M.k)+'】 · 수고비·녹봉 '+mainMul(M.k)+'배'+(M.tier?' · 높은 자리 '+M.tier+'/'+MAIN_TIERS.length:''));
+          note(!q?'본업의 맨 꼭대기에 올랐어요.':A.rank<2?'먼저 이 길의 으뜸 자리에 올라야 더 높은 자리가 열려요.'
+            :M.k==='rogue'?'다음 자리 【'+D.titles()[M.tier]+'】: 악명 '+q.inf+' (지금 '+A.inf+') · 레벨 '+q.lv+' (지금 '+S.level+'). 갖추면 저절로 올라요.'
+            :!told('main',M.tier+1)?'더 높은 자리는 궁궐의 '+kn+'에게 "높은 자리 청하기"로 물어봐요.'
+            :kn+'에게 들은 다음 자리 【'+D.titles()[M.tier]+'】의 조건: 레벨 '+q.lv+' (지금 '+S.level+') · '+STATS[D.stat].n+' '+q.stat+' (지금 '+sv(D.stat)+') · '+D.dn+' '+q.done+'번 (지금 '+D.done()+'번) · '+kn+' ♥'+q.h+' (지금 ♥'+hearts('king')+') · 다 갖추면 '+kn+'에게 청해요');
+        }else note('본업을 고를 수 있어요. 본업은 수고비와 녹봉을 1.25배로 받고, 그 길의 으뜸 자리에 오른 뒤에는 임금에게서 더 높은 자리를 받아요. 다른 길의 일도 그대로 할 수 있어요.');
+        if(!M||!M.tier){
+          const t=el('div','tabs');t.style.flexWrap='wrap';
+          for(const k of mine){const b=el('button','btn'+(M&&M.k===k?' on':''),MAIN[k].n);b.type='button';b.onclick=()=>pickMain(k);t.appendChild(b)}
+          body.appendChild(t);
+          if(M)note('높은 자리에 오르기 전까지는 본업을 바꿀 수 있어요.');
+        }else note('높은 자리에 오른 뒤라 본업은 바꿀 수 없어요.');
+      }
+    }
     if(mine.length>1){
       body.appendChild(el('p','sub','내세울 호칭'));
       const t=el('div','tabs');t.style.flexWrap='wrap';
@@ -4132,7 +4471,7 @@ function shoot(m){
   const spots=[[b.x,b.y]];
   for(const [dx,dy] of DIRS){const x=b.x+dx,y=b.y+dy;if(walkable(x,y)&&!(x===P.x&&y===P.y)&&!S.pickups.some(p=>p.x===x&&p.y===y))spots.push([x,y])}
   BEASTS[b.k].loot.forEach((id,j)=>{const s=spots[j%spots.length];drops.push({id,x:s[0],y:s[1],sx:b.x*T+16,sy:b.y*T+4,t:0})});
-  tip('loot','떨어진 전리품은 그 위를 지나가면 주워요');gearDrop(b.k);touch();
+  tip('loot','떨어진 전리품은 그 위를 지나가면 주워요');gearDrop(b.k);if(scene==='wild')planFind(planPlace(),.06,'짐승이 헤집은 덤불에서');touch();
 }
 function huntClick(b){
   b.calm=8;
@@ -4435,7 +4774,8 @@ function rogueAdd(n){
   const first=!S.rogue;if(first)S.rogue={rank:0,inf:0};
   const R=S.rogue;R.inf+=n;hear('rogue',true);let up=false;
   while(R.rank<2&&R.inf>=ROGUE.need[R.rank+1]){R.rank++;up=true;const f=ROGUE.fit[R.rank];if(f&&!S.owned.includes(f))S.owned.push(f)}
-  if(first)setTimeout(()=>{if(S)toast('마을에서 【건달】이라고 수군거려요. 아래 "신분"에 적혔어요')},1700);
+  mainRogueUp();
+  if(first)setTimeout(()=>{if(S)toast('마을에서 【건달】이라고 수군거려요. 아래 "나"의 "신분"에 적혔어요')},1700);
   else if(up)setTimeout(()=>{if(S){sfx('level');toast('악명이 높아져 이제 【'+ROGUE.ranks[R.rank]+'】라 불려요. '+jo(OUTFITS[ROGUE.fit[R.rank]].n,'을','를')+' 얻었어요 (옷장)')}},1700);
   touch();hud();
 }
@@ -4622,7 +4962,7 @@ function royalTake(id){
   S.royal[id]=1;let name,more;
   if(R[1]==='furn'){S.furn[id]=(S.furn[id]||0)+1;name=FURN[id].n;more='집 안에서 꾸미기로 놓을 수 있어요.'}
   else if(R[1]==='fit'){if(!S.owned.includes(id))S.owned.push(id);name=OUTFITS[id].n;more='옷장에서 입을 수 있어요.'}
-  else{gearGet(id);name=GEAR[id].n;more='아래 "장비"에서 걸쳐요.'}
+  else{gearGet(id);name=GEAR[id].n;more='아래 "나"의 "장비"에서 걸쳐요.'}
   addXp(40);sfx('level');saveAll();closeModal();
   dialog({who:'승지',role:'하사품',text:'전하께서 그대의 정성을 갸륵히 여겨 이것을 내리셨소.\n('+jo(name,'을','를')+' 받았어요. '+more+')',choices:[['성은이 망극하옵니다',openTribute]]});
 }
@@ -5168,7 +5508,7 @@ function nextDay(forced){
   {let fixed=0;for(const id in S.ruin){const R=S.ruin[id];if(R.k==='fire')R.k='burnt';if(S.day>=R.until){delete S.ruin[id];fixed++}}
     if(fixed)msgs.push('이웃들이 상한 집 '+fixed+'채를 고쳐 놓았어요');
     S.pee=[];cop=null;if(S.wanted>0)S.wanted--;
-    if(S.rogue&&ROGUE.rent[S.rogue.rank]){const r=ROGUE.rent[S.rogue.rank];S.coins+=r;msgs.push('이웃들이 겁이 나서 자릿세 '+r+'냥을 문 앞에 놓고 갔어요')}}
+    if(S.rogue&&ROGUE.rent[S.rogue.rank]){const r=Math.round(ROGUE.rent[S.rogue.rank]*mainMul('rogue'));S.coins+=r;msgs.push('이웃들이 겁이 나서 자릿세 '+r+'냥을 문 앞에 놓고 갔어요')}}
   if(S.lore.pal||S.seenPal){if(cupDay())msgs.push('오늘은 임금의 사냥 대회 날이에요! 궁궐 궐문의 무진에게 이름을 올리고 사냥터로 가요');else if(cupOn(S.day+1))msgs.push('내일은 임금의 사냥 대회 날이에요. 기력을 아껴 두세요')}
   S.wild=sea===2?5:4;spawnBeasts();dayStock(msgs);
   if(S.merch)rollOrder();
@@ -5180,8 +5520,8 @@ function nextDay(forced){
   if(workDone('sot'))msgs.push('솟대의 새가 알려 줘요: 내일은 '+(S.wNext==='rain'?(seasonOf(S.day+1)===3?'눈이 와요':'비가 와요'):'맑아요'));
   // 장독대: 하루씩 익는다
   {let ripe=0;for(const j of S.jars)if(j&&j.d>0&&--j.d===0)ripe++;if(ripe)msgs.push('장독대에서 '+ripe+'독이 다 익었어요')}
-  {let pay=0;for(const k in TRACKS)if(S[k]&&S[k].rank>=1)pay+=TRACKS[k].stipend[S[k].rank];if(pay){S.coins+=pay;msgs.push('나라에서 녹봉 '+pay+'냥을 보내왔어요')}}
-  if(S.court&&S.court.rank>=1){const p=COURT.stipend[S.court.rank];S.coins+=p;msgs.push('왕실에서 내탕금 '+p+'냥을 보내왔어요')}
+  {let pay=0;for(const k in TRACKS)if(S[k]&&S[k].rank>=1)pay+=Math.round(TRACKS[k].stipend[S[k].rank]*mainMul(k));if(pay){S.coins+=pay;msgs.push('나라에서 녹봉 '+pay+'냥을 보내왔어요')}}
+  if(S.court&&S.court.rank>=1){const p=Math.round(COURT.stipend[S.court.rank]*mainMul('court'));S.coins+=p;msgs.push('왕실에서 내탕금 '+p+'냥을 보내왔어요')}
   if(forced)msgs.push(jailNight?'옥에서 하룻밤을 보내고 풀려났어요. 다시는 그러지 말라는 호통을 들었어요':'깜빡 졸아서 집에 돌아와 잠들었어요');jailNight=false;
   if(S.build){S.house=S.build;S.build=0;msgs.push('새 집 완성! '+HOUSES[S.house-1].n+' · 방이 넓어졌어요');sfx('level')}
   const cf=wakeQ?S.q.placed.reduce((a,f)=>a+FURN[f.id].c,0):comfort();if(cf>0){addXp(cf*2);msgs.push('아늑한 '+(wakeQ?'처소':'집')+'에서 푹 잤어요 · 경험치 +'+cf*2)}
@@ -5236,7 +5576,7 @@ function closeDlg(){clearTimeout(dlgTimer);dlgState=null;$('dlg').hidden=true;$(
 const ROUTES=['cook','court','merch','mil','civ'];
 const routeOf=k=>k==='cook'?S.job:k==='court'?S.court:k==='merch'?S.merch:k==='mil'||k==='civ'||k==='rogue'?S[k]:null;
 const heard=k=>!!(routeOf(k)||S.lore[k]);
-function hear(k,quiet){if(S.lore[k])return;S.lore[k]=1;touch();if(!quiet){setTimeout(()=>toast('새 이야기를 들었어요. 아래 "신분"에 적어 뒀어요'),600);sfx('pick')}}
+function hear(k,quiet){if(S.lore[k])return;S.lore[k]=1;touch();if(!quiet){setTimeout(()=>toast('새 이야기를 들었어요. 아래 "나"의 "신분"에 적어 뒀어요'),600);sfx('pick')}}
 const told=(k,r)=>(S.lore['n'+k]|0)>=r;
 const tell=(k,r)=>{if((S.lore['n'+k]|0)<r){S.lore['n'+k]=r;touch()}};
 // 소문: [무슨 이야기, 들려주는 이웃, 때가 됐는지, 하는 말]. 이웃과 이야기할 때 한 번씩 나온다
@@ -5245,6 +5585,10 @@ const RUMORS=[
   ['pal','eunha',()=>S.level>=2||S.day>=3,'마을 북쪽 길 끝까지 가 봤어요? 그 길로 쭉 올라가면 한양 궁궐이에요. 궁 안 사람들도 인사는 받아 준답니다.'],
   ['hut','moru',()=>!!S.camp&&!S.diy,'새로 온 젊은이로구먼. 집도 없이 짚자리에서 잔다고? 딱하지. 나무 여덟 개만 해 오게. 움막 하나쯤은 삯 없이 거들어 주겠네. "짓기·고치기"로 말하게.'],
   ['gear','moru',()=>S.level>=2||S.kills>=1,'연장만 벼리는 줄 아나? 가죽이나 쇳돌을 가져오면 몸에 걸칠 장비도 지어 주지. 짐승을 잡다 보면 쓸 만한 게 떨어지기도 하고 말일세.'],
+  ['main','hun',()=>S.level>=8&&['cook','court','merch','mil','civ','rogue'].some(k=>routeOf(k)),'여러 길을 두루 걷는 것도 좋으나, 사람은 결국 한 우물을 파야 하느니라. 레벨이 열이 되거든 "신분"에서 본업을 하나 정하거라. 본업은 수고비도 녹봉도 더 받고, 그 길의 으뜸 자리에 오르면 전하께서 더 높은 자리를 내리시느니라. 다른 길의 일은 그대로 해도 되느니라.'],
+  ['antique','dami',()=>S.day>=6,'열흘마다 서는 큰 장에는 골동품 장수 할아버지가 온대! 좌판 둘 사이에 돗자리를 펴고 앉는다나 봐. 못 찾은 가구 도안이랑 옛 보물, 귀한 장비를 판다는데 값이 엄청 비싸대. 흥정을 잘하면 깎아 주지만, 너무 욕심내면 한 푼도 안 깎아 준대. 잔치랑 겹치는 날에는 안 온다더라.'],
+  ['party','eunha',()=>!S.camp&&S.placed.length>=2,'집은 좀 꾸미셨어요? 세간이 갖춰지면 집들이를 한번 여세요. 집 안에 놓은 소반이나 탁자 앞에서 행동하면 상을 차릴 수 있어요. 친한 이웃들이 선물을 들고 갈 거예요. 참, 같은 데서 난 가구를 빠짐없이 놓으면 세트가 되어 집이 한결 아늑해진대요.'],
+  ['plan','moru',()=>!S.camp&&(S.level>=2||S.day>=3),'집에 세간은 좀 들였나? 내 본업은 소목일세. 옛 소목장들이 남긴 가구 도안이 곳곳에 묻혀 있다더구먼. 반짝이는 곳을 파다 보면 나온다지. 마을 것과 숲의 것, 굴속의 것이 다 다르다네. 찾거든 가져오게. "가구 짜기"로 말하면 함께 짜 주겠네. 대패는 자네가 밀어야 하네만.'],
   ['merch','moru',()=>S.level>=3||sv('trade')>=1,'은하가 가게 일 거들 눈썰미 있는 사람을 찾는 눈치더구먼. 장사에 뜻이 있거든 한번 물어보게.'],
   ['rogue','dami',()=>S.level>=3||S.day>=6,'있잖아, 밤에 남의 집 문짝을 부수고 달아나는 못된 사람들이 있대! 이웃집 문 앞에서 행동하면… 아, 아니야! 포졸 아저씨한테 잡히면 옥에 갇힌댔어. 나는 그런 거 안 해!'],
   ['civ','dami',()=>S.level>=3||sv('lore')>=1,'훈장 할아버지가 서당에서 글 배울 제자를 찾는대! 나는 도망쳤지만!'],
@@ -5267,16 +5611,31 @@ const RELICS={
   r_flower:{n:'꽃놀이 한복',k:'fit',at:'town'},r_lantern:{n:'청사초롱',k:'furn',at:'town'},c_pouch:{n:'약초 주머니',k:'charm',at:'town',d:'기력 최대치가 10 늘어요'},
   r_moon:{n:'달빛 도포',k:'fit',at:'wild'},r_tigerpic:{n:'까치호랑이 그림',k:'furn',at:'wild'},c_feather:{n:'매 깃 살깃',k:'charm',at:'wild',d:'사냥할 때 과녁이 커져요'},c_bell:{n:'솔방울 방울',k:'charm',at:'wild',d:'들짐승이 한 칸 더 가까이 가야 달아나요'},
   r_sea:{n:'물빛 한복',k:'fit',at:'sea'},r_celadon:{n:'청자 매병',k:'furn',at:'sea'},r_pearl:{n:'진주 조개',k:'furn',at:'sea'},
-  r_gold:{n:'금박 예복',k:'fit',at:'cave'},r_crystal:{n:'수정 원석',k:'furn',at:'cave'},c_claw:{n:'범 발톱 노리개',k:'charm',at:'cave',d:'범 같은 사나운 짐승이 덮쳐도 기력을 절반만 잃어요'}
+  r_gold:{n:'금박 예복',k:'fit',at:'cave'},r_crystal:{n:'수정 원석',k:'furn',at:'cave'},c_claw:{n:'범 발톱 노리개',k:'charm',at:'cave',d:'범 같은 사나운 짐승이 덮쳐도 기력을 절반만 잃어요'},
+  r_rain:{n:'도롱이 차림',k:'fit',at:'town'},r_falcon:{n:'매사냥꾼 차림',k:'fit',at:'wild'},r_diver:{n:'해녀 물소중이',k:'fit',at:'sea'},r_jade:{n:'옥빛 원삼',k:'fit',at:'cave'}
 };
 const RELIC_AT={town:'마을의 반짝이는 곳',wild:'사냥터의 반짝이는 곳',sea:'먼바다 섬의 반짝이는 곳',cave:'동굴의 반짝이는 곳'};
 const DIG_GOODS={town:[['iron',1],['yeot',2],['ginseng',1]],wild:[['ginseng',1],['antler',1],['hide',2]],sea:[['abalone',2],['mineo',1],['shell',3]],cave:[['silver',1],['jade',1],['iron',3]]};
 const relic=id=>!!(S&&S.relics&&S.relics[id]);
+// 가구 도안: FURN에 mk가 붙은 가구는 도안(S.plans)을 찾아야 모루와 함께 짤 수 있다. 도안은 곳마다 다르고, 반짝이는 곳을 파거나 그곳에서 일하다가 나온다
+const PLAN_AT={town:'마을',wild:'사냥터 숲',deep:'깊은 산',cave:'동굴',sea:'먼바다의 섬',royal:'금원'};
+const planPlace=()=>scene==='wild'?(wz===1?'deep':wz===2?'royal':'wild'):scene;
+const plansLeft=at=>Object.keys(FURN).filter(k=>FURN[k].mk&&FURN[k].mk.at===at&&!S.plans[k]);
+// how가 있으면 일하다가 나온 것(잠깐 뒤 알림 글로), 없으면 흙에서 파낸 것(대화 창으로)
+function planFind(at,p,how){
+  const pool=plansLeft(at);if(!pool.length)return false;
+  const id=pick(pool);if(Math.random()>=p*[1,.6,.3][FURN[id].mk.g])return false; /* 짜기 어려운 가구의 도안일수록 드물다 */
+  S.plans[id]=1;addXp(20);sfx('level');saveAll();
+  const txt=jo(FURN[id].n,'을','를')+' 짜는 법이 그려져 있어요. '+(heard('plan')||S.joined?'목수 모루에게 가져가면 함께 짤 수 있어요.':'목수라면 알아볼지도 몰라요.');
+  if(how)setTimeout(()=>{if(S)toast(how+' 낡은 도안이 나왔어요! '+txt)},900);
+  else dialog({who:'가구 도안',role:PLAN_AT[at],text:'흙 속에서 기름 먹인 종이 한 장이 나왔어요.\n'+txt});
+  return true;
+}
 // 오늘의 반짝이는 곳을 정한다(하루에 한 번). 마을은 내 땅과 집들에서 떨어진 풀밭 한 곳, 사냥터는 깊은 숲 두 곳, 먼바다는 섬 모래톱 두 곳
 function rollGlints(){
   if(S.glints&&S.glints.day===S.day)return;
   const rng=mulberry((S.day*7919+townSeed*31+5)>>>0),take=(list,n)=>{const a=list.slice(),out=[];for(let i=0;i<n&&a.length;i++)out.push(a.splice(Math.floor(rng()*a.length),1)[0].slice());return out};
-  const far=TOWN.GRASS.filter(([x,y])=>!(x>=FARM[0]&&x<=FARM[2]&&y>=FARM[1]&&y<=FARM[3])&&Math.abs(x-SPAWN[0])+Math.abs(y-SPAWN[1])>8&&!BLD.some(b=>Math.abs(x-b.door[0])+Math.abs(y-b.door[1])<3));
+  const far=TOWN.GRASS.filter(([x,y])=>!(x>=FARM[0]&&x<=FARM[2]&&y>=FARM[1]&&y<=FARM[3])&&Math.abs(x-SPAWN[0])+Math.abs(y-SPAWN[1])>8&&!BLD.some(b=>Math.abs(x-b.door[0])+Math.abs(y-b.door[1])<3)&&!STALLS.some(s=>s.x===x&&s.y===y)); /* 좌판이 서는 칸은 뺀다 */
   S.glints={day:S.day,town:take(far,1),wild:take(WILD.GRASS.filter(q=>q[0]>14&&!(Math.abs(q[0]-HUNT_AT[0])<2&&Math.abs(q[1]-HUNT_AT[1])<3)),2),sea:take(SEA.SAND,2),deep:take(DEEP.GRASS.filter(q=>q[0]>12),2),royal:take(GEUMWON.GRASS.filter(q=>q[1]<H-8),2)};
 }
 const glintKey=()=>scene==='wild'&&wz?(wz===2?'royal':'deep'):scene; /* 깊은 산과 금원의 반짝이는 곳은 따로 둔다 (나오는 것은 사냥터와 같다) */
@@ -5300,8 +5659,11 @@ function digLoot(area){
   // 보물: 여섯에 하나쯤. 여섯 번을 파도록 안 나왔으면 그때는 꼭 나온다
   // 장비: 그곳에 묻힌 장비가 남아 있으면 열에 하나쯤 나온다
   const gp=Object.keys(GEAR).filter(k=>GEAR[k].dig===area&&!S.gear.own[k]);
-  if(gp.length&&Math.random()<.1+gearFx('luck')){const id=pick(gp);gearGet(id);saveAll();gearSay(id,'흙 속에서');return}
-  if(pool.length&&(Math.random()<.16+gearFx('luck')||n%6===0)){
+  if(gp.length){const id=pick(gp);if(Math.random()<.12*GEAR_RARE[GEAR[id].g]*(1+gearFx('luck')*2)){gearGet(id);saveAll();gearSay(id,'흙 속에서');return}} /* 귀한 것일수록 드물다 */
+  // 가구 도안: 그곳의 도안이 남아 있으면 열에 하나쯤(짜기 어려운 것일수록 드물다). 그곳을 여섯 번 팔 때마다 한 번은 거의 꼭 나온다
+  {const at=planPlace(),k='p_'+at,c=S.digs[k]=(S.digs[k]|0)+1;if(planFind(at,c%6===0?2:.14*(1+gearFx('luck')*2)))return}
+  // 보물: 열에 하나쯤. 여덟 번을 파도록 안 나왔으면 그때는 꼭 나온다
+  if(pool.length&&(Math.random()<.1*(1+gearFx('luck')*2)||n%8===0)){
     const id=pick(pool),R=RELICS[id];S.relics[id]=1;addXp(40);sfx('level');
     let more='';
     if(R.k==='fit'){if(!S.owned.includes(id))S.owned.push(id);more='옷장에서 입을 수 있어요.'}
@@ -5362,14 +5724,14 @@ const GEAR={
   t_fang:{n:'범 이빨 목걸이',s:'t',g:2,lv:12,fx:{guard:.25,aim:.6,luck:.05},drop:['tiger',.14],look:{gem:'#fff7ea'}},
   t_seven:{n:'칠보 노리개',s:'t',g:3,lv:15,fx:{luck:.14,xp:.06},need:{gold:1,jade:2,silver:2},cost:3200,look:{gem:'#d94a74'}},
   // 일하다가 얻는 장비(find=어디서): fresh 민물 낚시, sea 바다 낚시, deep 먼바다 낚시, mine 바위 캐기, vein 동굴 광맥, chop 소나무 베기, shake 과일나무 흔들기, fest 명절 잔치의 상, quest 이웃의 부탁
-  h_reed:{n:'갈대 삿갓',s:'h',g:0,lv:2,fx:{luck:.03,en:4},find:'fresh',look:{hat:'straw'}},
+  h_reed:{n:'갈대 삿갓',s:'h',g:0,lv:2,fx:{luck:.03,en:4},find:'fresh',look:{hat:'straw',hatC:'#c2bd7e'}},
   t_carp:{n:'잉어 비늘 노리개',s:'t',g:1,lv:4,fx:{luck:.06},find:'fresh',look:{gem:'#f08a2a'}},
   s_net:{n:'어부 장화',s:'s',g:1,lv:6,fx:{spd:.06,en:6},find:'sea',look:{shoe:'#3f6fb0'}},
   t_coral:{n:'산호 목걸이',s:'t',g:2,lv:8,fx:{luck:.08,en:6},find:'sea',look:{gem:'#f08a6a'}},
   w_whale:{n:'고래뼈 활',s:'w',g:2,lv:11,fx:{aim:1.9,luck:.04},find:'deep',look:{bow:'#f6f1e6'}},
-  h_pearl:{n:'진주 족두리',s:'h',g:2,lv:10,fx:{xp:.06,luck:.05},find:'deep',look:{hat:'hwagwan'}},
+  h_pearl:{n:'진주 족두리',s:'h',g:2,lv:10,fx:{xp:.06,luck:.05},find:'deep',look:{hat:'jokduri'}},
   t_ore:{n:'쇳돌 부적',s:'t',g:0,lv:3,fx:{en:6,guard:.1},find:'mine',look:{gem:'#d98a4a'}},
-  h_miner:{n:'광부 머리띠',s:'h',g:1,lv:4,fx:{en:8},find:'mine',look:{hat:'cap'}},
+  h_miner:{n:'광부 머리띠',s:'h',g:1,lv:4,fx:{en:8},find:'mine',look:{hat:'band'}},
   a_stone:{n:'돌비늘 갑옷',s:'a',g:2,lv:8,fx:{en:20,guard:.35},find:'vein',look:{top:'#7d858b',rib:'#3a3a40'}},
   s_iron:{n:'쇠징 장화',s:'s',g:2,lv:10,fx:{spd:.08,guard:.15},find:'vein',look:{shoe:'#5a606a'}},
   w_pine:{n:'솔가지 활',s:'w',g:0,lv:2,fx:{aim:.7},find:'chop',look:{bow:'#4aa368'}},
@@ -5383,23 +5745,23 @@ const GEAR={
   t_rabbit:{n:'토끼 발 부적',s:'t',g:0,lv:2,fx:{luck:.05},drop:['rabbit',.08],look:{gem:'#ffffff'}},
   w_tusk:{n:'멧돼지 엄니 화살',s:'w',g:1,lv:6,fx:{aim:1.3},drop:['boar',.06],look:{bow:'#f3ead6'}},
   s_pheasant:{n:'꿩 깃 꽃신',s:'s',g:1,lv:6,fx:{spd:.08,luck:.03},drop:['pheasant',.1],look:{shoe:'#3f8a5a'}},
-  h_antler:{n:'사슴뿔 투구',s:'h',g:2,lv:8,fx:{en:10,aim:.5},drop:['deer',.08],look:{hat:'helm'}},
+  h_antler:{n:'사슴뿔 투구',s:'h',g:2,lv:8,fx:{en:10,aim:.5},drop:['deer',.08],look:{hat:'antler'}},
   a_stripe:{n:'범 무늬 도포',s:'a',g:3,lv:13,fx:{en:26,guard:.45,aim:.5},drop:['tiger',.1],look:{top:'#e9b930',rib:'#2a2220'}},
   w_old:{n:'녹슨 옛 활',s:'w',g:1,lv:4,fx:{aim:1},dig:'town',look:{bow:'#8a7a5a'}},
-  h_old:{n:'옛 장수의 투구',s:'h',g:2,lv:11,fx:{en:12,guard:.2},dig:'wild',look:{hat:'helm'}},
+  h_old:{n:'옛 장수의 투구',s:'h',g:2,lv:11,fx:{en:12,guard:.2},dig:'wild',look:{hat:'helm',hatC:'#8a7a5a'}},
   a_seal:{n:'물개 가죽 옷',s:'a',g:1,lv:7,fx:{en:16,spd:.03},dig:'sea',look:{top:'#5a6870',rib:'#dfe9ee'}},
   s_gilt:{n:'금박 신',s:'s',g:3,lv:13,fx:{spd:.12,luck:.05},dig:'cave',look:{shoe:'#f7d24a'}},
   // 깊은 산의 짐승에게서 나오거나 그 전리품으로 짓는 것, 사냥꾼의 이름이 나면 받는 것(find:'hunt')
   t_foxtail:{n:'여우 꼬리 노리개',s:'t',g:1,lv:6,fx:{luck:.07,spd:.03},drop:['fox',.1],look:{gem:'#f08a2a'}},
   a_fox:{n:'여우 털 배자',s:'a',g:1,lv:6,fx:{en:15,spd:.04},need:{foxfur:3,hide:2},cost:600,look:{top:'#e58a3a',rib:'#fff7ea'}},
   w_fang:{n:'늑대 이빨 화살',s:'w',g:2,lv:8,fx:{aim:1.6,dmg:1},need:{fang:4,wood:6,feather:3},cost:1000,look:{bow:'#cfd6dc'}},
-  h_wolf:{n:'늑대 털 모자',s:'h',g:2,lv:8,fx:{en:10,guard:.15},drop:['wolf',.07],look:{hat:'cap'}},
+  h_wolf:{n:'늑대 털 모자',s:'h',g:2,lv:8,fx:{en:10,guard:.15},drop:['wolf',.07],look:{hat:'fur'}},
   a_bear:{n:'곰 가죽 갑옷',s:'a',g:2,lv:10,fx:{en:26,guard:.45},need:{bearhide:3,iron:6},cost:1800,look:{top:'#4a3528',rib:'#c9a86a'}},
   s_bear:{n:'곰 털 가죽신',s:'s',g:2,lv:10,fx:{spd:.1,en:8},drop:['bear',.12],look:{shoe:'#4a3528'}},
   w_tuskbow:{n:'대왕 엄니 활',s:'w',g:3,lv:13,fx:{aim:2.4,dmg:1,guard:.1},need:{tusk:1,antler:2,silver:2},cost:2600,look:{bow:'#fff7ea'}},
   t_hunter:{n:'사냥꾼의 뿔피리',s:'t',g:2,lv:1,fx:{aim:.8,luck:.05},find:'hunt',look:{gem:'#b98a5a'}},
   // 임금의 사냥 대회에서 받는 것(find:'cup')과 진상으로 공을 쌓아 받는 것(find:'trib')
-  h_cup:{n:'대회 깃 전립',s:'h',g:2,lv:1,fx:{aim:.7,xp:.04},find:'cup',look:{hat:'jeonrip'}},
+  h_cup:{n:'대회 깃 전립',s:'h',g:2,lv:1,fx:{aim:.7,xp:.04},find:'cup',look:{hat:'jeonrip',hatC:'#7a2430'}},
   w_royal:{n:'어사궁',s:'w',g:3,lv:1,fx:{aim:2,dmg:1,xp:.04},find:'cup',look:{bow:'#c8392f'}},
   t_okdae:{n:'하사받은 옥 노리개',s:'t',g:3,lv:1,fx:{luck:.08,en:10,xp:.04},find:'trib',look:{gem:'#8fd6b0'}},
   a_royal:{n:'임금이 내린 두정갑',s:'a',g:3,lv:8,fx:{en:30,guard:.5,aim:.5},find:'trib',look:{top:'#a8324a',rib:'#f7d24a'}},
@@ -5425,13 +5787,13 @@ const GEAR={
   c_shoe:{n:'수라간 버선신',s:'s',g:2,lv:1,route:'cook',rank:1,fx:{spd:.05,cook:.01},look:{shoe:'#f6f1e6'}},
   c_ladle:{n:'금 국자',s:'w',g:3,lv:1,route:'cook',rank:2,fx:{cook:.035},ic:'ladle'},
   q_shoe:{n:'당혜',s:'s',g:1,lv:1,route:'court',rank:0,fx:{friend:.05,spd:.04},look:{shoe:'#c8392f'}},
-  q_hat:{n:'궁중 족두리',s:'h',g:2,lv:1,route:'court',rank:1,fx:{friend:.1},look:{hat:'hwagwan'}},
+  q_hat:{n:'궁중 족두리',s:'h',g:2,lv:1,route:'court',rank:1,fx:{friend:.1},look:{hat:'jokduri',hatC:'#5a1f3a'}},
   q_scroll:{n:'교지 두루마리',s:'w',g:3,lv:1,route:'court',rank:2,fx:{friend:.2,xp:.05},ic:'scroll'},
-  m_hat:{n:'패랭이',s:'h',g:1,lv:1,route:'merch',rank:0,fx:{sell:.03},look:{hat:'straw'}},
+  m_hat:{n:'패랭이',s:'h',g:1,lv:1,route:'merch',rank:0,fx:{sell:.03},look:{hat:'gat',hatC:'#d9bd6c'}},
   m_shoe:{n:'보부상 미투리',s:'s',g:2,lv:1,route:'merch',rank:1,fx:{spd:.08,sell:.02},look:{shoe:'#d9c27a'}},
   m_scale:{n:'은 저울',s:'w',g:3,lv:1,route:'merch',rank:2,fx:{sell:.08,luck:.04},ic:'scale'},
   k_boot:{n:'군관 목화',s:'s',g:1,lv:1,route:'mil',rank:0,fx:{spd:.06},look:{shoe:'#2a2220'}},
-  k_hat:{n:'군관 전립',s:'h',g:2,lv:1,route:'mil',rank:1,fx:{aim:.6,guard:.1},look:{hat:'jeonrip'}},
+  k_hat:{n:'군관 전립',s:'h',g:2,lv:1,route:'mil',rank:1,fx:{aim:.6,guard:.1},look:{hat:'jeonrip',hatC:'#22304f'}},
   k_great:{n:'대장 각궁',s:'w',g:3,lv:1,route:'mil',rank:2,fx:{aim:2.2,dmg:1},look:{bow:'#2e2a5a'}},
   v_shoe:{n:'선비 가죽신',s:'s',g:1,lv:1,route:'civ',rank:0,fx:{xp:.02,spd:.04},look:{shoe:'#3a2a22'}},
   v_hat:{n:'선비 갓',s:'h',g:2,lv:1,route:'civ',rank:1,fx:{xp:.05},look:{hat:'gat'}},
@@ -5439,14 +5801,95 @@ const GEAR={
   // 나쁜 길(왈패)의 장비: 악명이 쌓여 자리가 오를 때마다 손에 들어온다
   x_shoe:{n:'밤도둑 버선신',s:'s',g:1,lv:1,route:'rogue',rank:0,fx:{spd:.08},look:{shoe:'#2a2a30'}},
   x_coat:{n:'왈패 가죽 조끼',s:'a',g:2,lv:1,route:'rogue',rank:1,fx:{en:14,guard:.2,spd:.03},look:{top:'#3a2a22',rib:'#c8392f'}},
-  x_ring:{n:'두목의 쇠고리 목걸이',s:'t',g:3,lv:1,route:'rogue',rank:2,fx:{luck:.1,spd:.05},look:{gem:'#6a7178'}}
+  x_ring:{n:'두목의 쇠고리 목걸이',s:'t',g:3,lv:1,route:'rogue',rank:2,fx:{luck:.1,spd:.05},look:{gem:'#6a7178'}},
+  // 본업의 높은 자리에서 받는 장비: rank 3~6은 으뜸 자리(2)에 높은 자리 단계(1~4)를 더한 값이다(rk). 단계마다 신발·쓰개·옷·으뜸 물건
+  c_s3:{n:'수라간 비단신',s:'s',g:3,lv:1,route:'cook',rank:3,fx:{spd:.08,cook:.015},look:{shoe:'#3f8a5a'}},
+  c_h4:{n:'어선 머릿수건',s:'h',g:3,lv:1,route:'cook',rank:4,fx:{cook:.02,en:8},look:{hat:'chef'}},
+  c_a5:{n:'어선 앞치마',s:'a',g:3,lv:1,route:'cook',rank:5,fx:{cook:.03,en:16},look:{top:'#f6f1e6',rib:'#f2c531'}},
+  c_w6:{n:'임금이 내린 은 식칼',s:'w',g:4,lv:1,route:'cook',rank:6,fx:{cook:.05,luck:.05},ic:'knife'},
+  q_s3:{n:'수놓은 당혜',s:'s',g:3,lv:1,route:'court',rank:3,fx:{friend:.1,spd:.06},look:{shoe:'#f2c531'}},
+  q_h4:{n:'떨잠 족두리',s:'h',g:3,lv:1,route:'court',rank:4,fx:{friend:.18,xp:.03},look:{hat:'jokduri',hatC:'#7a1f2a'}},
+  q_a5:{n:'금박 원삼',s:'a',g:3,lv:1,route:'court',rank:5,fx:{friend:.22,en:12},look:{top:'#3f8a5a',rib:'#f2c531'}},
+  q_t6:{n:'어보 노리개',s:'t',g:4,lv:1,route:'court',rank:6,fx:{friend:.35,xp:.08,luck:.05},look:{gem:'#f2c531'},ic:'seal'},
+  m_s3:{n:'도고 비단신',s:'s',g:3,lv:1,route:'merch',rank:3,fx:{spd:.1,sell:.03},look:{shoe:'#7a3a5a'}},
+  m_h4:{n:'행수 흑립',s:'h',g:3,lv:1,route:'merch',rank:4,fx:{sell:.06,luck:.04},look:{hat:'gat',hatC:'#22304f'}},
+  m_a5:{n:'대행수 비단 배자',s:'a',g:3,lv:1,route:'merch',rank:5,fx:{sell:.09,luck:.05},look:{top:'#7a3a5a',rib:'#f2c531'}},
+  m_t6:{n:'으뜸 거상의 금 인장',s:'t',g:4,lv:1,route:'merch',rank:6,fx:{sell:.15,luck:.08},look:{gem:'#f2c531'},ic:'seal'},
+  k_s3:{n:'절도사 수혜자',s:'s',g:3,lv:1,route:'mil',rank:3,fx:{spd:.1,en:8},look:{shoe:'#1f1f24'}},
+  k_h4:{n:'훈련대장 투구',s:'h',g:3,lv:1,route:'mil',rank:4,fx:{aim:1,guard:.2,en:10},look:{hat:'helm',hatC:'#3a4a6a'}},
+  k_a5:{n:'판서 두정갑',s:'a',g:3,lv:1,route:'mil',rank:5,fx:{en:28,guard:.45},look:{top:'#7a2f2a',rib:'#f2c531'}},
+  k_w6:{n:'도원수 보궁',s:'w',g:4,lv:1,route:'mil',rank:6,fx:{aim:3,dmg:2},look:{bow:'#e9b930'}},
+  v_s3:{n:'정승 목화',s:'s',g:3,lv:1,route:'civ',rank:3,fx:{xp:.04,spd:.06},look:{shoe:'#1f1f24'}},
+  v_h4:{n:'좌의정 사모',s:'h',g:3,lv:1,route:'civ',rank:4,fx:{xp:.08,luck:.03},look:{hat:'samo'}},
+  v_a5:{n:'영의정 단령',s:'a',g:3,lv:1,route:'civ',rank:5,fx:{xp:.1,en:12},look:{top:'#a8324a',rib:'#f2c531'}},
+  v_t6:{n:'국로의 옥대',s:'t',g:4,lv:1,route:'civ',rank:6,fx:{xp:.18,luck:.06},look:{gem:'#5fbf7a'}},
+  x_s3:{n:'큰 두목의 가죽 장화',s:'s',g:3,lv:1,route:'rogue',rank:3,fx:{spd:.12},look:{shoe:'#1f1f24'}},
+  x_h4:{n:'대두목 검은 삿갓',s:'h',g:3,lv:1,route:'rogue',rank:4,fx:{spd:.04,luck:.06},look:{hat:'straw',hatC:'#3a3a40'}},
+  x_a5:{n:'검계 쇠사슬 조끼',s:'a',g:3,lv:1,route:'rogue',rank:5,fx:{en:20,guard:.35,spd:.04},look:{top:'#2a2220',rib:'#6a7178'}},
+  x_w6:{n:'밤의 임금 쌍도',s:'w',g:4,lv:1,route:'rogue',rank:6,fx:{dmg:2,spd:.06,luck:.08},look:{bow:'#3a3a44'},ic:'sword'},
+  // 등급을 넓혀 더한 장비. 귀한 것일수록 훨씬 드물게 나온다(GEAR_RARE·DROP_RARE). g 4는 전설의 것으로, 지을 수 없고 찾아야만 한다
+  w_drift:{n:'떠내려온 나무 활',s:'w',g:0,lv:2,fx:{aim:.6},find:'fresh',look:{bow:'#9a8a6a'}},
+  w_harpoon:{n:'고래잡이 작살',s:'w',g:1,lv:5,fx:{aim:1.1,luck:.03},find:'sea',look:{bow:'#9aa3aa'},ic:'spear'},
+  w_shark:{n:'상어 이빨 화살',s:'w',g:2,lv:9,fx:{aim:1.6,dmg:1},find:'deep',look:{bow:'#f6f1e6'}},
+  w_dragon:{n:'용궁 각궁',s:'w',g:4,lv:14,fx:{aim:2.8,dmg:1,luck:.08},find:'deep',look:{bow:'#3fd0c0'}},
+  w_stone:{n:'돌촉 화살',s:'w',g:0,lv:2,fx:{aim:.6},find:'mine',look:{bow:'#8f8f96'}},
+  w_meteor:{n:'별똥 쇠 화살',s:'w',g:3,lv:12,fx:{aim:2.2,dmg:1},find:'vein',look:{bow:'#6a5acd'}},
+  w_sword:{n:'녹슨 환도',s:'w',g:1,lv:5,fx:{guard:.15,aim:.5},dig:'wild',look:{bow:'#a8763f'},ic:'sword'},
+  w_general:{n:'옛 장수의 환도',s:'w',g:3,lv:12,fx:{guard:.3,aim:1.2,en:8},dig:'wild',look:{bow:'#dfe9ee'},ic:'sword'},
+  w_spear:{n:'멧돼지 사냥 창',s:'w',g:2,lv:9,fx:{aim:1.5,guard:.2},drop:['kboar',.3],look:{bow:'#c9d2d8'},ic:'spear'},
+  w_wolf:{n:'늑대 뼈 화살',s:'w',g:1,lv:7,fx:{aim:1.4},drop:['wolf',.08],look:{bow:'#e9e4d8'}},
+  w_tiger:{n:'범 힘줄 활',s:'w',g:3,lv:12,fx:{aim:2.3,dmg:1},drop:['tiger',.1],look:{bow:'#e0a13a'}},
+  w_white:{n:'흰 사슴뿔 각궁',s:'w',g:4,lv:13,fx:{aim:2.7,dmg:1,xp:.06},drop:['wdeer',.5],look:{bow:'#ffffff'}},
+  a_net:{n:'그물 조끼',s:'a',g:0,lv:2,fx:{en:7,luck:.02},find:'fresh',look:{top:'#b9a86a',rib:'#6b5a4c'}},
+  a_diver:{n:'해녀 물옷',s:'a',g:1,lv:6,fx:{en:14,spd:.03},find:'sea',look:{top:'#f6f1e6',rib:'#2e4a6a'}},
+  a_scale:{n:'물고기 비늘 갑옷',s:'a',g:2,lv:10,fx:{en:22,guard:.3},find:'deep',look:{top:'#7fb3d0',rib:'#dfe9ee'}},
+  a_dragonking:{n:'용왕의 비늘옷',s:'a',g:4,lv:15,fx:{en:40,guard:.6,luck:.06},find:'deep',look:{top:'#1f8a8a',rib:'#ffd86a'}},
+  a_miner:{n:'광부 가죽 앞치마',s:'a',g:0,lv:3,fx:{en:9,guard:.08},find:'mine',look:{top:'#7a6048',rib:'#3a3a40'}},
+  a_bark:{n:'나무껍질 갑옷',s:'a',g:0,lv:2,fx:{en:8,guard:.05},find:'chop',look:{top:'#8a6a4a',rib:'#5e3f24'}},
+  a_fox:{n:'여우 털 배자',s:'a',g:2,lv:8,fx:{en:18,spd:.04,luck:.04},drop:['fox',.1],look:{top:'#e08a4a',rib:'#fff7ea'}},
+  a_bear:{n:'곰 가죽 갑옷',s:'a',g:3,lv:11,fx:{en:30,guard:.5},drop:['bear',.15],look:{top:'#5a4030',rib:'#c9a86a'}},
+  a_hermit:{n:'은자의 누더기 도포',s:'a',g:2,lv:7,fx:{xp:.08,en:12},dig:'town',look:{top:'#a89a8a',rib:'#6b5a4c'}},
+  a_tomb:{n:'옛 무덤의 갑옷',s:'a',g:3,lv:13,fx:{en:32,guard:.55},dig:'cave',look:{top:'#4a5a6a',rib:'#c9a03a'}},
+  h_otter:{n:'수달피 귀마개',s:'h',g:1,lv:6,fx:{en:8,spd:.03},find:'fresh',look:{hat:'ear',hatC:'#8a6a4a'}},
+  h_fisher:{n:'어부 삿갓',s:'h',g:1,lv:5,fx:{luck:.05,en:6},find:'sea',look:{hat:'straw',hatC:'#b98f4e'}},
+  h_lamp:{n:'등 달린 투구',s:'h',g:2,lv:9,fx:{en:12,luck:.05},find:'vein',look:{hat:'helmL'}},
+  h_wild:{n:'들꽃 화관',s:'h',g:0,lv:1,fx:{friend:.05},dig:'town',look:{hat:'hwagwan'}},
+  h_scholar:{n:'낡은 선비 갓',s:'h',g:1,lv:4,fx:{xp:.05},dig:'town',look:{hat:'gat',hatC:'#5a554e'}},
+  h_bearcap:{n:'곰 털 모자',s:'h',g:2,lv:10,fx:{en:14,guard:.2},drop:['bear',.12],look:{hat:'fur',hatC:'#4f3828'}},
+  h_crown:{n:'옛 임금의 금관',s:'h',g:4,lv:14,fx:{xp:.12,luck:.08,en:14},dig:'cave',look:{hat:'crown'}},
+  s_reed:{n:'갈대 신',s:'s',g:0,lv:1,fx:{spd:.03,luck:.02},find:'fresh',look:{shoe:'#b9a86a'}},
+  s_miner:{n:'광부 짚신',s:'s',g:0,lv:2,fx:{spd:.04,en:3},find:'mine',look:{shoe:'#8a7a6a'}},
+  s_sand:{n:'모래톱 미투리',s:'s',g:1,lv:5,fx:{spd:.07},dig:'sea',look:{shoe:'#e9d8a8'}},
+  s_fox:{n:'여우 털신',s:'s',g:1,lv:7,fx:{spd:.09},drop:['fox',.1],look:{shoe:'#e08a4a'}},
+  s_wolf:{n:'늑대 가죽 장화',s:'s',g:2,lv:9,fx:{spd:.1,guard:.1},drop:['wolf',.08],look:{shoe:'#7a7a80'}},
+  s_wave:{n:'물결 꽃신',s:'s',g:2,lv:9,fx:{spd:.1,luck:.04},find:'deep',look:{shoe:'#7fd0e6'}},
+  s_wind:{n:'바람 가죽신',s:'s',g:4,lv:14,fx:{spd:.16,en:10},dig:'wild',look:{shoe:'#dff3ff'}},
+  t_minnow:{n:'송사리 뼈 목걸이',s:'t',g:0,lv:1,fx:{luck:.02},find:'fresh',look:{gem:'#e9e4d8'}},
+  t_seaglass:{n:'바다 유리 가락지',s:'t',g:1,lv:5,fx:{luck:.06},find:'sea',look:{gem:'#7fd0c0'}},
+  t_blackpearl:{n:'흑진주 노리개',s:'t',g:3,lv:12,fx:{luck:.12,en:8},find:'deep',look:{gem:'#4a4a66'}},
+  t_dragonpearl:{n:'여의주 노리개',s:'t',g:4,lv:15,fx:{luck:.16,xp:.08,en:12},find:'deep',look:{gem:'#ffd86a'}},
+  t_quartz:{n:'수정 목걸이',s:'t',g:1,lv:5,fx:{xp:.04,luck:.03},find:'vein',look:{gem:'#b8a8f0'}},
+  t_ruby:{n:'홍옥 가락지',s:'t',g:3,lv:11,fx:{luck:.1,aim:.5},find:'vein',look:{gem:'#e0354a'}},
+  t_pine:{n:'솔방울 노리개',s:'t',g:0,lv:1,fx:{en:4},find:'chop',look:{gem:'#8a5a34'}},
+  t_peach:{n:'복숭아씨 염주',s:'t',g:1,lv:3,fx:{friend:.06,xp:.02},find:'shake',look:{gem:'#f6a3c4'}},
+  t_coin:{n:'옛 엽전 목걸이',s:'t',g:1,lv:4,fx:{sell:.04},dig:'town',look:{gem:'#c9a03a'}},
+  t_binyeo:{n:'옥비녀',s:'t',g:2,lv:8,fx:{friend:.1,xp:.04},dig:'sea',look:{gem:'#7fc7a8'},ic:'pin'},
+  t_boar:{n:'멧돼지 엄니 목걸이',s:'t',g:1,lv:5,fx:{guard:.12,en:5},drop:['boar',.06],look:{gem:'#f3ead6'}},
+  t_wolf:{n:'늑대 송곳니 노리개',s:'t',g:2,lv:8,fx:{aim:.7,guard:.1},drop:['wolf',.08],look:{gem:'#dfe9ee'}},
+  t_bear:{n:'곰 발톱 목걸이',s:'t',g:3,lv:11,fx:{guard:.3,en:12},drop:['bear',.12],look:{gem:'#6e5040'}},
+  t_jadering:{n:'비취 가락지',s:'t',g:2,lv:9,fx:{luck:.09,xp:.04},need:{jade:2,silver:1},cost:1300,look:{gem:'#5fbf7a'}},
+  t_goldpin:{n:'금비녀',s:'t',g:3,lv:13,fx:{friend:.12,luck:.08},need:{gold:2,jade:1},cost:2800,look:{gem:'#f7d24a'},ic:'pin'}
 };
 const FIND_AT={fresh:'민물 낚시',sea:'바다 낚시',deep:'먼바다 낚시',mine:'바위 캐기',vein:'동굴 광맥',chop:'소나무 베기',shake:'과일나무 흔들기',fest:'명절 잔치의 상',quest:'이웃의 부탁',hunt:'사냥꾼의 이름',cup:'임금의 사냥 대회',trib:'진상의 하사품'};
 // 일하다가 장비를 얻는다: 그 일(src)에서 나오는 것 가운데 아직 없는 것이 운(p)에 따라 나온다. quiet면 알리지 않고 id만 돌려준다(부르는 쪽이 말에 넣는다)
+// 귀한 것일수록 드물다: 남은 것 가운데 하나를 짚고, 그 등급의 드묾(GEAR_RARE)만큼 다시 가린다. 그래서 수수한 것을 다 모은 뒤에는 한참 만에 하나씩 나온다.
+// 상으로 받는 것(quiet: 잔치·부탁)은 등급으로 가리지 않는다. 짐승이 떨어뜨리는 것은 DROP_RARE를 쓴다(gearDrop)
+const GEAR_RARE=[1,.5,.2,.1,.06],DROP_RARE=[1,.8,.5,.3,.15];
 function gearFind(src,p,how,quiet){
   const pool=Object.keys(GEAR).filter(k=>GEAR[k].find===src&&!S.gear.own[k]);
-  if(!pool.length||Math.random()>=p*(1+gearFx('luck')*2))return null;
-  const id=pick(pool);gearGet(id);
+  if(!pool.length)return null;
+  const id=pick(pool);if(Math.random()>=p*(quiet?1:GEAR_RARE[GEAR[id].g])*(1+gearFx('luck')*2))return null;
+  gearGet(id);
   if(!quiet)setTimeout(()=>{if(!S)return;if(busy()||mg||fishing)toast(how+' '+jo(GEAR[id].n,'을','를')+' 얻었어요! "장비"에서 걸쳐요');else gearSay(id,how)},900);
   return id;
 }
@@ -5457,12 +5900,14 @@ function syncRouteGear(quiet){
   if(!S||!S.gear||!S.lore)return;
   for(const id in GEAR){
     const G=GEAR[id];if(!G.route||S.gear.own[id])continue;
-    const a=routeOf(G.route);if(!a||(a.rank|0)<G.rank)continue;
+    const a=routeOf(G.route);if(!a||rk(G.route)<G.rank)continue; /* 높은 자리 장비(rank 3~6)는 본업의 단계까지 더해서 본다 */
     S.gear.own[id]=1;if(!S.gear.on[G.s])S.gear.on[G.s]=id;S.lore.gear=1;touch();
-    if(!quiet)setTimeout(()=>{sfx('level');toast(ROUTE_N[G.route]+'의 길에서 '+jo(G.n,'을','를')+' 받았어요. 아래 "장비"에서 걸쳐요')},1400);
+    if(!quiet)setTimeout(()=>{sfx('level');toast(ROUTE_N[G.route]+'의 길에서 '+jo(G.n,'을','를')+' 받았어요. 아래 "나"의 "장비"에서 걸쳐요')},1400);
   }
+  /* 높은 자리의 옷: 오른 단계까지의 옷이 옷장에 없으면 넣어 둔다 */
+  if(S.main&&MAIN[S.main.k])for(let i=0;i<(S.main.tier|0);i++){const f=MAIN[S.main.k].fit[i];if(f&&!S.owned.includes(f)){S.owned.push(f);touch()}}
 }
-const GEAR_SLOTS=[['w','무기·도구'],['a','갑옷·옷'],['h','쓰개'],['s','신발'],['t','장신구']],GEAR_GRADE=['수수한','쓸 만한','귀한','으뜸'],GEAR_COL=['#8a7a5a','#3f8fc4','#8a63c9','#dd6a1c'];
+const GEAR_SLOTS=[['w','무기·도구'],['a','갑옷·옷'],['h','쓰개'],['s','신발'],['t','장신구']],GEAR_GRADE=['수수한','쓸 만한','귀한','으뜸','전설의'],GEAR_COL=['#8a7a5a','#3f8fc4','#8a63c9','#dd6a1c','#d9304a'];
 const FX_TXT={aim:v=>'사냥 과녁 +'+v,dmg:v=>'화살 힘 +'+v,en:v=>'기력 최대치 +'+v,spd:v=>'걷는 빠르기 +'+Math.round(v*100)+'%',guard:v=>'사나운 짐승에게 덜 다침 '+Math.round(v*100)+'%',luck:v=>'귀한 것이 나올 운 +'+Math.round(v*100)+'%',xp:v=>'경험치 +'+Math.round(v*100)+'%',
   cook:v=>'요리 불의 폭 +'+Math.round(v/.12*100)+'%',friend:v=>'가까워지는 빠르기 +'+Math.round(v*100)+'%',sell:v=>'파는 값 +'+Math.round(v*100)+'%'};
 const gearFx=k=>{let v=0;if(S&&S.gear)for(const s in S.gear.on){const G=GEAR[S.gear.on[s]];if(G&&G.fx[k])v+=G.fx[k]}return v};
@@ -5482,6 +5927,8 @@ function gearArt(c,id){
     else if(G.ic==='scale'){line(c,0,-13,0,10,'#9aa3aa',2.5);line(c,-13,-9,13,-9,'#dfe9ee',2.5);rr(c,-6,10,12,3,1,'#9aa3aa');for(const sx of [-12,12]){line(c,sx,-9,sx-4,2,'#9aa3aa',1);line(c,sx,-9,sx+4,2,'#9aa3aa',1);c.fillStyle='#dfe9ee';c.beginPath();c.arc(sx,2,5.5,0,Math.PI);c.fill()}circ(c,0,-13,2.2,'#e9b930')}
     else if(G.ic==='inkstone'){rr(c,-14,-9,28,20,3,'#2a2a30');rr(c,-11,-6,22,14,2,'#3a3a44');ell(c,-3,1,6,4.5,'#16161a');ell(c,-4,0,2.5,1.4,'rgba(255,255,255,.35)');c.strokeStyle='#e9b930';c.lineWidth=1.4;c.beginPath();c.arc(7,-1,3.5,-.4,3.6);c.stroke();circ(c,9.5,-3.5,1.1,'#e9b930')}
     else if(G.ic==='brush'){line(c,-12,12,5,-5,'#b98a5a',4);line(c,3,-3,7,-7,'#e9b930',4.5);poly(c,[5,-9,9,-5,15,-15],'#2a2220');circ(c,-12,12,2.4,'#7a5230')}
+    else if(G.ic==='sword'){line(c,-9,9,10,-10,dk(L.bow),5.5);line(c,-9,9,10,-10,L.bow,3);poly(c,[8,-12,15,-15,12,-8],L.bow);line(c,-10,4,-4,10,'#e9b930',3.5);line(c,-14,14,-9,9,'#7a5230',5)}
+    else if(G.ic==='spear'){line(c,-14,14,7,-7,'#8a5a34',3);poly(c,[4,-10,10,-4,16,-16],L.bow);poly(c,[10,-4,16,-16,9,-8],dk(L.bow));circ(c,5,-5,2.4,'#c8392f')}
     else if(G.n.indexOf('화살')>=0){line(c,-10,10,9,-9,'#b98a5a',3);poly(c,[13,-13,4,-11,11,-4],L.bow);poly(c,[-9,9,-15,8,-12,13],'#f3ead6');poly(c,[-9,9,-8,15,-13,12],'#e9e4d8')}
     else{c.strokeStyle=dk(L.bow);c.lineWidth=5.5;c.lineCap='round';c.beginPath();c.arc(-9,0,16,-1.05,1.05);c.stroke();c.strokeStyle=L.bow;c.lineWidth=3.5;c.beginPath();c.arc(-9,0,16,-1.05,1.05);c.stroke();line(c,-1,-13.5,-1,13.5,'#f3ead6',1.5);rr(c,4,-3,4,6,1.5,dk(L.bow))}
     break;
@@ -5489,14 +5936,23 @@ function gearArt(c,id){
     poly(c,[-14,-9,-6,-13,0,-9,6,-13,14,-9,16,1,10,3,10,13,-10,13,-10,3,-16,1],L.top);poly(c,[-10,3,-10,13,10,13,10,3,6,6,-6,6],dk(L.top));
     rr(c,-10,5,20,3.5,1,L.rib||dk(L.top));poly(c,[-4,-12,0,-5,4,-12,2,-13,0,-9,-2,-13],L.rib||'#f3ead6');break;
   case 'h':
-    if(L.hat==='ear'){c.strokeStyle='#c9a86a';c.lineWidth=3;c.beginPath();c.arc(0,2,11,Math.PI,0);c.stroke();circ(c,-11,4,6.5,'#ffffff');circ(c,11,4,6.5,'#ffffff');circ(c,-12,3,3,'#f1e6d6');circ(c,10,3,3,'#f1e6d6')}
-    else if(L.hat==='straw'){poly(c,[-16,8,0,-11,16,8],'#edd58c');poly(c,[0,-11,16,8,6,8],'#d9bd6c');ell(c,0,8,16,3.5,'#c9a85a');line(c,-8,-1,-11,8,'#c9a85a',1.2);line(c,7,-2,10,8,'#b9983f',1.2)}
-    else if(L.hat==='jeonrip'){ell(c,0,7,16,4.5,'#1f1f24');rr(c,-8,-8,16,15,5,'#2a2a30');ell(c,0,7,9,2.2,'#3a3a40');circ(c,0,-9,3,'#c8392f');line(c,7,-6,13,-14,'#e9b930',2.5);line(c,9,-7,14,-11,'#a8854a',1.2)}
+    /* hatC가 있으면 같은 모양을 그 빛깔로 그린다 */
+    if(L.hat==='ear'){const f=L.hatC||'#ffffff';c.strokeStyle='#c9a86a';c.lineWidth=3;c.beginPath();c.arc(0,2,11,Math.PI,0);c.stroke();circ(c,-11,4,6.5,f);circ(c,11,4,6.5,f);circ(c,-12,3,3,L.hatC?dk(f):'#f1e6d6');circ(c,10,3,3,L.hatC?dk(f):'#f1e6d6')}
+    else if(L.hat==='straw'){const f=L.hatC||'#edd58c';poly(c,[-16,8,0,-11,16,8],f);poly(c,[0,-11,16,8,6,8],shade(f,.9));ell(c,0,8,16,3.5,shade(f,.82));line(c,-8,-1,-11,8,shade(f,.82),1.2);line(c,7,-2,10,8,shade(f,.74),1.2)}
+    else if(L.hat==='jeonrip'){ell(c,0,7,16,4.5,L.hatC?dk(L.hatC):'#1f1f24');rr(c,-8,-8,16,15,5,L.hatC||'#2a2a30');ell(c,0,7,9,2.2,'rgba(255,255,255,.14)');circ(c,0,-9,3,'#c8392f');line(c,7,-6,13,-14,'#e9b930',2.5);line(c,9,-7,14,-11,'#a8854a',1.2)}
+    else if(L.hat==='jokduri'){const b=L.hatC||'#26262c';rr(c,-11,-5,22,15,6,b);rr(c,-12,6,24,4,2,dk(b));circ(c,0,-8,3.4,'#edd58c');circ(c,0,-8,1.5,'#c8392f');circ(c,-6,1,2,'#ffffff');circ(c,0,2,2.4,'#7fd0e6');circ(c,6,1,2,'#ffffff')}
+    else if(L.hat==='crown'){const m=L.hatC||'#e9b930';[-9,0,9].forEach(x=>{rr(c,x-1.3,-15,2.6,19,1,m);rr(c,x-4.5,-12,9,2.2,1,m);rr(c,x-3.5,-7,7,2.2,1,m)});rr(c,-13,3,26,8,2,m);rr(c,-13,8,26,3,1,dk(m));[-9,0,9].forEach(x=>circ(c,x,6,1.8,'#5fbf7a'));circ(c,-4.5,6.5,1.2,'#ffffff');circ(c,4.5,6.5,1.2,'#ffffff')}
+    else if(L.hat==='fur'){const m=L.hatC||'#8a8f98';rr(c,-15,5,7,11,3,m);rr(c,8,5,7,11,3,m);ell(c,0,0,13,11,m);rr(c,-15,3,30,7,3.5,dk(m));circ(c,-5,-4,2.2,'rgba(255,255,255,.28)');circ(c,3,-6,1.6,'rgba(255,255,255,.22)')}
+    else if(L.hat==='band'){const m=L.hatC||'#c8392f';poly(c,[11,0,18,-6,17,1],m);poly(c,[11,2,18,9,13,6],dk(m));rr(c,-14,-3,28,7,3,m);rr(c,-14,1,28,3,1.5,dk(m))}
     else if(L.hat==='cap'){ell(c,0,2,12,11,'#7a5a3e');poly(c,[-12,2,12,2,12,10,-12,10],'#7a5a3e');rr(c,-14,6,28,5,2.5,'#5a4a3e');circ(c,-4,-3,2,'#9a7a5a');circ(c,0,-8,1.6,'#c9a86a');circ(c,-7,5,1.3,'#c9a86a');circ(c,7,5,1.3,'#c9a86a')}
     else if(L.hat==='hwagwan'){c.strokeStyle='#5aab5c';c.lineWidth=3.5;c.beginPath();c.arc(0,4,12,Math.PI*1.05,Math.PI*1.95);c.stroke();[[-11,2,'#f6a3c4'],[-6,-6,'#ffe27a'],[0,-9,'#ffffff'],[6,-6,'#f6a3c4'],[11,2,'#ffe27a']].forEach(q=>{circ(c,q[0],q[1],4.2,q[2]);circ(c,q[0],q[1],1.5,'#f2a531')})}
     else if(L.hat==='chef'){rr(c,-11,-2,22,11,4,'#ffffff');circ(c,-6,-6,6.5,'#ffffff');circ(c,6,-6,6.5,'#ffffff');circ(c,0,-9,7,'#ffffff');rr(c,-11,5,22,4,1.5,'#dfe9ee')}
-    else if(L.hat==='gat'){ell(c,0,8,17,4,'#1f1f24');rr(c,-6.5,-11,13,19,2.5,'#2a2a30');ell(c,0,8,8,1.8,'#3a3a40');circ(c,-10,9,1.8,'#5fbf7a');circ(c,10,9,1.8,'#5fbf7a')}
-    else{const m=L.hat==='helmG'?'#e9b930':'#9aa3aa';ell(c,0,1,12,12,m);poly(c,[-12,1,12,1,13,9,-13,9],m);rr(c,-14,6,28,5,2,dk(m));rr(c,-1.8,-16,3.6,6,1.5,dk(m));circ(c,0,-17,2.2,L.hat==='helmG'?'#c8392f':'#dfe9ee');ell(c,-5,-4,2.5,4,'rgba(255,255,255,.55)');rr(c,-1.2,1,2.4,8,1,dk(m))}
+    else if(L.hat==='samo'){const b=L.hatC||'#26262c';rr(c,-18,1,11,4.5,2,'#3a3a44');rr(c,7,1,11,4.5,2,'#3a3a44');rr(c,-8,-11,16,13,5,b);rr(c,-10,0,20,8,3,b);ell(c,-3,-5,2.5,4,'rgba(255,255,255,.16)')}
+    else if(L.hat==='gat'){ell(c,0,8,17,4,L.hatC?dk(L.hatC):'#1f1f24');rr(c,-6.5,-11,13,19,2.5,L.hatC||'#2a2a30');ell(c,0,8,8,1.8,'rgba(255,255,255,.14)');if(!L.hatC){circ(c,-10,9,1.8,'#5fbf7a');circ(c,10,9,1.8,'#5fbf7a')}}
+    else{const m=L.hatC||(L.hat==='helmG'?'#e9b930':'#9aa3aa');
+      if(L.hat==='antler')for(const s of [-1,1]){line(c,s*8,-6,s*14,-16,'#e6d3a3',2.6);line(c,s*11,-11,s*17,-11,'#e6d3a3',2);line(c,s*13,-14,s*10,-18,'#e6d3a3',1.8)}
+      ell(c,0,1,12,12,m);poly(c,[-12,1,12,1,13,9,-13,9],m);rr(c,-14,6,28,5,2,dk(m));rr(c,-1.8,-16,3.6,6,1.5,dk(m));circ(c,0,-17,2.2,L.hat==='helmG'?'#c8392f':'#dfe9ee');ell(c,-5,-4,2.5,4,'rgba(255,255,255,.55)');rr(c,-1.2,1,2.4,8,1,dk(m));
+      if(L.hat==='helmL'){rr(c,-4.5,-7,9,9,2,'#5a4a3e');circ(c,0,-2.5,3,'#ffe27a');circ(c,0,-2.5,1.3,'#ffffff')}}
     break;
   case 's': // 신 한 켤레
     for(const dx of [-8,6]){rr(c,dx-5,-4,9,10,3.5,L.shoe);rr(c,dx-5,2,14,7,3,L.shoe);rr(c,dx-5,7,14,2.4,1,dk(L.shoe));ell(c,dx-.5,-3.5,3.2,1.6,dk(L.shoe))}
@@ -5519,14 +5975,14 @@ function gearBadge(id){
 // 장비를 얻는다. 처음 얻은 것이고 그 칸이 비어 있으면 바로 걸친다. 이미 가진 것이면 값으로 쳐서 받는다
 function gearGet(id){
   const G=GEAR[id];
-  if(S.gear.own[id]){const c=Math.round((G.cost||900)*.4);addCoins(c);sfx('coin');toast('이미 가진 '+jo(G.n,'이라','라')+' '+won(c)+'에 넘겼어요');return false}
+  if(S.gear.own[id]){const c=Math.round((G.cost||[60,200,500,1200,3000][G.g])*.4); /* 지을 수 없는 것은 등급으로 값을 친다 */addCoins(c);sfx('coin');toast('이미 가진 '+jo(G.n,'이라','라')+' '+won(c)+'에 넘겼어요');return false}
   S.gear.own[id]=1;if(!S.gear.on[G.s]&&S.level>=G.lv)S.gear.on[G.s]=id;
   hear('gear',true);sfx('level');hud();touch();return true;
 }
-const gearSay=(id,how)=>dialog({who:'장비',role:GEAR_GRADE[GEAR[id].g]+' '+gearSlot(GEAR[id].s)+' · 레벨 '+GEAR[id].lv+'부터',text:how+' '+jo(GEAR[id].n,'을','를')+' 얻었어요!\n'+gearTxt(id)+'\n('+(S.level<GEAR[id].lv?'레벨 '+GEAR[id].lv+'이 되면 걸칠 수 있어요. 그때까지 잘 간직해요.':'아래 "장비"에서 걸치거나 바꿀 수 있어요.')+')'});
+const gearSay=(id,how)=>dialog({who:'장비',role:GEAR_GRADE[GEAR[id].g]+' '+gearSlot(GEAR[id].s)+' · 레벨 '+GEAR[id].lv+'부터',text:how+' '+jo(GEAR[id].n,'을','를')+' 얻었어요!\n'+gearTxt(id)+'\n('+(S.level<GEAR[id].lv?'레벨 '+GEAR[id].lv+'이 되면 걸칠 수 있어요. 그때까지 잘 간직해요.':'아래 "나"의 "장비"에서 걸치거나 바꿀 수 있어요.')+')'});
 // 짐승을 잡았을 때: 그 짐승이 떨어뜨리는 장비가 있으면 운에 따라 나온다
 function gearDrop(kind){
-  for(const id in GEAR){const d=GEAR[id].drop;if(!d||d[0]!==kind||Math.random()>=d[1]*(1+gearFx('luck')*2))continue;
+  for(const id in GEAR){const d=GEAR[id].drop;if(!d||d[0]!==kind||Math.random()>=d[1]*DROP_RARE[GEAR[id].g]*(1+gearFx('luck')*2))continue;
     if(gearGet(id))setTimeout(()=>{if(S&&!busy())gearSay(id,BEASTS[kind].n+'에게서')},900);return}
 }
 // 대장간에서 짓기: 연장 벼리기와 같은 두드리기 놀이를 한다. 재료와 삯은 다 두드려 냈을 때만 든다
@@ -5558,6 +6014,135 @@ function smithEnd(m){
   if(m.good<m.need||S.gear.own[id]||S.coins<G.cost||!hasNeed(G.need)){toast('쇠가 식어 버렸어요 ('+m.good+'/'+m.need+'). 재료는 그대로이니 다시 두드려 봐요');sfx('err');return}
   addCoins(-G.cost);takeNeed(G.need);gearGet(id);addXp(25);addFriend('moru',5);saveAll();gearSay(id,'모루와 함께 지어');
 }
+// ───────── 가구 짜기 ─────────
+// 찾은 도안의 가구를 모루와 함께 짠다. 재료와 삯은 대패질을 마쳤을 때만 든다. 처음 열면 연습 삼아 소반 도안을 받는다
+function openJoin(){
+  if(!S.plans.soban){S.plans.soban=1;touch();toast('모루가 연습 삼아 소반 도안을 건네줬어요')}
+  openModal('가구 짜기',body=>{
+    body.appendChild(el('p','note','도안과 재료를 가져오면 모루와 함께 가구를 짜요. 널판을 대패로 밀어 다듬는데, 고르게 밀면 삯을 절반만 받아요. 재료와 삯은 다 밀었을 때만 들고, 한 번 짤 때마다 기력이 5 들어요.'));
+    for(const id of Object.keys(FURN).filter(k=>FURN[k].mk&&S.plans[k])){
+      const F=FURN[id],K=F.mk;
+      row(body,icon('furn',id),F.n+(S.furn[id]?' · 보관 '+S.furn[id]+'개':''),['아늑함 +'+F.c+' · '+PLAN_AT[K.at]+'의 도안 · 대패질 '+['쉬움','보통','어려움'][K.g],needText(K.need)+' · 삯 '+won(K.cost)],[['짜기',()=>{closeModal();startJoin(id)},S.coins<K.cost||!hasNeed(K.need)]]);
+    }
+    // 아직 못 찾은 도안: 이야기를 들었거나 갈 수 있는 곳만 이름을 밝힌다
+    const known={town:1,wild:1,cave:1,deep:heard('deep')||S.level>=DEEP_LV,sea:workDone('boat'),royal:heard('bowon')||quarterTier()>=1},left=[];let etc=0;
+    for(const at in PLAN_AT){const n=plansLeft(at).length;if(!n)continue;if(known[at])left.push(PLAN_AT[at]+' '+n+'장');else etc+=n}
+    body.appendChild(el('p','note',left.length||etc?'아직 못 찾은 도안 · '+left.concat(etc?['아직 모르는 곳 '+etc+'장']:[]).join(' · ')+'. 반짝이는 곳을 파거나 그곳에서 일하다 보면 나와요.':'도안을 모두 찾았어요!'));
+  });
+}
+// 대패질: 대패가 널판 위를 저절로 나아간다. 행동을 누르고 있는 동안만 깎이고(holding), 옹이(짙은 마디) 위에서는 손을 떼야 한다. 널판은 두세 장
+const PLANE_N=60;
+function startJoin(id){
+  const F=FURN[id],K=F&&F.mk;if(scene!=='town'||!K||!S.plans[id]||S.coins<K.cost||!hasNeed(K.need)||!useEn(5))return;
+  mg={kind:'plane',o:{x:P.x,y:P.y,sh:0},id,pass:0,n:K.g?3:2,q:[],note:'',nt:0,cool:0,fin:false,end:0};planeBoard(mg);P.path=[];P.after=null;N.moru.hold=30;
+  tip('plane','행동을 누르고 있으면 대패가 널판을 깎아요. 짙은 옹이 위에서는 손을 떼고, 지나가면 다시 눌러요');
+}
+// 널판 한 장: 옹이를 칸칸이 하나씩 놓는다(서로 붙지 않게). 장이 넘어갈수록 옹이가 늘고 대패가 빨라진다
+function planeBoard(m){
+  const g=FURN[m.id].mk.g,n=Math.min(5,2+g+m.pass),s=.82/n;
+  m.knots=[];for(let i=0;i<n;i++){const w=rnd(.05,.08),a=.12+i*s+rnd(.03,Math.max(.03,s-w-.04));m.knots.push([a,a+w,0])}
+  m.x=-.2;m.sp=.27+g*.035+m.pass*.03;m.hit=0;m.cells=new Array(PLANE_N).fill(0);m.snd=0;m.jolt=0;m.down=false;
+}
+const planeKnot=(m,x,pad)=>m.knots.find(k=>x>=k[0]+pad&&x<=k[1]-pad);
+function updPlane(m,dt){
+  if(m.nt>0){m.nt-=dt;if(m.nt<=0)m.note=''}
+  if(m.jolt>0)m.jolt-=dt;
+  if(m.fin){m.end-=dt;if(m.end<=0)mgEnd();return}
+  const x0=m.x;m.x+=m.sp*dt;m.down=holding();
+  if(m.down&&m.x>0&&x0<1){
+    const kn=planeKnot(m,m.x,.012); /* 옹이 가장자리는 조금 봐준다 */
+    if(kn){if(!kn[2]){kn[2]=1;m.hit++;m.note='옹이에 걸렸어요!';m.nt=.6;m.jolt=.3;sfx('err')}}
+    else{
+      for(let i=Math.max(0,Math.floor(x0*PLANE_N));i<=Math.min(PLANE_N-1,Math.floor(m.x*PLANE_N));i++)if(!planeKnot(m,(i+.5)/PLANE_N,0))m.cells[i]=1;
+      m.snd-=dt;if(m.snd<=0){m.snd=.2;sfx('chop')}
+    }
+  }
+  if(m.x>=1.06){
+    // 한 장의 점수: 옹이 아닌 곳을 얼마나 깎았는가, 옹이에 걸릴 때마다 0.2씩 깎임
+    let clean=0,cut=0;for(let i=0;i<PLANE_N;i++)if(!planeKnot(m,(i+.5)/PLANE_N,0)){clean++;cut+=m.cells[i]}
+    const q=clamp(cut/clean-m.hit*.2,0,1);m.q.push(q);m.pass++;
+    if(m.pass>=m.n){m.fin=true;m.end=.8;m.down=false;m.note='다 밀었어요!';m.nt=9}
+    else{m.note=q>=.85?'결이 곱게 나왔어요! 다음 널판':q>=.6?'됐어요. 다음 널판':'거칠어요… 다음 널판';m.nt=1.2;planeBoard(m)}
+  }
+}
+function joinEnd(m){
+  N.moru.hold=0;if(!m.fin){toast('대패질을 그만뒀어요. 재료는 그대로예요');return}
+  const F=FURN[m.id],K=F.mk,q=m.q.reduce((a,b)=>a+b,0)/m.q.length,pt=Math.round(q*100);S.min=Math.min(1380,S.min+40);
+  if(q<.6||S.coins<K.cost||!hasNeed(K.need)){toast('결이 거칠게 일어났어요 ('+pt+'점, 60점부터 돼요). 재료는 그대로이니 다시 밀어 봐요');sfx('err');return}
+  const fine=q>=.85,cost=fine?Math.round(K.cost/2):K.cost;
+  addCoins(-cost);takeNeed(K.need);S.furn[m.id]=(S.furn[m.id]||0)+1;S.joined=(S.joined|0)+1;addXp(fine?45:30);addFriend('moru',5);sfx('level');saveAll();
+  dialog({npc:'moru',who:NPCS.moru.name,text:(fine?'허허, 결이 비단 같구먼! ('+pt+'점) 솜씨가 좋으니 삯은 절반만 받겠네.':'됐네, 쓸 만하게 나왔어. ('+pt+'점)')+'\n'+jo(F.n,'을','를')+' 얻었어요. 집 안에서 꾸미기로 놓을 수 있어요.'});
+}
+// ───────── 가구 세트·집들이 ─────────
+function openSets(){
+  openModal('가구 세트',body=>{
+    const done=setsDone(),put=id=>S.placed.some(f=>f.id===id);
+    body.appendChild(el('p','note','한 묶음을 빠짐없이 집 안에 놓으면 세트가 되어 아늑함이 더해져요. 갖춘 세트 '+done.length+'/'+Object.keys(SETS).length+' · 지금 아늑함 '+comfort()));
+    for(const k in SETS){
+      const D=SETS[k],known=D.open||D.ids.some(id=>put(id)||S.furn[id]>0||S.plans[id]);
+      const parts=D.ids.map(id=>put(id)?'● '+FURN[id].n:S.furn[id]>0?'○ '+FURN[id].n:D.open||S.plans[id]?'· '+FURN[id].n:'· ？？？');
+      row(body,known?icon('furn',D.ids[0]):el('span','badge','?'),D.n+' · 아늑함 +'+D.c+(done.includes(k)?' · 갖춤':''),[parts.join('  '),known?D.h:'어디서 구하는지 아직 몰라요'],[]);
+    }
+    body.appendChild(el('p','note','● 놓음 · ○ 보관 중 · · 아직 없음. 세트를 갖추고 집들이를 열면 이웃들이 알아봐요.'));
+  });
+}
+// 집들이: 집 안의 소반·탁자·평상 앞에서 연다. 한 칸 이상 친해진 마을 이웃이 가까운 차례로 다섯까지 오고, PARTY_GAP일에 한 번 열 수 있다.
+// 식혜 따르기(pour): 누르고 있는 동안 사발이 차고, 손을 떼면 그 자리에서 가늠한다. 손님마다 바라는 만큼(초록 띠)이 다르다
+const PARTY_AT={soban:1,table:1,pyeongsang:1},PARTY_GAP=7,PARTY_COST=80;
+const PARTY_WANT=[['조금만',.3,.46],['반쯤',.5,.64],['넉넉히',.68,.8],['찰랑찰랑 가득',.82,.93]],PARTY_FOOD=['apple','persimmon','chestnut','egg','bread','mushroom'];
+const partyGuests=()=>TOWN_IDS.filter(id=>id!==partner()&&hearts(id)>=1).sort((a,b)=>S.npcs[b].pts-S.npcs[a].pts).slice(0,5);
+const partyTier=cf=>cf>=90?'으리으리한 집':cf>=45?'멋진 집':cf>=18?'아늑한 집':'소박한 집';
+function partyTalk(f){
+  hear('party',true);
+  const g=partyGuests(),wait=S.party.day?S.party.day+PARTY_GAP-S.day:0,say=(text,choices)=>dialog({who:FURN[f.id].n,text,choices}),more=[['세트 보기',openSets],['그만두기',null]];
+  if(g.length<2){say('집들이를 열려면 ♥ 한 칸 넘게 친해진 마을 이웃이 둘은 있어야 해요. (지금 '+g.length+'명)\n이웃에게 말을 걸고 선물을 주면 가까워져요.',more);return}
+  if(wait>0){say('지난 집들이의 여운이 아직 남아 있어요. '+wait+'일 뒤에 다시 열 수 있어요.',more);return}
+  if(S.min>=1140){say('손님을 부르기에는 너무 늦었어요. 내일 낮에 열어요.',more);return}
+  if(S.coins<PARTY_COST){say('떡과 식혜를 장만하려면 '+won(PARTY_COST)+'이 있어야 해요. (가진 것: '+won(S.coins)+')',more);return}
+  say('이웃을 불러 집들이를 열까요? 떡과 식혜를 장만하는 데 '+won(PARTY_COST)+'이 들어요.\n올 손님: '+g.map(id=>NPCS[id].name).join(', ')+'\n지금 집: '+partyTier(comfort())+' (아늑함 '+comfort()+', 갖춘 세트 '+setsDone().length+')\n집이 아늑할수록, 식혜를 바라는 만큼 잘 따를수록 선물이 푸짐해요.',[['집들이 열기',startParty]].concat(more));
+}
+function startParty(){
+  const g=partyGuests();if(scene!=='home'||S.inQ||g.length<2||S.coins<PARTY_COST)return;
+  setDeco(false);mg={kind:'pour',o:{x:P.x,y:P.y,sh:0},g,i:0,q:[],lv:0,on:false,armed:false,next:false,wait:0,note:'',nt:0,fin:false,snd:0};pourNext(mg);P.path=[];P.after=null;
+  tip('pour','행동을 누르고 있으면 식혜가 따라져요. 손님이 바라는 초록 띠 안에서 손을 떼요. 넘치면 안 돼요');
+}
+/* 뒤에 오는 손님일수록 빨리 차오르고, 찰수록 더 빨라진다 */
+function pourNext(m){const w=pick(PARTY_WANT);m.want=w;m.lo=w[1];m.hi=w[2];m.lv=0;m.on=false;m.armed=false;m.wait=.5;m.sp=.46+m.i*.06+rnd(0,.08)}
+function pourJudge(m,q,note){m.q.push(q);m.on=false;m.next=true;m.note=note;m.nt=1;sfx(q>=1?'level':q>0?'pick':'err')}
+function updPour(m,dt){
+  if(m.nt>0){m.nt-=dt;if(m.nt<=0){m.note='';if(m.next){m.next=false;m.i++;if(m.i>=m.g.length){m.fin=true;mgEnd();return}pourNext(m)}}}
+  if(m.next||m.fin)return;
+  if(m.wait>0){m.wait-=dt;return}
+  const h=holding();
+  if(!m.armed){if(!h)m.armed=true;return} /* 앞에서 누르던 손을 한 번 떼어야 따르기 시작한다 */
+  if(h){
+    m.on=true;m.lv+=m.sp*(1+m.lv*.7)*dt;m.snd-=dt;if(m.snd<=0){m.snd=.25;sfx('pick')}
+    if(m.lv>=1){m.lv=1;pourJudge(m,0,'앗, 넘쳤어요!')}
+  }else if(m.on){
+    if(m.lv<.12){m.on=false;return} /* 살짝 스친 것은 봐준다 */
+    if(m.lv>=m.lo&&m.lv<=m.hi)pourJudge(m,1,'딱 좋아요!');
+    else if(m.lv<m.lo)pourJudge(m,clamp(.75-(m.lo-m.lv)*3,.1,.75),'조금 모자라요');
+    else pourJudge(m,clamp(.75-(m.lv-m.hi)*3,.1,.75),'조금 많아요');
+  }
+}
+function partyEnd(m){
+  if(!m.q.length){toast('집들이를 그만뒀어요. 장만한 것이 없으니 돈은 그대로예요');return}
+  while(m.q.length<m.g.length)m.q.push(0); /* 대접 못 한 손님은 0점 */
+  const n=m.g.length,q=m.q.reduce((a,b)=>a+b,0)/n,cf=comfort(),first=!S.party.n,fresh=setsDone().filter(k=>!S.party.seen[k]),hit=m.q.filter(v=>v>=1).length;
+  addCoins(-Math.min(S.coins,PARTY_COST));S.party.day=S.day;S.party.n++;S.min=Math.min(1380,S.min+120);
+  m.g.forEach((id,i)=>addFriend(id,Math.round(4+10*m.q[i])));
+  const gift=Math.round(n*(12+Math.min(cf,120)*.5)*(.4+.6*q)),xp=Math.round((20+Math.min(cf,120)*.5)*(.5+.5*q));let bonus=0;
+  for(const k of fresh){S.party.seen[k]=1;bonus+=SETS[k].c*10}
+  addCoins(gift+bonus);addXp(xp+fresh.length*30);for(let i=0;i<hit;i++)gain(pick(PARTY_FOOD),1);
+  const L=['('+partyTier(cf)+'에 이웃 '+n+'명이 다녀갔어요. 식혜 따르기 '+Math.round(q*100)+'점)'];
+  if(S.placed.length)L.push('('+jo(NPCS[pick(m.g)].name,'이','가')+' '+jo(FURN[pick(S.placed).id].n,'을','를')+' 한참 들여다보며 감탄했어요.)');
+  if(fresh.length)L.push('(새로 갖춘 세트 "'+fresh.map(k=>SETS[k].n).join('", "')+'"'+(fresh.length>1?'들':'')+'을 보고 다들 놀랐어요. 축하로 '+won(bonus)+'을 더 받았어요.)');
+  L.push('(이웃들이 집들이 선물로 '+won(gift)+'을 모아 줬어요. 온 이웃 모두와 더 가까워졌어요.'+(hit?' 딱 맞게 받은 손님 '+hit+'명은 먹을거리도 두고 갔어요.':'')+')');
+  if(first){S.furn.jori=(S.furn.jori||0)+1;L.push('(첫 집들이 기념으로 '+jo(FURN.jori.n,'을','를')+' 받았어요. 꾸미기로 놓을 수 있어요.)')}
+  if(q<.5)L.push('(식혜를 바라는 만큼 따르면 선물이 더 푸짐해요.)');
+  L.push('(다음 집들이는 '+PARTY_GAP+'일 뒤에 열 수 있어요.)');
+  sfx('level');saveAll();dialog({who:'집들이',text:L.join('\n')});
+}
 function openGear(){
   openModal('장비',body=>{
     const all=Object.keys(FX_TXT).filter(k=>gearFx(k)).map(k=>FX_TXT[k](+(k==='guard'?Math.min(.75,gearFx(k)):gearFx(k)).toFixed(2))); /* 덜 다침은 75%가 끝 */
@@ -5581,7 +6166,7 @@ function openGear(){
     const g=el('div','grid');
     for(const id of ids){
       const G=GEAR[id],got=!!S.gear.own[id],c=el('button','cell'+(got?'':' unk'));c.type='button';c.onclick=()=>openGearInfo(id,openGear);c.setAttribute('aria-label',(got?G.n:'아직 못 얻은 '+gearSlot(G.s))+' 설명 보기');
-      c.appendChild(gearBadge(got?id:null));c.appendChild(el('b',null,got?G.n:'???'));c.appendChild(el('small',null,G.route?ROUTE_N[G.route]+'의 길 · '+(got?gearSlot(G.s):['들어서면','자리가 한 번 오르면','가장 높은 자리에 오르면'][G.rank]+' 받아요'):'레벨 '+G.lv+' '+gearSlot(G.s)+' · '+(got?GEAR_GRADE[G.g]:gearHint(id))));g.appendChild(c);
+      c.appendChild(gearBadge(got?id:null));c.appendChild(el('b',null,got?G.n:'???'));c.appendChild(el('small',null,G.route?ROUTE_N[G.route]+'의 길 · '+(got?gearSlot(G.s):(G.rank>2?'본업의 높은 자리 '+(G.rank-2)+'단계에 오르면':['들어서면','자리가 한 번 오르면','가장 높은 자리에 오르면'][G.rank])+' 받아요'):'레벨 '+G.lv+' '+gearSlot(G.s)+' · '+(got?GEAR_GRADE[G.g]:gearHint(id))));g.appendChild(c);
     }
     body.appendChild(g);
   });
@@ -5620,14 +6205,37 @@ const GEAR_DESC={
   m_hat:'장사꾼이 쓰는 패랭이. 먼 길 볕을 가려 줘요.',m_shoe:'보부상이 신는 질긴 미투리. 먼 장터도 금방이에요.',m_scale:'은으로 만든 저울. 한 치도 틀리지 않아 믿고 사 가요.',
   k_boot:'군관이 신는 검은 목화. 달려도 벗겨지지 않아요.',k_hat:'군관이 쓰는 전립. 쓰면 겨눔이 흔들리지 않아요.',k_great:'대장만 쥐는 각궁. 화살이 바위도 뚫는대요.',
   x_shoe:'발소리가 나지 않는 검은 버선신. 달아날 때 요긴해요.',x_coat:'왈패들이 걸치는 질긴 가죽 조끼. 멱살을 잡혀도 끄떡없어요.',x_ring:'두목만 거는 쇠고리 목걸이. 보기만 해도 다들 길을 비켜요.',
-  v_shoe:'선비가 신는 가죽신. 서당 가는 길이 가벼워요.',v_hat:'선비의 갓. 쓰면 몸가짐이 반듯해져요.',v_ink:'용을 새긴 벼루. 먹을 갈면 글이 절로 나와요.'
+  c_s3:'수라간 높은 이가 신는 비단신. 넓은 부엌을 종일 오가도 발이 편해요.',c_h4:'임금의 상을 살피는 이가 두르는 머릿수건. 머리칼 한 올 떨어지지 않아요.',c_a5:'금실로 가장자리를 두른 앞치마. 어선을 맡은 이만 둘러요.',c_w6:'임금이 손수 내린 은 식칼. 독이 닿으면 빛이 변한대요.',
+  q_s3:'금실로 꽃을 수놓은 당혜. 걸음마다 품위가 묻어나요.',q_h4:'걸을 때마다 떨잠이 파르르 떠는 족두리. 대궐 잔치의 꽃이에요.',q_a5:'금박을 찍은 초록 원삼. 큰 예식에만 입는 옷이에요.',q_t6:'왕실의 도장인 어보를 본뜬 노리개. 만백성이 우러러봐요.',
+  m_s3:'비단으로 지은 도고의 신. 팔도 장터를 누벼도 해지지 않아요.',m_h4:'육의전 행수가 쓰는 남빛 흑립. 쓰고 서면 값이 먼저 올라요.',m_a5:'자줏빛 비단 배자. 대행수의 말 한마디에 시세가 움직여요.',m_t6:'금으로 새긴 으뜸 거상의 인장. 이것이 찍힌 어음은 나라 안 어디서나 통해요.',
+  k_s3:'절도사가 신는 검은 가죽신. 진흙길 행군에도 끄떡없어요.',k_h4:'푸른 옻칠을 한 훈련대장의 투구. 군사들이 이것만 보고 줄을 맞춰요.',k_a5:'쇠못을 촘촘히 박은 판서의 갑옷. 화살이 박히지 않아요.',k_w6:'도원수에게만 내리는 금빛 활. 시위 소리에 산짐승이 먼저 엎드린대요.',
+  v_s3:'정승이 신는 목이 긴 신. 대궐 섬돌을 오르내리기 좋아요.',v_h4:'날개가 곧게 뻗은 좌의정의 사모. 쓰면 생각이 가지런해져요.',v_a5:'붉은 영의정의 단령. 백관의 맨 앞에 서는 옷이에요.',v_t6:'나라의 큰 어른에게 내리는 옥 허리띠. 임금도 자리에서 일어나 맞는대요.',
+  x_s3:'쇠 징을 박은 큰 두목의 장화. 발소리만으로도 골목이 조용해져요.',x_h4:'얼굴을 깊이 가리는 검은 삿갓. 누가 썼는지 아무도 몰라요.',x_a5:'가죽 속에 쇠사슬을 누빈 조끼. 포졸의 육모 방망이도 아프지 않아요.',x_w6:'밤의 임금이 양손에 쥐는 쌍도. 뽑은 것을 본 이가 없대요.',
+  v_shoe:'선비가 신는 가죽신. 서당 가는 길이 가벼워요.',v_hat:'선비의 갓. 쓰면 몸가짐이 반듯해져요.',v_ink:'용을 새긴 벼루. 먹을 갈면 글이 절로 나와요.',
+  w_drift:'개울에 떠내려온 나무로 깎은 활. 물을 먹어 묵직해요.',w_harpoon:'먼바다 뱃사람이 쓰던 작살. 끝이 날카롭게 벼려 있어요.',w_shark:'상어 이빨을 촉으로 단 화살. 한번 박히면 빠지지 않아요.',
+  w_dragon:'용궁에서 흘러나왔다는 각궁. 시위를 당기면 파도 소리가 나요.',w_stone:'바위틈에서 나온 옛사람의 돌촉 화살. 투박해도 곧게 날아요.',w_meteor:'하늘에서 떨어진 쇠로 벼린 화살. 어두운 곳에서 푸르게 빛나요.',
+  w_sword:'숲에 묻혀 있던 녹슨 칼. 날은 무뎌도 들고 있으면 든든해요.',w_general:'이름 모를 장수가 차던 칼. 칼집에 범이 새겨져 있어요.',w_spear:'대왕 멧돼지를 잡던 사냥꾼의 창. 자루에 엄니 자국이 남아 있어요.',
+  w_wolf:'늑대 뼈를 깎아 촉으로 단 화살. 가볍고 날카로워요.',w_tiger:'범의 힘줄로 시위를 맨 활. 당기는 데 힘이 들지만 멀리 날려요.',w_white:'흰 사슴의 뿔로 만든 각궁. 이것을 가진 사람은 손에 꼽는대요.',
+  a_net:'낡은 그물을 엮어 만든 조끼. 주머니가 많아 쓸모 있어요.',a_diver:'해녀가 물질할 때 입던 옷. 젖어도 금세 말라요.',a_scale:'큰 물고기의 비늘을 엮은 갑옷. 빛을 받으면 무지갯빛이 돌아요.',
+  a_dragonking:'용왕이 입었다는 비늘옷. 물에 젖지 않고 칼도 들지 않아요.',a_miner:'광부가 두르던 두꺼운 가죽 앞치마. 돌가루가 배어 있어요.',a_bark:'소나무 껍질을 겹쳐 만든 갑옷. 솔향이 나요.',
+  a_fox:'여우 털로 지은 조끼. 가볍고 따뜻해 걸음이 빨라져요.',a_bear:'곰 가죽을 통째로 지은 갑옷. 웬만한 짐승은 보고 달아나요.',a_hermit:'산에 숨어 살던 선비의 낡은 도포. 입고 있으면 생각이 맑아져요.',
+  a_tomb:'동굴 깊은 곳 옛 무덤에서 나온 갑옷. 녹 하나 슬지 않았어요.',h_otter:'수달 털로 만든 귀마개. 물가의 찬바람도 끄떡없어요.',h_fisher:'어부가 쓰던 넓은 삿갓. 볕도 비도 다 막아 줘요.',
+  h_lamp:'작은 등을 단 광부의 투구. 어두운 굴에서도 손끝이 보여요.',h_wild:'들꽃을 엮은 화관. 쓰고 다니면 이웃이 먼저 웃어 줘요.',h_scholar:'누군가 두고 간 낡은 갓. 쓰면 글 읽던 기운이 느껴져요.',
+  h_bearcap:'곰 털로 지은 두툼한 모자. 머리를 든든히 지켜 줘요.',h_crown:'동굴에 잠들어 있던 옛 임금의 금관. 누구의 것이었는지는 아무도 몰라요.',s_reed:'갈대를 엮어 삼은 신. 물가를 걷기 좋아요.',
+  s_miner:'광부가 신던 질긴 짚신. 돌밭에서도 미끄러지지 않아요.',s_sand:'모래톱에 묻혀 있던 미투리. 모래 위에서도 발이 빠지지 않아요.',s_fox:'여우 털을 덧댄 신. 발소리가 나지 않아요.',
+  s_wolf:'늑대 가죽으로 지은 장화. 가시덤불도 헤치고 가요.',s_wave:'물결무늬를 수놓은 꽃신. 걸을 때마다 물방울 소리가 나는 듯해요.',s_wind:'바람을 탄다는 가죽신. 신으면 발이 땅에 닿지 않는 것 같대요.',
+  t_minnow:'송사리 뼈를 꿴 목걸이. 어부들이 재미로 걸고 다녀요.',t_seaglass:'파도에 닳은 유리로 만든 가락지. 바닷빛이 그대로 담겼어요.',t_blackpearl:'먼바다 깊은 데서만 나는 흑진주 노리개. 밤에 보면 더 고와요.',
+  t_dragonpearl:'용이 물고 있었다는 여의주. 지닌 사람에게 좋은 일만 따른대요.',t_quartz:'광맥에서 나온 맑은 수정 목걸이. 들여다보면 머리가 맑아져요.',t_ruby:'붉은 홍옥을 박은 가락지. 광부들도 평생 한 번 볼까 말까래요.',
+  t_pine:'솔방울을 다듬어 만든 노리개. 수수해도 솔향이 좋아요.',t_peach:'복숭아씨를 꿴 염주. 나쁜 기운을 막아 준대요.',t_coin:'옛 엽전을 꿴 목걸이. 장사하는 사람이 걸면 손님이 든대요.',
+  t_binyeo:'바닷가 모래에 묻혀 있던 옥비녀. 누군가의 귀한 물건이었겠지요.',t_boar:'멧돼지 엄니를 꿴 목걸이. 사냥꾼의 첫 자랑거리예요.',t_wolf:'늑대 송곳니를 단 노리개. 지니면 눈이 밝아진대요.',
+  t_bear:'곰 발톱을 꿴 목걸이. 곰과 맞선 사람만 걸 수 있어요.',t_jadering:'맑은 비취를 깎은 가락지. 볼수록 빛깔이 깊어요.',t_goldpin:'금으로 빚은 비녀. 꽂고 나서면 다들 한 번씩 돌아봐요.'
 };
 const FX_WHY={aim:'사냥할 때 과녁이 넓어져 맞히기 쉬워요',dmg:'화살 한 대가 짐승의 기운을 더 많이 깎아요',en:'기력이 더 많이 차서 하루에 더 많은 일을 해요',spd:'더 빨리 걸어요',guard:'범·늑대·곰 같은 사나운 짐승이 덮쳤을 때 기력을 덜 잃어요 (걸친 것을 모두 합쳐 75%까지)',
   luck:'보물과 장비가 더 잘 나와요',xp:'무엇을 하든 경험치를 더 받아요',cook:'요리할 때 알맞은 불의 폭이 넓어져 맛있게 익히기 쉬워요',friend:'이웃과 더 빨리 가까워져요',sell:'물건을 더 비싼 값에 팔아요'};
 // 얻는 곳을 풀어서 적는다. 아직 모르는 것(full이 아님)은 재료나 확률 없이 곳만
 function gearWhere(id,full){
   const G=GEAR[id],a=[];
-  if(G.route)a.push(ROUTE_N[G.route]+'의 길: '+['그 길에 들어서면','자리가 한 번 오르면','가장 높은 자리에 오르면'][G.rank]+(G.route==='rogue'?' 손에 들어와요':' 스승이 내어 줘요'));
+  if(G.route)a.push(ROUTE_N[G.route]+'의 길: '+(G.rank>2?'본업으로 삼아 높은 자리 '+(G.rank-2)+'단계에 오르면'+(G.route==='rogue'?' 손에 들어와요':' 임금이 내려요'):['그 길에 들어서면','자리가 한 번 오르면','가장 높은 자리에 오르면'][G.rank]+(G.route==='rogue'?' 손에 들어와요':' 스승이 내어 줘요')));
   if(G.need)a.push('대장간: 모루에게 "장비 짓기"를 부탁해 두드려 지어요'+(full?' ('+Object.keys(G.need).map(k=>(ITEMS[k]?ITEMS[k].n:k)+' '+G.need[k]).join(' · ')+' · 삯 '+won(G.cost)+')':''));
   if(G.drop)a.push('사냥: '+jo(BEASTS[G.drop[0]].n,'을','를')+' 잡으면 가끔 떨어뜨려요');
   if(G.dig)a.push('땅 파기: '+RELIC_AT[G.dig]+'을 파면 드물게 나와요');
@@ -5779,12 +6387,13 @@ function talk(id){
   const ch=[],q=S.quests.find(q=>q.npc===id&&!q.done);
   if(q)ch.push(['부탁 듣기',()=>questTalk(id,q)]);
   ch.push(['선물하기',()=>openGift(id)]);
-  if(id==='moru'){ch.push(['짓기·고치기',buildTalk]);ch.push(['연장 벼리기',openForge]);ch.push(['장비 짓기',openSmith])}
+  if(id==='moru'){ch.push(['짓기·고치기',buildTalk]);ch.push(['연장 벼리기',openForge]);ch.push(['장비 짓기',openSmith]);ch.push(['가구 짜기',openJoin])}
   if(id==='yeon')ch.push(['수라간 일',kitchenTalk]);
   if(id==='queen')ch.push(['궁중 일',courtTalk]);
   if(id==='eunha')ch.push(['장사 일',tradeTalk]);
   if(id==='mujin'){ch.push(['무예 일',()=>trackTalk('mil')]);ch.push([cupDay()?'오늘 사냥 대회':'사냥 대회',cupTalk])}
   if(id==='hun')ch.push(['글공부',()=>trackTalk('civ')]);
+  if(id==='king'&&S.main&&S.main.k!=='rogue')ch.push(['높은 자리 청하기',mainTalk]);
   // 혼인할 수 있는 이웃과 ♥4가 되면 청혼할 수 있다
   if(d.wed&&!S.spouse&&h>=4)ch.push(['청혼하기',()=>propose(id)]);
   if(id===partner()&&S.kids.length<2)ch.push(['아이 이야기',()=>kidTalk(id)]);
@@ -5881,7 +6490,28 @@ function startBuild(){
 function openModal(title,build){
   const b=$('mBody'),keep=!$('modal').hidden&&$('mTitle').textContent===title?b.scrollTop:0;
   $('mTitle').textContent=title;b.textContent='';build(b);$('modal').hidden=false;b.scrollTop=keep;
+  // 묶음에 든 창이면 제목 아래에 탭을 단다 (그 밖의 창에서는 감춘다)
+  const tb=tabOf(title),mt=$('mTabs');mt.textContent='';mt.hidden=!tb;
+  if(tb){tabLast[tb[0]]=tb[1];TABS[tb[0]].forEach((t,i)=>{const x=el('button','btn'+(i===tb[1]?' on':''),t[0]+(t[0]==='소식'&&i!==tb[1]&&S&&S.news<VER?' ●':''));x.type='button';x.onclick=t[1];mt.appendChild(x)})}
   if(!keep)$('mClose').focus({preventScroll:true});
+}
+// 도구줄 묶음: 단추 하나가 창 여럿을 맡고, 창 위의 탭으로 오간다. TABS[묶음]=[탭 글자, 여는 함수, 그 창의 제목(openModal이 이것으로 알아본다)]
+// 묶음 단추는 마지막에 보던 탭을 다시 연다(tabLast, 저장하지 않음). 못 본 소식이 있으면 설정은 소식부터 연다
+const TABS={me:[['신분',()=>openStatus(),'신분'],['옷장',()=>openWardrobe(),'옷장'],['장비',()=>openGear(),'장비']],
+  log:[['이웃',()=>openFriends(),'이웃'],['부탁',()=>openQuests(),'오늘의 부탁'],['도감',()=>openDex(),'도감'],['지도',()=>openMap(),'마을 지도']],
+  set:[['설정',()=>openSettings(),'설정'],['도움말',()=>openHelp(),'도움말'],['소식',()=>openNews(false),'소식']]};
+const tabLast={me:0,log:0,set:0};
+function tabOf(title){for(const g in TABS){const i=TABS[g].findIndex(t=>t[2]===title);if(i>=0)return[g,i]}return null}
+function openGroup(g){if(g==='set'&&S&&S.news<VER)tabLast.set=2;TABS[g][tabLast[g]][1]()}
+// 설정 창: 도구줄에 따로 있던 저장·소리·조작키를 모았다
+function openSettings(){
+  openModal('설정',body=>{
+    const badge=t=>el('div','badge',t);
+    row(body,badge('저'),'저장',(cloudDoc?'이 브라우저와 계정에 보관해요.':'이 브라우저에 보관해요.')+' 평소에도 틈틈이 저절로 저장돼요',[['저장하기',()=>{saveAll();toast(cloudDoc?'저장했어요 · 계정에도 올려서 다른 기기에서 이어 할 수 있어요':'저장했어요 · 이 브라우저에 보관돼요')}]]);
+    row(body,badge('♪'),'소리',S.sound?'지금 켜져 있어요':'지금 꺼져 있어요',[[S.sound?'끄기':'켜기',()=>{S.sound=!S.sound;touch();sfx('pick');openSettings()}]]);
+    if(touchDev)row(body,badge('✥'),'조작키',padOn?'화면 왼쪽 아래에 방향 단추가 보여요':'방향 단추를 감췄어요. 가고 싶은 곳을 눌러서 걸어요',[[padOn?'끄기':'켜기',()=>{padOn=!padOn;try{localStorage.setItem('doran-village-keys',padOn?'1':'0')}catch(e){}syncKeys();openSettings()}]]);
+    body.appendChild(el('p','note','이름 바꾸기와 마을 옮기기는 "나"의 "신분" 창에 있어요.'));
+  });
 }
 function closeModal(){if($('modal').hidden)return;$('modal').hidden=true;cv.focus({preventScroll:true})}
 function row(body,ic,name,sub,acts){
@@ -6037,11 +6667,11 @@ function openSeeds(i,seeds){
   });
 }
 // 소식 창. fresh: 들어올 때 저절로 뜨는 창(아직 못 본 것 가운데 가장 새로운 두 묶음만). 도구줄의 "소식"은 전부 보여 준다
-function syncNews(){$('bNews').textContent=S&&S.news<VER?'소식 ●':'소식'}
+function syncNews(){$('bSet').textContent=S&&S.news<VER?'설정 ●':'설정'}
 function openNews(fresh){
   const from=S.news|0,list=fresh?NEWS.filter(n=>n.v>from).slice(0,2):NEWS;
   openModal(fresh?'새 소식':'소식',body=>{
-    body.appendChild(el('p','note',fresh?'마을이 조금 달라졌어요. 이 창은 판이 바뀔 때 한 번만 떠요. 아래 도구줄의 "소식"에서 언제든 다시 볼 수 있어요.':'판이 바뀔 때마다 달라진 점을 여기에 적어요. 맨 위가 가장 새로운 소식이에요.'));
+    body.appendChild(el('p','note',fresh?'마을이 조금 달라졌어요. 이 창은 판이 바뀔 때 한 번만 떠요. 아래 "설정"의 "소식"에서 언제든 다시 볼 수 있어요.':'판이 바뀔 때마다 달라진 점을 여기에 적어요. 맨 위가 가장 새로운 소식이에요.'));
     for(const n of list){
       const h=el('p','sub',n.t);h.style.marginTop='12px';body.appendChild(h);
       const d=el('p','note',n.d);d.style.marginBottom='4px';body.appendChild(d);
@@ -6144,14 +6774,14 @@ function openHelp(){
   openModal('도움말',body=>{
     const ul=el('ul','help');
     for(const t of ['걷기: 방향키나 WASD, 또는 가고 싶은 곳을 눌러요.','행동: Space나 E, 또는 화면의 행동 버튼. 나무·바위·이웃·물·밭·문을 직접 눌러도 돼요.',
-      '마을 모양: 새로 시작한 마을은 집·길·개울·연못·내 땅의 자리가 마을마다 달라요. 시작할 때 "다른 마을 보기"로 고를 수 있어요. 어디에 무엇이 있는지는 아래 "지도"에서 봐요. 내 땅은 말뚝으로 둘러 있고, 같이 하는 친구는 내 마을의 가까운 빈자리에 보여요.',
+      '마을 모양: 새로 시작한 마을은 집·길·개울·연못·내 땅의 자리가 마을마다 달라요. 시작할 때 "다른 마을 보기"로 고를 수 있어요. 어디에 무엇이 있는지는 아래 "기록"의 "지도"에서 봐요. 내 땅은 말뚝으로 둘러 있고, 같이 하는 친구는 내 마을의 가까운 빈자리에 보여요.',
       (S.lore.bridge||S.kit>0||S.bridges.length>0)&&'다리: 나무 '+BRIDGE_WOOD+'개와 '+won(BRIDGE_COST)+'을 모아 모루에게 "짓기·고치기"에서 다리 놓기를 부탁하면 다리 재목을 줘요. 놓고 싶은 개울가에 서서 물을 바라보고 행동하면 못질로 놓아요. 동쪽이나 서쪽으로 물 세 칸까지 건널 수 있어요.',
       '휴대폰: 가고 싶은 곳을 누르면 걸어가요. 오른쪽 아래 행동 버튼은 바라보는 것에 행동해요. 물은 한 번 누르면 물가로 가서 바라보기만 하고, 한 번 더 눌러야 낚싯대를 던져요.',
       '과일나무: 행동을 연타해 흔들면 열매가 떨어져요. 빨리 흔들면 하나 더! 떨어진 열매는 지나가면서 주워요.',
       '소나무: 움직이는 눈금이 초록 칸에 올 때 행동. 노란 칸이면 완벽! 바위: 줄어드는 고리가 흰 원에 겹칠 때 행동.',
       '낚시: 물가에서 행동 → 느낌표가 뜨면 챔 → 잔잔할 때 연타로 당기고 물이 튀면 멈춰요. 비 오는 날 더 잘 물어요.',
       '사냥터: 마을 큰길을 따라 동쪽 끝까지 가면 깊은 숲 사냥터로 나가요. 짐승이 훨씬 많고 범과 산삼도 있어요. 서쪽 길로 돌아오면 마을이에요.',
-      '이름 바꾸기: 아래 "신분" 창 맨 위의 "이름 바꾸기"에서 내 이름을 언제든 바꿀 수 있어요. 아이 이름도 같은 창의 가족 칸에서 바꿔요.',
+      '이름 바꾸기: 아래 "나"의 "신분" 창 맨 위의 "이름 바꾸기"에서 내 이름을 언제든 바꿀 수 있어요. 아이 이름도 같은 창의 가족 칸에서 바꿔요.',
       '옷장: 옷장 버튼에서 남자·여자 모습과 옷을 바꿔요. 새 옷은 은하 만물상의 옷 칸에서 사요.',
       '조작 더: 이웃이 바로 곁(대각선도)에 있으면 바라보지 않아도 행동(스페이스)으로 말이 걸려요. 대화 창에서는 스페이스로 글을 넘기고, 방향키로 선택을 옮긴 뒤 스페이스로 정해요(숫자 키 1·2·3으로 바로 골라도 돼요). 처음에는 맨 끝 선택에 놓여 있어요.',
       '사냥: 들짐승은 가까이 가면 달아나요. 쏠 수 있는 짐승에는 겨눔 줄과 "쏠 수 있어요"가 떠요. 사냥터에서는 행동만 눌러도 가까운 짐승을 겨누러 가요. 서너 칸 떨어져 일직선에 서서 행동 → 흔들리는 과녁이 짐승에 겹칠 때 한 번 더. 전리품은 지나가면서 주워요. 짐승마다 과녁이 흔들리는 모양이 다르고, 놓치지 않고 이어서 잡으면 경험치가 더 붙어요.',
@@ -6168,7 +6798,7 @@ function openHelp(){
       '집 직접 짓기: 모루에게 직접 짓겠다고 하면 값이 절반이에요. 집 문 앞에서 양쪽 눈금이 만날 때 못을 박아 세 단계를 지으면 바로 완성돼요.',
       '밭: 집 둘레 내 땅의 빈 풀밭에 서서 행동하면 어디든 밭을 갈 수 있어요. 씨앗을 심고 날마다 물을 줘요. 비 오는 날은 저절로 젖어요.',
       '살아갈 길: 처음부터 정해진 길은 없어요. 이웃과 이야기를 나누다 보면 때가 됐을 때 새로운 일과 자리 이야기를 들려줘요. 들은 이야기는 "신분"에 적히고, 더 높은 자리로 가는 길은 그 일을 가르쳐 주는 사람에게 물어봐요.',
-      (S.lore.gear||Object.keys(S.gear.own).length>0)&&'장비: 무기·갑옷·쓰개·신발·장신구 다섯 칸에 걸쳐요. 아래 "장비"에서 걸치거나 바꾸고, 아직 못 구한 것은 어디서 나오는지 볼 수 있어요. 모루에게 "장비 짓기"로 재료를 대고 두드려 짓거나, 짐승을 잡거나, 반짝이는 곳을 파서 구해요. 낚시·나무 베기·바위 캐기·과일나무 흔들기를 하다가 딸려 나오기도 하고, 명절 잔치의 상이나 이웃의 부탁으로 받기도 해요. 갑옷과 쓰개는 걸치면 모습도 바뀌어요.',
+      (S.lore.gear||Object.keys(S.gear.own).length>0)&&'장비: 무기·갑옷·쓰개·신발·장신구 다섯 칸에 걸쳐요. 아래 "나"의 "장비"에서 걸치거나 바꾸고, 아직 못 구한 것은 어디서 나오는지 볼 수 있어요. 모루에게 "장비 짓기"로 재료를 대고 두드려 짓거나, 짐승을 잡거나, 반짝이는 곳을 파서 구해요. 낚시·나무 베기·바위 캐기·과일나무 흔들기를 하다가 딸려 나오기도 하고, 명절 잔치의 상이나 이웃의 부탁으로 받기도 해요. 갑옷과 쓰개는 걸치면 모습도 바뀌어요.',
       (S.seenPal||S.lore.pal)&&'궁궐: 마을 북쪽(만물상 옆) 길 끝으로 가면 한양 궁궐이에요. 궁 안 사람들과도 인사와 선물로 친해져요. 남쪽 궐문으로 나오면 마을이에요.',
       '가꾸기: 마을에서 도구줄의 "가꾸기"를 눌러 꽃밭(들꽃 1개), 나무 울타리(나무 1개), 장명등(나무 2개와 40냥)을 골라요. 가까운 풀밭 칸을 누르거나 바라보고 행동하면 놓이고, 놓인 것을 누르면 거둬요(울타리와 장명등은 재료를 돌려받아요). 꽃밭은 밟고 지나가고, 울타리는 옆 울타리와 이어지고, 장명등은 밤에 불이 켜져요. 많이 가꾸면 아침마다 경험치를 조금 받고 이웃들도 좋아해요.',
       '이웃과 편지: 마을에서 가까이 있던 이웃이 가끔 먼저 다가와 말을 걸어요(느낌표가 뜨면 잠깐 서서 기다려요). 소문이나 작은 선물을 주기도 해요. 가까운 이웃(♥2부터)과 고향의 어머니는 가끔 편지를 보내요. 집 문 옆 우편함에 깃발이 서면 문 앞에서 행동하거나 "이웃" 창의 편지함에서 읽어요.',
@@ -6176,7 +6806,7 @@ function openHelp(){
       S.lore.cup&&'사냥 대회: 열흘에 한 번(3·13·23…일) 임금의 사냥 대회가 열려요. 그날 궁궐 궐문의 무진에게 이름을 올리면 잡는 짐승마다 점수가 쌓여요(센 짐승일수록 높아요). 무진에게 돌아가 마감하면 맞수 셋과 견줘 등수가 정해지고, 가지 않으면 다음 날 아침에 셈해 줘요. 맞수들의 점수는 내 레벨에 맞춰져요.',
       (S.lore.bowon||S.seenRoyal)&&'금원: 궁궐 북서쪽 담 끝의 작은 문으로 들어가는 임금의 사냥터예요. 공주에게 문 이야기를 들었거나 궁궐에서 자리가 오른 사람에게 열려요. 사슴·꿩·토끼·멧돼지가 하루 여덟 마리까지 나오고 사나운 짐승은 없어요. 사흘에 한 번꼴로 흰 사슴이 나타나는데, 멀리서도 눈치채고 달아나요. 북동쪽 약수터의 물은 하루에 한 번 기력 25를 채워 줘요. 남쪽 문으로 나가면 궁궐이에요.',
       (S.lore.qtr||quarterTier())&&'내 처소: 수라간 상궁(숙수)·세자빈(부마)·내금위 군관·정승이 되면 궁궐 큰길 서쪽의 전각이 내 처소가 돼요. 자리가 더 오르면 방이 넓어져요. 집처럼 꾸미기로 가구를 놓을 수 있고(가구는 집과 함께 써요), 침대에서 자면 다음 날 처소에서 눈을 떠요. 왕실의 배필은 밤과 아침에 처소에 함께 있어요.',
-      '마을 옮기기: 아래 "신분" 창의 "마을 옮기기"에서 이 마을을 글자 코드로 내보내고, 다른 기기나 브라우저에서 그 코드를 붙여 넣어 가져와요. 처음 화면의 "다른 기기의 마을 가져오기"로도 돼요. 가져오면 그 기기에 있던 마을은 바뀌어요(한 번은 되돌릴 수 있어요).',
+      '마을 옮기기: 아래 "나"의 "신분" 창의 "마을 옮기기"에서 이 마을을 글자 코드로 내보내고, 다른 기기나 브라우저에서 그 코드를 붙여 넣어 가져와요. 처음 화면의 "다른 기기의 마을 가져오기"로도 돼요. 가져오면 그 기기에 있던 마을은 바뀌어요(한 번은 되돌릴 수 있어요).',
       S.lore.trib&&'진상과 하사품: 궁궐 정전 문 앞에서 행동하면 진상을 올려요. 철마다 궁에서 찾는 물건이 다르고, 바칠 때마다 공이 쌓여요. 공이 차면 임금이 내리는 가구·옷·장비를 받아요. 공은 써서 없어지지 않아요.',
       cntOn()&&'하는 사람 수: 이 주소에서는 몇 명이 하는지 알려고 숫자만 세요(처음 켠 날 한 번, 그리고 날마다 한 번). 이름이나 마을 내용은 보내지 않아요.',
       '신분과 스탯: 레벨이 오르면 점수를 받아 손맛·기품·학식·무예·수완을 올려요. 요리·인사와 선물·도감·사냥·장사를 해도 조금씩 저절로 올라요.',
@@ -6201,7 +6831,7 @@ function openHelp(){
       '기력: 밭 갈기·나무 베기·낚시 같은 일을 하면 줄어요. 가방에서 음식을 먹거나 침대에서 자면 다시 차요.','이웃: 하루에 한 번 인사와 선물로 ♥가 올라요. 머리 위 물음표는 부탁이 있다는 뜻이에요. ♥2에 선물, ♥3에 혜택을 받아요.',
       '방 고치기: 집 안에서 꾸미기를 누르면 바닥을 한 칸씩 넓히거나 떼서 방 모양을 마음대로 만들고, 벽지와 바닥 무늬도 바꿀 수 있어요. 집을 키우면 쓸 수 있는 칸이 늘어요.',
       '집: 목수 모루에게 집 고치기를 맡기면 다음 날 완성돼요. 집 안에서 꾸미기로 가구를 놓고, 침대에서 자면 다음 날이 돼요.','모은 물건은 은하 잡화점에서 팔아요. 진행은 자동으로 저장돼요.',
-      '소식: 판이 바뀌면 달라진 점을 적은 창이 들어올 때 한 번 떠요. 아래 도구줄의 "소식"에서 지난 소식까지 다시 볼 수 있어요.'])if(t)ul.appendChild(el('li',null,t));
+      '소식: 판이 바뀌면 달라진 점을 적은 창이 들어올 때 한 번 떠요. 아래 "설정"의 "소식"에서 지난 소식까지 다시 볼 수 있어요.'])if(t)ul.appendChild(el('li',null,t));
     body.appendChild(ul);
   });
 }
@@ -6214,7 +6844,8 @@ function renderDeco(){
   mk('+floor','바닥 넓히기 · 남은 '+(roomBudget()-roomSet().size)+'칸');mk('-floor','바닥 떼기');
   const cyc=(label,key,n)=>{const b=el('button','btn',label);b.type='button';b.onclick=()=>{S[key]=((S[key]||0)+1)%n;touch();sfx('pick')};box.appendChild(b)};
   cyc('벽지 바꾸기','wallS',WALLS.length);cyc('바닥 무늬 바꾸기','floorS',FLOORS.length);
-  $('decoHint').textContent=(ids.length?'가구를 고르고 바닥을 누르면 놓여요. 놓인 가구를 누르면 다시 넣어요.':'보관 중인 가구가 없어요. 잡화점에서 사거나 이웃과 친해지면 받을 수 있어요.')+' · 아늑함 '+comfort();
+  if(!S.inQ){const b=el('button','btn','세트 '+setsDone().length+'/'+Object.keys(SETS).length);b.type='button';b.onclick=openSets;box.appendChild(b)}
+  $('decoHint').textContent=(ids.length?'가구를 고르고 바닥을 누르면 놓여요. 놓인 가구를 누르면 다시 넣어요.':'보관 중인 가구가 없어요. 잡화점에서 사거나, 모루와 함께 짜거나, 이웃과 친해지면 받을 수 있어요.')+' · 아늑함 '+comfort();
   for(const k of ids){const b=el('button','btn'+(k===decoSel?' on':''));b.type='button';b.appendChild(icon('furn',k));b.appendChild(el('span',null,FURN[k].n+' ×'+S.furn[k]));b.onclick=()=>{decoSel=decoSel===k?null:k;renderDeco()};box.appendChild(b)}
 }
 function setDeco(on){
@@ -6252,7 +6883,9 @@ function decoClick(x,y){
     const okBed=findPath(dxr,rh-1,(a,b)=>(a===1&&b<2)||(a===0&&b===2)),okMe=findPath(dxr,rh-1,(a,b)=>a===P.x&&b===P.y);
     if(!okBed||!okMe){S.placed.pop();toast('길이 막혀서 놓을 수 없어요');sfx('err');return}
   }
-  S.furn[decoSel]--;sfx('pick');touch();renderDeco();
+  S.furn[decoSel]--;sfx('pick');touch();
+  for(const k in SETS)if(SETS[k].ids.includes(decoSel)&&setHas(k)&&S.placed.filter(q=>q.id===decoSel).length===1){toast('"'+SETS[k].n+'" 세트를 갖췄어요! 아늑함 +'+SETS[k].c);sfx('level')}
+  renderDeco();
 }
 // ───────── 시작 화면 ─────────
 const COLORS=['#dd6a1c','#3f8fc4','#3a8749','#d94a74','#8a63c9'];
@@ -6333,10 +6966,10 @@ function begin(st){
   // 예전 저장에는 모습 정보가 없다: 한 번 옷장을 열어 고르게 한다
   if(!S.sex){S.sex='m';setTimeout(()=>{if(S&&!busy())openWardrobe()},1500)}
   initRoom();initP2P();
-  setTimeout(()=>{if(S&&!busy())tip('talk','이웃에게 자주 말을 걸어 보세요. 가까워지면 마을 안팎의 이야기를 들려줘요. 들은 이야기는 아래 "신분"에 적혀요')},9000);
+  setTimeout(()=>{if(S&&!busy())tip('talk','이웃에게 자주 말을 걸어 보세요. 가까워지면 마을 안팎의 이야기를 들려줘요. 들은 이야기는 아래 "나"의 "신분"에 적혀요')},9000);
   countMe();if(/[#&]stats\b/.test(location.hash))setTimeout(()=>{if(S&&!busy())openStats()},1600);
   spawnBeasts();setTimeout(()=>{if(S&&beasts.length)tip('hunt','마을 바깥쪽에 들짐승이 보여요. 서너 칸 떨어져 일직선에 서서 행동하면 사냥할 수 있어요')},3500);
-  $('bSound').textContent=S.sound?'소리 켬':'소리 끔';hud();saveAll();cv.focus({preventScroll:true});
+  hud();saveAll();cv.focus({preventScroll:true});
   syncNews();setTimeout(()=>newsSoon(0),2600); /* 판이 바뀐 뒤 처음 들어왔으면 달라진 점을 한 번 보여 준다 */
   toast(S.day===1&&S.xp===0?'환영해요, '+S.name+' 님! 나무 앞에서 행동 버튼을 눌러 보세요':'다시 오셨네요, '+S.name+' 님');
 }
@@ -6352,14 +6985,14 @@ const peerName=p=>cleanText(p.presence.n).slice(0,8)||'친구';
 const SCENE_NO={town:0,home:1,wild:2,palace:3,sea:5};
 const peerHere=p=>scene!=='home'&&p.presence.s===sceneNo();
 const peerAt=(x,y)=>peers.find(p=>{const v=PV[p.peer];return v&&peerHere(p)&&v.x===x&&v.y===y});
-const peerLook=q=>({skin:'#f3cfb0',hair:'#2e2a2a',shirt:safeColor(q.c),bot:safeColor(q.k),rib:safeColor(q.r),sex:q.g==='f'?'f':'m',hat:['bun','none','gat','cap','straw','gache','ikseon','samo','hwagwan','ear','jeonrip','helm','helmG','chef'].includes(q.h)?q.h:'none',shoe:optColor(q.sh),bow:optColor(q.bw),gem:optColor(q.gm)});
+const peerLook=q=>({skin:'#f3cfb0',hair:'#2e2a2a',shirt:safeColor(q.c),bot:safeColor(q.k),rib:safeColor(q.r),sex:q.g==='f'?'f':'m',hat:['bun','none','gat','cap','straw','gache','ikseon','samo','hwagwan','ear','jeonrip','helm','helmG','chef','helmL','antler','jokduri','crown','fur','band'].includes(q.h)?q.h:'none',hatC:optColor(q.hc),shoe:optColor(q.sh),bow:optColor(q.bw),gem:optColor(q.gm)});
 const optColor=c=>typeof c==='string'&&/^#[0-9a-fA-F]{6}$/.test(c)?c:'';
 function syncPresence(){
   if(!net||!started||!S)return;
   const d=DIRS.findIndex(q=>q[0]===P.dir[0]&&q[1]===P.dir[1]),k=[P.x,P.y,d,scene,mySayT,S.name,S.outfit,S.sex,myEmoT,rps?rps.id+rps.st:'',tag?tag.id+'.'+tag.q:'',townSeed,S.gear.show,S.gear.on.w,S.gear.on.a,S.gear.on.h,S.gear.on.s,S.gear.on.t].join();
   if(k===lastPres)return;lastPres=k;
   const L=playerLook();
-  net.presence({n:S.name,c:L.shirt,k:L.bot,r:L.rib,g:L.sex,h:L.hat,x:P.x,y:P.y,d,s:sceneNo(),v:townSeed,sh:L.shoe||'',bw:L.bow||'',gm:L.gem||'',say:mySay,st:mySayT,e:myEmo,et:myEmoT,
+  net.presence({n:S.name,c:L.shirt,k:L.bot,r:L.rib,g:L.sex,h:L.hat,hc:L.hatC||'',x:P.x,y:P.y,d,s:sceneNo(),v:townSeed,sh:L.shoe||'',bw:L.bow||'',gm:L.gem||'',say:mySay,st:mySayT,e:myEmo,et:myEmoT,
     m:rps?{w:rps.w,id:rps.id,st:rps.st,p:rps.st==='show'?rps.me:0}:null,tg:tag?{id:tag.id,q:tag.q,it:tag.it}:null}).catch(()=>{});
 }
 function onPeers(ch){
@@ -6821,6 +7454,7 @@ window.addEventListener('keydown',e=>{
   if(KEYDIR[e.code]){e.preventDefault();dirDown(e.code,e.repeat);return}
   if(go){if(e.target&&e.target.tagName==='BUTTON'&&e.code!=='KeyE')return;e.preventDefault();if(!e.repeat)interact();return}
   if(e.code==='KeyB')openBag();
+  if(e.code==='KeyZ')undoTill();
 });
 // 방향 입력 하나(방향키든 터치 방향판이든). 놀이 가운데 몇은 방향이 걷기가 아니라 동작 입력이다
 function dirDown(code,rep){
@@ -6869,7 +7503,7 @@ for(const t of ['touchstart','touchend','touchmove'])keysEl.addEventListener(t,e
 document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});
 {let lastEnd=0;document.addEventListener('touchend',e=>{const t=Date.now(),el2=e.target,inField=el2&&(el2.tagName==='INPUT'||el2.tagName==='TEXTAREA');if(t-lastEnd<350&&!inField&&e.cancelable&&!(el2&&el2.closest&&el2.closest('button,a,.cell')))e.preventDefault();lastEnd=t},{passive:false})}
 document.addEventListener('gesturestart',e=>{if(e.target&&e.target.closest&&e.target.closest('#stage'))e.preventDefault()},{passive:false});
-function syncKeys(){keysEl.hidden=!(touchDev&&padOn);$('bPad').hidden=!touchDev;$('bPad').textContent=padOn?'조작키 켬':'조작키 끔';if(keysEl.hidden)padSet(null)}
+function syncKeys(){keysEl.hidden=!(touchDev&&padOn);if(keysEl.hidden)padSet(null)}
 window.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'&&!touchDev){touchDev=true;syncKeys()}},true);
 syncKeys();
 // 작은 지도: 마을 화면 오른쪽 위에 늘 떠 있다. 지금 있는 곳(마을·사냥터·궁궐·먼바다·동굴)의 모양과 내 자리(분홍), 같이 하는 친구의 자리(파랑)를 보여 준다. 누르면 큰 지도가 열린다
@@ -6903,7 +7537,7 @@ miniEl.addEventListener('click',()=>{if(started&&!sleeping&&!busy())openMap()});
 const ACT_TXT={npc:'말 걸기',rock:'캐기',beast:'사냥',peer:'인사',hboard:'사냥 방',sgate:'작은 문',spring:'약수',yard:'살피기',cave:'들어\n가기',crock:'깨기',ladder:'사다리',deco:'살피기',board:'알림판',soil:'밭일',till:'밭 갈기',stock:'돌보기',kid:'돌보기',
   pen:'우리',forge:'대장간',stall:'장터',fest:'잔치',shoal:'낚시',bed:'잠자기'};
 function actLabel(){
-  if(mg)return mg.kind==='hunt'?'쏘기':mg.kind==='forge'||mg.kind==='build'?'두드\n리기':mg.kind==='kindle'?'연타!':mg.kind==='pee'?'쉬…':'지금!';
+  if(mg)return mg.kind==='hunt'?'쏘기':mg.kind==='forge'||mg.kind==='build'?'두드\n리기':mg.kind==='kindle'?'연타!':mg.kind==='pee'?'쉬…':mg.kind==='plane'?'밀기':mg.kind==='pour'?'따르기':'지금!';
   if(fishing)return fishing.phase==='bite'?'채기':fishing.phase==='reel'?(fishing.thr===2?'멈춰!':'당기기'):'기다림';
   if(P.t<1)return null; /* 걷는 동안에는 바꾸지 않는다 */
   if(garden&&scene==='town')return yardAt(P.x+P.dir[0],P.y+P.dir[1])?'거두기':yardOK(P.x+P.dir[0],P.y+P.dir[1])?'놓기':'';
@@ -6914,13 +7548,14 @@ function actLabel(){
   if(tg.t==='water')return scene==='palace'?'':S.kit>0&&!tg.sea&&bridgeSpan()?'다리\n놓기':'낚시';
   if(tg.t==='bld')return tg.b.id==='home'?(S.camp?'눕기':'들어\n가기'):tg.b.id==='shop'?'가게':tg.b.pal?(tg.b.id==='hall'?'진상':tg.b.id==='kitchen'?'수라간':tg.b.id==='pav'?'쉬기':tg.b.id==='mine'&&quarterTier()?'들어\n가기':'살피기'):'똑똑';
   if(tg.t==='work')return workDone(tg.k)?(tg.k==='boat'?'배 타기':'쓰기'):'짓기';
-  if(tg.t==='furn')return tg.f.id==='agungi'?'요리':'살피기';
+  if(tg.t==='furn')return tg.f.id==='agungi'?'요리':PARTY_AT[tg.f.id]&&!S.inQ?'집들이':'살피기';
   if(tg.t==='soil'){const p=S.farm[tg.x+','+tg.y];if(p)return !p.c?'심기':p.g>=CROPS[p.c].days?'거두기':soilTodo(tg.x,tg.y)?'물 주기':'살피기'}
   return ACT_TXT[tg.t]||'행동';
 }
 let actT=0,actLast=null;
 function updAct(dt){
   actT-=dt;if(actT>0)return;actT=mg||fishing?0:.12; /* 놀이 중에는 곧바로 따라간다 */
+  {const u=undoWhat(),b=$('undoBtn');if(b.hidden===!!u)b.hidden=!u;if(u&&b.textContent!==u.txt)b.textContent=u.txt} /* 밭 되돌리기 단추 */
   const t=busy()?'':actLabel();if(t===null||t===actLast)return;
   actLast=t;const b=$('actBtn');b.textContent=t||'행동';b.classList.toggle('idle',!t);
 }
@@ -6953,14 +7588,19 @@ cv.addEventListener('pointerdown',e=>{
 });
 $('dlgText').addEventListener('click',skipType);
 $('actBtn').onclick=()=>{interact();cv.focus({preventScroll:true})};
+// 행동을 누르고 있는가 (대패질처럼 누르고 있어야 하는 놀이가 본다). 1 글쇠, 2 행동 단추. 화면을 누르고 있는 것은 cvPtr로 안다
+let actHold=0;
+const holding=()=>!!actHold||cvPtr!==null,isGo=e=>e.code==='Space'||e.code==='KeyE'||e.code==='Enter';
+window.addEventListener('keydown',e=>{if(isGo(e))actHold|=1});
+window.addEventListener('keyup',e=>{if(isGo(e))actHold&=~1});
+window.addEventListener('blur',()=>{actHold=0});
+{const ab=$('actBtn'),up=()=>{actHold&=~2};ab.addEventListener('pointerdown',()=>{actHold|=2});for(const ev of ['pointerup','pointercancel','pointerleave'])ab.addEventListener(ev,up)}
+$('undoBtn').onclick=()=>{undoTill();cv.focus({preventScroll:true})};
 const tool=(id,fn)=>{$(id).onclick=()=>{if(!started||sleeping)return;if(!$('dlg').hidden)closeDlg();fn()}};
-tool('bBag',openBag);tool('bJob',openStatus);tool('bFriends',openFriends);tool('bQuests',openQuests);tool('bHelp',openHelp);tool('bDex',openDex);tool('bSay',openSay);tool('bWear',openWardrobe);tool('bMap',openMap);tool('bGear',openGear);tool('bNews',()=>openNews(false));
-tool('bPad',()=>{padOn=!padOn;try{localStorage.setItem('doran-village-keys',padOn?'1':'0')}catch(e){}syncKeys();cv.focus({preventScroll:true})});
+tool('bBag',openBag);tool('bSay',openSay);tool('bMe',()=>openGroup('me'));tool('bLog',()=>openGroup('log'));tool('bSet',()=>openGroup('set'));
 tool('bDeco',()=>{setDeco(!decoMode);cv.focus({preventScroll:true})});
 tool('bYard',()=>{if(garden){garden=null;syncPlace()}else if(!busy()&&scene==='town')openYard();cv.focus({preventScroll:true})});
 tool('bPlace',()=>{if(placing)stopPlacing();else{placing=true;syncPlace();toast('집 둘레 내 땅(밝게 표시된 풀밭)에서 지을 자리를 눌러요')}cv.focus({preventScroll:true})});
-tool('bSave',()=>{saveAll();toast(cloudDoc?'저장했어요 · 계정에도 올려서 다른 기기에서 이어 할 수 있어요':'저장했어요 · 이 브라우저에 보관돼요');cv.focus({preventScroll:true})});
-tool('bSound',()=>{S.sound=!S.sound;$('bSound').textContent=S.sound?'소리 켬':'소리 끔';touch();sfx('pick');cv.focus({preventScroll:true})});
 $('mClose').onclick=closeModal;
 $('modal').addEventListener('pointerdown',e=>{if(e.target===$('modal'))closeModal()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&S&&started){keys.length=0;saveLocal();if(cloudDirty)pushCloud()}});
