@@ -210,6 +210,7 @@ ul.help{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
     <button class="btn" id="bPad" type="button" hidden>조작키 켬</button>
     <button class="btn" id="bSound" type="button">소리 켬</button>
     <button class="btn" id="bHelp" type="button">도움말</button>
+    <button class="btn" id="bNews" type="button">소식</button>
   </nav>
 </div>
 
@@ -926,6 +927,33 @@ function rollQuests(s){
     s.quests.push({npc,item,n,coin:Math.round(p*n*1.6+40),done:false});
   }
 }
+// ───────── 새 소식 ─────────
+// 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
+// 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
+const NEWS=[
+  {v:48,d:'11월 25일',t:'밭일은 서 있는 칸부터',l:[
+    '밭일이 서 있는 칸부터 걸려요. 가고 싶은 칸까지 걸어가서 행동하면 바로 그 칸이 갈려요. 전에는 한 칸 앞이 갈렸어요.',
+    '서 있는 칸에 할 일이 없을 때만 바라보는 칸에 해요. 흰 테두리가 행동이 걸릴 칸이에요.',
+    '행동 버튼에 심기·물 주기·거두기가 적혀요. 서 있는 풀밭 칸을 한 번 더 눌러도 갈려요.',
+    '판이 바뀌면 이 소식 창이 한 번 떠요. 아래 도구줄의 "소식"에서 다시 볼 수 있어요.']},
+  {v:47,d:'11월 25일',t:'스페이스 조작, 사냥 동작',l:[
+    '바로 곁에 있는 이웃에게는 바라보지 않아도 행동(스페이스)으로 말이 걸려요.',
+    '대화 창을 키보드로 다뤄요. 스페이스로 넘기고 정하고, 방향키로 옮기고, 숫자 키로 바로 골라요.',
+    '사냥터에서는 행동만 눌러도 가까운 짐승을 겨누러 가요. 겨눔 줄과 활, 날아가는 화살이 보여요.']},
+  {v:46,d:'11월 25일',t:'작은 지도, 캐릭터 정리',l:[
+    '작은 지도가 가리는 곳에 가면 지도가 흐려져서 그 아래를 누를 수 있어요.',
+    '"같이 하기"에서 안 쓰는 창에 남은 캐릭터를 정리할 수 있어요. 가려 둔 창은 스스로 방에서 빠져요.']},
+  {v:45,d:'11월 24일',t:'사냥터, 궁궐, 편지, 가꾸기',l:[
+    '사냥터에 새 짐승과 사냥 방이 생겼어요. 숲 너머로 길이 더 이어진다는 말이 돌아요.',
+    '궁궐에 새 행사가 생겼다고 해요. 이웃에게 물어보세요.',
+    '이웃이 먼저 다가와 말을 걸고, 집 앞 우편함에 편지가 와요.',
+    '마을 풀밭에 꽃·울타리·등불을 놓는 "가꾸기"가 생겼어요.',
+    '밤마을에 수상한 소문이 돈다고 해요.']},
+  {v:40,d:'11월 24일',t:'장비 설명, 짚자리 시작',l:[
+    '장비 창과 도감에서 장비를 누르면 설명과 얻는 곳을 볼 수 있어요.',
+    '새 마을은 집 없이 짚자리에서 시작해요.']}
+];
+const VER=NEWS[0].v;
 function fixState(s){
   s.inv=s.inv||{};s.furn=s.furn||{};s.placed=s.placed||[];s.trees=s.trees||[];s.rocks=s.rocks||[];
   s.plots=s.plots||[];s.npcs=s.npcs||{};s.known=s.known||{};s.quests=s.quests||[];s.shopFurn=s.shopFurn||[];
@@ -1031,6 +1059,8 @@ function fixState(s){
     if(old){s.lore.pal=1;s.lore.gl=1;s.lore.gear=1;s.lore.bridge=1;for(const k of ['cook','court','merch','mil','civ']){s.lore[k]=1;const a=k==='cook'?s.job:k==='court'?s.court:k==='merch'?s.merch:s[k];if(a)s.lore['n'+k]=(a.rank|0)+1}}
   }
   s.dexDone=s.dexDone||{};
+  // 마지막으로 본 소식: 새로 만든 마을은 다 본 것으로 치고, 예전 저장은 처음 한 번 소식 창을 본다
+  if(typeof s.news!=='number')s.news=(s.day|0)>1||(s.xp|0)>0?0:VER;
   if(!s.dex){s.dex={};for(const k in s.inv)if(!ITEMS[k].seed)s.dex[k]=s.inv[k]}
   return s;
 }
@@ -2291,15 +2321,32 @@ function faceTarget(){
   if(tg&&tg.t==='bld'){const b=tg.b;if(!(P.x===b.door[0]&&P.y===b.door[1]&&P.dir[1]===-1))tg=null}
   // 일직선 앞쪽 네 칸 안에 들짐승이 있으면 물가보다 사냥이 먼저다
   if(!tg||tg.t==='water'){const b=beastInLine();if(b)return{x:b.x,y:b.y,tg:{t:'beast',b}}}
-  // 밭 한가운데 남은 빈칸(둘레 세 곳 이상이 밭)에 서 있으면, 옆 밭보다 발밑 빈칸을 먼저 간다
-  if(scene==='town'&&(!tg||tg.t==='soil')&&tillable(P.x,P.y)&&soilSides(P.x,P.y)>=3)return{x:P.x,y:P.y,tg:{t:'till',x:P.x,y:P.y}};
-  if(tg)return{x:fx,y:fy,tg};
-  if(scene==='town'){
-    // 바라보는 칸이 내 땅의 빈 풀밭이면 그 칸을 간다. 밭 위에 서 있어도 마찬가지다 (예전에는 발밑 밭이 먼저라, 밭에 둘러싸인 빈칸을 갈 수 없었다)
+  // 밭일은 서 있는 칸이 먼저다. 예전에는 바라보는 칸이 먼저라, 가고 싶은 칸까지 걸어가서 행동하면 한 칸 앞이 갈렸다("한 칸씩 밀린다"는 말을 들었다).
+  // 차례: 발밑 밭에 할 일 → 바라보는 밭에 할 일 → 발밑 풀밭 갈기 → 바라보는 풀밭 갈기 → 할 일 없는 밭 살피기. 흰 테두리가 이 칸을 따라간다
+  if(scene==='town'&&(!tg||tg.t==='soil')){
+    const here=S.farm[P.x+','+P.y]?{t:'soil',x:P.x,y:P.y}:tillable(P.x,P.y)?{t:'till',x:P.x,y:P.y,d:P.dir}:null;
+    const me=here&&{x:P.x,y:P.y,tg:here},front=tg?{x:fx,y:fy,tg}:null;
+    if(here&&here.t==='till'&&soilSides(P.x,P.y)>=3)return me; /* 밭 한가운데 남은 빈칸은 옆 밭보다 먼저 */
+    if(here&&here.t==='soil'&&soilTodo(P.x,P.y))return me;
+    if(front&&soilTodo(fx,fy))return front;
+    if(here&&here.t==='till')return me;
     if(tillable(fx,fy))return{x:fx,y:fy,tg:{t:'till',x:fx,y:fy}};
-    if(S.farm[P.x+','+P.y])return{x:P.x,y:P.y,tg:{t:'soil',x:P.x,y:P.y}};
+    return me||front;
   }
-  return null;
+  return tg?{x:fx,y:fy,tg}:null;
+}
+// 할 일이 있는 밭인가 (soilAct와 같은 판정): 빈 밭에 지금 심을 씨앗이 있거나, 다 자랐거나, 물뿌리개가 닿는 곳에 마른 밭이 있다
+function soilTodo(x,y){
+  const p=S.farm[x+','+y];if(!p)return false;
+  if(!p.c)return Object.keys(S.inv).some(k=>ITEMS[k].seed&&CROPS[ITEMS[k].seed].s.includes(season()));
+  if(p.g>=CROPS[p.c].days)return true;
+  if(!CROPS[p.c].s.includes(season()))return false;
+  const lv=tl('can'),r=lv>=3?2:1;
+  for(let b=-r;b<=r;b++)for(let a=-r;a<=r;a++){
+    if(lv===0&&(a||b))continue;if(lv===1&&a&&b)continue;
+    const q=S.farm[(x+a)+','+(y+b)];if(q&&q.c&&!q.w)return true;
+  }
+  return false;
 }
 // 갈 수 있는 칸: 내 땅의 빈 풀밭이고, 아직 밭이 아니며, 누가 서 있거나 주울 것이 놓여 있지 않다
 const tillable=(x,y)=>inFarm(x,y)&&!S.farm[x+','+y]&&!yardAt(x,y)&&!garden&&!npcOn(x,y)&&!herdOn(x,y)&&!kidOn(x,y)&&!S.pickups.some(p=>p.x===x&&p.y===y);
@@ -2336,7 +2383,7 @@ function act(tg,x,y){
     if(S.kit>0&&!tg.sea&&bridgeSpan()){dialog({who:'개울가',text:'여기에 다리를 놓을까요? 물 '+bridgeSpan().length+'칸을 건너요. (남은 재목 '+S.kit+'벌)',choices:[['다리 놓기',startBridge],['낚시하기',()=>startFishing(x,y,tg.sea)],['그만',null]]});break}
     startFishing(x,y,tg.sea);break;
   case 'soil':soilAct(tg.x,tg.y);break;
-  case 'till':till(tg.x,tg.y);break;
+  case 'till':till(tg.x,tg.y,tg.d);break;
   case 'stock':stockAct(tg.a);break;
   case 'kid':kidMenu(tg.i);break;
   case 'pen':penAct(tg.k);break;
@@ -2391,10 +2438,12 @@ function clickTile(x,y,low){
   if(!tg&&scene==='town'&&tillable(x,y)&&soilSides(x,y)>=3){
     // 밭 한가운데 남은 빈칸을 누르면: 그 위나 바로 옆이면 곧바로 갈고, 멀면 옆까지 걸어가서 간다
     const d=Math.abs(x-P.x)+Math.abs(y-P.y),go=()=>{if(Math.abs(x-P.x)+Math.abs(y-P.y)===1){P.dir=[x-P.x,y-P.y];till(x,y)}};
-    if(d===0)till(x,y);else if(d===1)go();else setPath((a,b)=>Math.abs(a-x)+Math.abs(b-y)===1,go);
+    if(d===0)till(x,y,P.dir);else if(d===1)go();else setPath((a,b)=>Math.abs(a-x)+Math.abs(b-y)===1,go);
     return;
   }
-  if(!tg){if(walkable(x,y))walkThen(x,y,null);return}
+  // 서 있는 칸(내 땅의 빈 풀밭)을 누르면 그 칸을 간다. 멀리 있는 풀밭은 그리로 걸어가기만 하고, 도착한 뒤 한 번 더 누르거나 행동하면 갈린다
+  if(!tg&&scene==='town'&&x===P.x&&y===P.y&&P.t>=1&&tillable(x,y)){till(x,y,P.dir);return}
+  if(!tg){if(walkable(x,y))walkThen(x,y,scene==='town'&&tillable(x,y)?()=>tip('till2','내 땅의 빈 풀밭에 서서 행동을 누르거나, 서 있는 칸을 한 번 더 누르면 그 칸을 갈아요. 흰 테두리가 행동이 걸릴 칸이에요'):null);return}
   if(tg.t==='beast'){huntClick(tg.b);return}
   if(tg.t==='bld'){const b=tg.b;walkThen(b.door[0],b.door[1],()=>{P.dir=[0,-1];act(tg)});return}
   if(tg.t==='soil'){if(Math.abs(x-P.x)+Math.abs(y-P.y)<=1&&(x!==P.x||y!==P.y)){P.dir=[x-P.x,y-P.y];act(tg,x,y)}else walkThen(x,y,()=>act(tg,x,y));return}
@@ -2838,10 +2887,11 @@ function plant(k,seed){
   gain(seed,-1);p.c=ITEMS[seed].seed;p.g=0;p.e=0;p.w=S.weather==='rain';
   float(ITEMS[seed].n+' 심기',(+xy[0]+.5)*T,xy[1]*T);sfx('pick');touch();
 }
-function till(x,y){
+function till(x,y,d){
   if(!inFarm(x,y)||S.farm[x+','+y])return;
-  // 괭이를 벼릴수록 바라보는 쪽으로 여러 칸을 한 번에 간다. 다 자란 소가 있으면 기력이 덜 든다
-  const dx=Math.sign(x-P.x),dy=Math.sign(y-P.y),n=[1,2,3,5][tl('hoe')],ox=hasOx();
+  // 괭이를 벼릴수록 바라보는 쪽으로 여러 칸을 한 번에 간다. 다 자란 소가 있으면 기력이 덜 든다.
+  // d: 발밑 칸을 갈 때는 나와 그 칸 사이에 방향이 없으므로 바라보는 쪽을 따로 받는다
+  const dx=d?d[0]:Math.sign(x-P.x),dy=d?d[1]:Math.sign(y-P.y),n=[1,2,3,5][tl('hoe')],ox=hasOx();
   if(!useEn(ox?1:3))return;
   let made=0;
   for(let i=0;i<n;i++){
@@ -5825,6 +5875,31 @@ function openSeeds(i,seeds){
     body.appendChild(g);
   });
 }
+// 소식 창. fresh: 들어올 때 저절로 뜨는 창(아직 못 본 것 가운데 가장 새로운 두 묶음만). 도구줄의 "소식"은 전부 보여 준다
+function syncNews(){$('bNews').textContent=S&&S.news<VER?'소식 ●':'소식'}
+function openNews(fresh){
+  const from=S.news|0,list=fresh?NEWS.filter(n=>n.v>from).slice(0,2):NEWS;
+  openModal(fresh?'새 소식':'소식',body=>{
+    body.appendChild(el('p','note',fresh?'마을이 조금 달라졌어요. 이 창은 판이 바뀔 때 한 번만 떠요. 아래 도구줄의 "소식"에서 언제든 다시 볼 수 있어요.':'판이 바뀔 때마다 달라진 점을 여기에 적어요. 맨 위가 가장 새로운 소식이에요.'));
+    for(const n of list){
+      const h=el('p','sub',n.t);h.style.marginTop='12px';body.appendChild(h);
+      const d=el('p','note',n.d);d.style.marginBottom='4px';body.appendChild(d);
+      const ul=el('ul','help');for(const s of n.l)ul.appendChild(el('li',null,s));body.appendChild(ul);
+    }
+    const r=el('div','tabs');r.style.marginTop='14px';
+    const ok=el('button','btn pri','확인');ok.type='button';ok.onclick=closeModal;r.appendChild(ok);
+    if(fresh&&NEWS.length>list.length){const b=el('button','btn','지난 소식 보기');b.type='button';b.onclick=()=>openNews(false);r.appendChild(b)}
+    body.appendChild(r);
+  });
+  if(S.news!==VER){S.news=VER;saveLocal()}
+  syncNews();
+}
+// 들어온 직후에 다른 창(옷장, 초대, 대화)이 떠 있거나 놀이 중이면 끝날 때까지 기다렸다가 띄운다
+function newsSoon(n){
+  if(!S||S.news>=VER)return;
+  if(busy()||mg||fishing){if(n<40)setTimeout(()=>newsSoon(n+1),3000);return}
+  openNews(true);
+}
 function openHelp(){
   openModal('도움말',body=>{
     const ul=el('ul','help');
@@ -5851,7 +5926,7 @@ function openHelp(){
       '아이·가족: 배필에게 말을 걸어 "아이 이야기"를 나눠요(초가삼간 이상, 혼례 사흘 뒤). 미역 2개(바닷가)와 200냥으로 삼신상을 차리면 사흘 뒤 아침에 아기가 와요. 날마다 안아 주고 우유나 죽을 먹이면 정이 쌓여요. 이레째에는 돌잡이를 하는데, 잡은 물건(붓·활·엽전·실타래·떡)이 아이의 재주가 돼요. 돌이 지난 아이는 낮에 집 앞마당에서 놀고, 정이 깊을수록 아침에 자주 거들어 줘요. 아이는 둘까지예요.',
       '친구와 놀이: 친구 곁(네 칸 안)에서 일하면 경험치를 10% 더 받아요. 같이 하기 버튼의 몸짓(절하기·폴짝·손 흔들기·덩실덩실)을 친구와 같이 하면 마음이 통해요. 친구를 누르면 가위바위보와 술래잡기를 할 수 있어요. 술래는 셋을 센 뒤 친구 옆에서 행동해서 잡고, 잡힌 친구가 다음 술래예요. 술래잡기는 3분 뒤에 끝나요.',
       '집 직접 짓기: 모루에게 직접 짓겠다고 하면 값이 절반이에요. 집 문 앞에서 양쪽 눈금이 만날 때 못을 박아 세 단계를 지으면 바로 완성돼요.',
-      '밭: 집 둘레 내 땅의 빈 풀밭을 바라보고 행동하면 어디든 밭을 갈 수 있어요. 씨앗을 심고 날마다 물을 줘요. 비 오는 날은 저절로 젖어요.',
+      '밭: 집 둘레 내 땅의 빈 풀밭에 서서 행동하면 어디든 밭을 갈 수 있어요. 씨앗을 심고 날마다 물을 줘요. 비 오는 날은 저절로 젖어요.',
       '살아갈 길: 처음부터 정해진 길은 없어요. 이웃과 이야기를 나누다 보면 때가 됐을 때 새로운 일과 자리 이야기를 들려줘요. 들은 이야기는 "신분"에 적히고, 더 높은 자리로 가는 길은 그 일을 가르쳐 주는 사람에게 물어봐요.',
       (S.lore.gear||Object.keys(S.gear.own).length>0)&&'장비: 무기·갑옷·쓰개·신발·장신구 다섯 칸에 걸쳐요. 아래 "장비"에서 걸치거나 바꾸고, 아직 못 구한 것은 어디서 나오는지 볼 수 있어요. 모루에게 "장비 짓기"로 재료를 대고 두드려 짓거나, 짐승을 잡거나, 반짝이는 곳을 파서 구해요. 낚시·나무 베기·바위 캐기·과일나무 흔들기를 하다가 딸려 나오기도 하고, 명절 잔치의 상이나 이웃의 부탁으로 받기도 해요. 갑옷과 쓰개는 걸치면 모습도 바뀌어요.',
       (S.seenPal||S.lore.pal)&&'궁궐: 마을 북쪽(만물상 옆) 길 끝으로 가면 한양 궁궐이에요. 궁 안 사람들과도 인사와 선물로 친해져요. 남쪽 궐문으로 나오면 마을이에요.',
@@ -5875,14 +5950,15 @@ function openHelp(){
       S.mil&&'무예 수련: 날마다 무진에게서 활쏘기를 해요. 행동 한 번에 좌우, 또 한 번에 높이를 정해 과녁 한가운데를 맞혀요. 더 높은 자리로 가는 길은 무진에게 물어봐요.',
       S.civ&&'글공부: 날마다 훈장에게서 같은 글자끼리 짝을 지어요. 글자를 누르거나 방향키로 옮겨 행동으로 뒤집어요. 더 높은 자리로 가는 길은 훈장에게 물어봐요.',
       S.merch&&'장사 일: 날마다 은하와 안목 겨루기(두 물건 가운데 더 비싼 쪽을 왼쪽·오른쪽 방향키나 눌러서 고르기)를 하고, 주문받은 물건을 모아 납품하면 가게 값보다 후하게 받아요. 더 높은 자리로 가는 길은 은하에게 물어봐요.',
-      '밭 갈기: 바라보는 칸이 내 땅의 빈 풀밭이면 그 칸을 갈아요. 밭 한가운데 남은 빈칸은 그 위에 서서 행동하거나, 그 칸을 눌러도 갈려요.',
+      '밭일은 서 있는 칸부터: 내 땅의 빈 풀밭에 서서 행동하면 그 칸을 갈고, 밭 위에 서서 행동하면 그 밭에 심고 물 주고 거둬요. 서 있는 칸에 할 일이 없으면 바라보는 칸에 해요. 흰 테두리가 행동이 걸릴 칸이고, 행동 버튼에 무엇을 할지 적혀 있어요. 서 있는 풀밭 칸을 눌러도 갈려요.',
       S.court&&'궁중 예법: 날마다 중전이 보여 주는 동작의 차례를 방향키나 화면의 화살표로 따라 해요. 더 높은 자리로 가는 길은 중전에게 물어봐요.',
       S.job&&'수라간: 수라간 문 앞에서 음식을 짓고(행동으로 부채질해 바늘을 초록 띠 안에 두기), 연 상궁에게 수라상을 올리면 하사금을 받아요. 더 높은 자리로 가는 길은 연 상궁에게 물어봐요.',
       '대장간: 모루네 집 옆 화덕 앞에서 행동하거나 모루에게 말을 걸어 연장을 벼려요. 쇳덩이가 초록 칸에 닿는 박자에 맞춰 두드려요. 쇳돌은 바위를 잘 맞혀 캐면 섞여 나와요.',
       '가축: 모루에게 닭장·외양간을 부탁하고, 내 땅에서 자리를 골라 못질로 마무리해요. 은하 만물상의 가축 칸에서 병아리·송아지와 먹이를 사요. 우리 앞에서 행동하면 먹이를 주고, 가축을 바라보고 행동하면 쓰다듬어요. 닭은 달걀을 낳고, 소는 젖을 짜고 밭 갈기를 도와요.',
       '기력: 밭 갈기·나무 베기·낚시 같은 일을 하면 줄어요. 가방에서 음식을 먹거나 침대에서 자면 다시 차요.','이웃: 하루에 한 번 인사와 선물로 ♥가 올라요. 머리 위 물음표는 부탁이 있다는 뜻이에요. ♥2에 선물, ♥3에 혜택을 받아요.',
       '방 고치기: 집 안에서 꾸미기를 누르면 바닥을 한 칸씩 넓히거나 떼서 방 모양을 마음대로 만들고, 벽지와 바닥 무늬도 바꿀 수 있어요. 집을 키우면 쓸 수 있는 칸이 늘어요.',
-      '집: 목수 모루에게 집 고치기를 맡기면 다음 날 완성돼요. 집 안에서 꾸미기로 가구를 놓고, 침대에서 자면 다음 날이 돼요.','모은 물건은 은하 잡화점에서 팔아요. 진행은 자동으로 저장돼요.'])if(t)ul.appendChild(el('li',null,t));
+      '집: 목수 모루에게 집 고치기를 맡기면 다음 날 완성돼요. 집 안에서 꾸미기로 가구를 놓고, 침대에서 자면 다음 날이 돼요.','모은 물건은 은하 잡화점에서 팔아요. 진행은 자동으로 저장돼요.',
+      '소식: 판이 바뀌면 달라진 점을 적은 창이 들어올 때 한 번 떠요. 아래 도구줄의 "소식"에서 지난 소식까지 다시 볼 수 있어요.'])if(t)ul.appendChild(el('li',null,t));
     body.appendChild(ul);
   });
 }
@@ -6015,6 +6091,7 @@ function begin(st){
   countMe();if(/[#&]stats\b/.test(location.hash))setTimeout(()=>{if(S&&!busy())openStats()},1600);
   spawnBeasts();setTimeout(()=>{if(S&&beasts.length)tip('hunt','마을 바깥쪽에 들짐승이 보여요. 서너 칸 떨어져 일직선에 서서 행동하면 사냥할 수 있어요')},3500);
   $('bSound').textContent=S.sound?'소리 켬':'소리 끔';hud();saveAll();cv.focus({preventScroll:true});
+  syncNews();setTimeout(()=>newsSoon(0),2600); /* 판이 바뀐 뒤 처음 들어왔으면 달라진 점을 한 번 보여 준다 */
   toast(S.day===1&&S.xp===0?'환영해요, '+S.name+' 님! 나무 앞에서 행동 버튼을 눌러 보세요':'다시 오셨네요, '+S.name+' 님');
 }
 // ───────── 같이 하기 ─────────
@@ -6592,6 +6669,7 @@ function actLabel(){
   if(tg.t==='bld')return tg.b.id==='home'?(S.camp?'눕기':'들어\n가기'):tg.b.id==='shop'?'가게':tg.b.pal?(tg.b.id==='hall'?'진상':tg.b.id==='kitchen'?'수라간':tg.b.id==='pav'?'쉬기':'살피기'):'똑똑';
   if(tg.t==='work')return workDone(tg.k)?(tg.k==='boat'?'배 타기':'쓰기'):'짓기';
   if(tg.t==='furn')return tg.f.id==='agungi'?'요리':'살피기';
+  if(tg.t==='soil'){const p=S.farm[tg.x+','+tg.y];if(p)return !p.c?'심기':p.g>=CROPS[p.c].days?'거두기':soilTodo(tg.x,tg.y)?'물 주기':'살피기'}
   return ACT_TXT[tg.t]||'행동';
 }
 let actT=0,actLast=null;
@@ -6630,7 +6708,7 @@ cv.addEventListener('pointerdown',e=>{
 $('dlgText').addEventListener('click',skipType);
 $('actBtn').onclick=()=>{interact();cv.focus({preventScroll:true})};
 const tool=(id,fn)=>{$(id).onclick=()=>{if(!started||sleeping)return;if(!$('dlg').hidden)closeDlg();fn()}};
-tool('bBag',openBag);tool('bJob',openStatus);tool('bFriends',openFriends);tool('bQuests',openQuests);tool('bHelp',openHelp);tool('bDex',openDex);tool('bSay',openSay);tool('bWear',openWardrobe);tool('bMap',openMap);tool('bGear',openGear);
+tool('bBag',openBag);tool('bJob',openStatus);tool('bFriends',openFriends);tool('bQuests',openQuests);tool('bHelp',openHelp);tool('bDex',openDex);tool('bSay',openSay);tool('bWear',openWardrobe);tool('bMap',openMap);tool('bGear',openGear);tool('bNews',()=>openNews(false));
 tool('bPad',()=>{padOn=!padOn;try{localStorage.setItem('doran-village-keys',padOn?'1':'0')}catch(e){}syncKeys();cv.focus({preventScroll:true})});
 tool('bDeco',()=>{setDeco(!decoMode);cv.focus({preventScroll:true})});
 tool('bYard',()=>{if(garden){garden=null;syncPlace()}else if(!busy()&&scene==='town')openYard();cv.focus({preventScroll:true})});
