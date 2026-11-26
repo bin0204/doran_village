@@ -529,11 +529,13 @@ const STATS={cook:{n:'손맛',d:'요리할 때 알맞은 불의 폭이 넓어져
   lore:{n:'학식',d:'경험치를 더 많이 얻어요 (10까지 1마다 +3%, 그 위로는 +1.5%)'},arms:{n:'무예',d:'기력 최대치가 늘고 사냥 과녁이 커져요'},trade:{n:'수완',d:'물건을 더 비싸게 팔아요 (10까지 1마다 +2%, 그 위로는 +1%)'}};
 const STAT_MAX=20;
 /* 길에서 자리가 오를 때 갖춰야 하는 레벨(v80 균형): [처음, 둘째 자리, 으뜸 자리]. 전에는 레벨 조건이 없어서 스탯만 채우면 초반에 으뜸 자리까지 갔다 */
+/* v90(사용자 의견: 초반에는 여러 길을 맛볼 수 있어야 한다): 스탯이 레벨마다 1점이 되면서, 길에 들어서는 스탯 조건은 없애고(2 → 0) 둘째 자리는 낮췄다(6~8 → 4~5).
+   으뜸 자리(12~14)와 높은 자리(15~20)는 그대로라, 뒤로 갈수록 한 길에 힘을 실어야 한다. 조건 숫자는 JOBS·TRADE·COURT·무관/문관의 need에 있다 */
 const RANK_LV=[5,10,16]; /* v81: 길에 들어서는 레벨 5(전에는 제한 없음), 다음 자리 8→10, 으뜸 자리 14→16 */
 const routeEarly=say=>S.level<RANK_LV[0]&&(say('아직은 일러요. 조금 더 자란 뒤에 다시 찾아와요.\n(이 길은 레벨 '+RANK_LV[0]+'부터 걸을 수 있어요 · 지금 레벨 '+S.level+')'),true);
 // 직업의 길. need[품계]=그 품계가 되는 조건, pay=수라상 하사금, dishes=수라상에 올릴 가짓수, fit=받는 옷
 const JOBS={cook:{n:'수라간',stat:'cook',ranks:{f:['수라간 나인','수라간 상궁','수라간 최고상궁'],m:['수라간 견습 숙수','수라간 숙수','대령숙수']},
-  need:[{stat:2},{stat:6,served:5,npc:'yeon',h:2},{stat:12,served:15,npc:'king',h:2}],pay:[120,300,600],dishes:[2,3,4],fit:['nain','sanggung','jejo'],exam:['d_juk','d_sam']}};
+  need:[{stat:0},{stat:4,served:5,npc:'yeon',h:2},{stat:12,served:15,npc:'king',h:2}],pay:[120,300,600],dishes:[2,3,4],fit:['nain','sanggung','jejo'],exam:['d_juk','d_sam']}};
 // 마을 복구: 정해진 터(x,y에서 오른쪽으로 w칸)에 재료(need)와 돈(coins)을 모아 넣고 못질로 마무리하면 시설이 서고 혜택(perk)이 생긴다.
 // 터는 모두 내 땅 밖이고, 지도에서 나무·바위가 없는 자리다
 const WORKS={
@@ -578,7 +580,7 @@ const MKT_GOODS=[['iron',55,5],['feed',6,20],['yeot',20,5],['ginseng',420,1]];
 const MKT_WANT=['apple','persimmon','mushroom','shell','wood','stone','crucian','scad','mackerel','meat','hide','egg','milk','flower','chestnut','turnip','carrot','carp'];
 // 상인의 길: 만물상 은하 밑에서 물건 보는 눈을 기르고(안목 겨루기) 주문받은 물건을 댄다(납품). need[자리]=오르는 조건(done 안목 겨루기·sold 납품 횟수),
 // eye[0 날마다·1 객주 시험·2 거상 시험]={n 문제 수, ratio 두 물건 값 차이의 최소 배수, time 한 문제 시간, bad 틀려도 되는 수}
-const TRADE={ranks:['보부상','객주','거상'],need:[{stat:2},{stat:7,done:5,sold:4,npc:'eunha',h:2},{stat:13,done:14,sold:12,npc:'king',h:2}],pay:[50,100,180],fit:['bobu','merch1','merch2'],
+const TRADE={ranks:['보부상','객주','거상'],need:[{stat:0},{stat:5,done:5,sold:4,npc:'eunha',h:2},{stat:13,done:14,sold:12,npc:'king',h:2}],pay:[50,100,180],fit:['bobu','merch1','merch2'],
   eye:[{n:6,ratio:1.3,time:5,bad:2},{n:8,ratio:1.15,time:4,bad:1},{n:10,ratio:1.08,time:3.5,bad:1}],
   goods:[['wood','stone','apple','persimmon','flower','mushroom','shell','minnow','crucian','scad','egg','turnip'],['mackerel','carrot','meat','hide','milk','chestnut','feather','iron']],
   royal:['carp','snapper','antler','pumpkin','watermelon','strawberry','milk','hide','salmon','catfish','sweetfish']};
@@ -586,7 +588,7 @@ const TRADE={ranks:['보부상','객주','거상'],need:[{stat:2},{stat:7,done:5
 // need[자리]={stat, done 수련 횟수, ex[이름, 필요한 수, 지금 값을 내는 함수], npc·h 친밀도}. start(0 수련·1·2 시험)가 놀이를 연다
 const TRACKS={
   mil:{n:'무관의 길',npc:'mujin',stat:'arms',ranks:['한량','내금위 군관','금군 대장'],work:'활쏘기 수련',test:['','무과','대장 시험'],start:ex=>startBow(ex),
-    need:[{stat:2},{stat:7,done:5,ex:['사냥한 짐승',10,()=>S.kills|0],npc:'mujin',h:2},{stat:13,done:14,ex:['잡은 범',2,()=>S.tigers|0],npc:'king',h:2}],
+    need:[{stat:0},{stat:5,done:5,ex:['사냥한 짐승',10,()=>S.kills|0],npc:'mujin',h:2},{stat:13,done:14,ex:['잡은 범',2,()=>S.tigers|0],npc:'king',h:2}],
     pay:[60,120,200],stipend:[0,100,300],fit:['mil0','mil1','mil2'],perkTxt:'기력 최대치도 10 늘어요.',where:'궁궐 궐문 앞의 무진에게 "무예 일"을 청해요',
     t:{low:'무예를 배우고 싶소? 무예가 적어도 2 이상은 되어야 활을 잡게 해 줄 수 있소.',invite:'몸놀림이 가볍구려. 내 밑에서 무예를 닦아 보겠소? 날마다 활터에서 과녁을 쏘는 일이오.',yes:'배우겠소',
       joined:t=>'오늘부터 그대는 '+jo(t,'이오','요')+'. 날마다 내게 와서 활쏘기를 수련하시오.',daily:'오늘도 활을 잡아 보겠소? 화살 다섯 대를 쏘아 과녁 한가운데를 노리시오.',rest:'오늘 수련은 충분하오. 내일 다시 오시오.',
@@ -594,7 +596,7 @@ const TRACKS={
       fail:'점수가 모자라요. 숨을 고르고 다시 쏘아 봐요',great:'훌륭하오! 화살마다 한가운데에 가깝구려.',good:'나쁘지 않소. 꾸준히 닦으면 될 것이오.',examFail:'아직은 손이 흔들리오. 더 닦고 다시 오시오.',
       pass:['무과에 급제했소! 오늘부터 그대는 내금위의 군관이오.','이제 금군을 그대에게 맡기겠소. 전하를 잘 모시시오.']}},
   civ:{n:'문관의 길',npc:'hun',stat:'lore',ranks:['유생','진사','정승'],work:'글공부',test:['','소과','대과'],start:ex=>startStudy(ex),
-    need:[{stat:2},{stat:7,done:5,ex:['도감에 적은 것',20,()=>Object.keys(S.dex).length],npc:'hun',h:2},{stat:13,done:14,ex:['도감에 적은 것',30,()=>Object.keys(S.dex).length],npc:'king',h:2}],
+    need:[{stat:0},{stat:5,done:5,ex:['도감에 적은 것',20,()=>Object.keys(S.dex).length],npc:'hun',h:2},{stat:13,done:14,ex:['도감에 적은 것',30,()=>Object.keys(S.dex).length],npc:'king',h:2}],
     pay:[60,120,200],stipend:[0,100,300],fit:['civ0','civ1','civ2'],perkTxt:'경험치도 10% 더 얻어요.',where:'마을 동쪽 서당 앞의 훈장에게 "글공부"를 청해요',
     t:{low:'글을 배우고 싶은가? 학식이 적어도 2 이상은 되어야 서당에 앉힐 수 있느니라.',invite:'눈빛이 총명하구먼. 내 밑에서 글을 배워 보겠는가? 날마다 글자의 짝을 찾아 외는 공부이니라.',yes:'배우겠습니다',
       joined:t=>'오늘부터 자네는 '+jo(t,'이니라','니라')+'. 날마다 서당에 와서 글공부를 하거라.',daily:'오늘도 글을 읽어 보겠는가? 뒤집힌 글자 가운데 같은 것끼리 짝을 지으면 되느니라.',rest:'오늘 공부는 그만하면 됐느니라. 내일 또 오거라.',
@@ -606,7 +608,7 @@ const TRACKS={
 const HANJA=[['天','하늘 천'],['地','땅 지'],['日','날 일'],['月','달 월'],['山','메 산'],['水','물 수'],['人','사람 인'],['木','나무 목'],['火','불 화'],['土','흙 토'],['金','쇠 금'],['大','큰 대'],['小','작을 소'],['上','위 상'],['下','아래 하'],['中','가운데 중']];
 // 왕실의 길: 중전에게 예법을 수련하고, 간택(세자나 공주의 배필)과 책봉 의식을 거친다. need[자리]=오르는 조건(mate=배필과의 ♥),
 // pay=수련 수고비, stipend=날마다 받는 내탕금, rounds[0 수련·1 간택·2 책봉]=따라 할 동작의 길이
-const COURT={need:[{stat:2},{stat:8,done:6,mate:3,npc:'queen',h:2},{stat:14,done:16,mate:5,npc:'king',h:3}],pay:[60,120,200],stipend:[0,150,400],
+const COURT={need:[{stat:0},{stat:5,done:6,mate:3,npc:'queen',h:2},{stat:14,done:16,mate:5,npc:'king',h:3}],pay:[60,120,200],stipend:[0,150,400],
   fit:['court0','court1','court2'],rounds:[[3,4,5],[4,5,6],[5,6,7]],names:[['수련 첫째','수련 둘째','수련 셋째'],['초간택','재간택','삼간택'],['책봉 첫째','책봉 둘째','책봉 셋째']]};
 // 수라간 음식: need의 fish는 아무 물고기나 한 마리, rank는 배울 수 있는 품계
 // 장독대에 담그는 것: need 재료, days 익는 날수
@@ -1257,6 +1259,11 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:90,d:'11월 26일',t:'처음에는 여러 길을',l:[
+    '길에 들어설 때 스탯이 필요 없어졌어요. 레벨 5만 되면 수라간·왕실·상인·무관·문관 어느 길이든 스승을 찾아가 시작할 수 있어요.',
+    '둘째 자리의 스탯 조건도 낮아졌어요(6~8 → 4~5). 레벨 10쯤이면 두 길에서 둘째 자리까지 가 볼 수 있어요.',
+    '으뜸 자리와 그 위의 높은 자리는 그대로예요. 뒤로 갈수록 한 길에 스탯을 모아야 닿아요.'
+  ]},
   {v:89,d:'11월 26일',t:'스탯은 레벨마다 1점',l:[
     '레벨이 오를 때 받는 스탯 점수가 2점에서 1점으로 줄었어요. 모든 스탯을 다 올릴 수 없으니, 어느 길에 힘을 실을지 골라야 해요.',
     '지금까지 받은 점수도 같은 기준으로 다시 셌어요. 남은 점수에서 먼저 빼고, 모자라면 스탯에서 고르게 줄여요. 한쪽으로 키운 모양과 이미 오른 길의 자리는 그대로예요.',
