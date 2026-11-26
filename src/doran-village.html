@@ -1030,6 +1030,7 @@ function randomTown(seed){
 }
 const TOWN={};let townSeed=-1,spotCache=new Map();
 // 씨앗에 맞는 마을을 짓는다. 못 지으면(그럴 일은 없어야 하지만) 처음 모양으로 둔다
+let WEST_Y=-1;
 function buildTown(seed,init){
   seed=seed>>>0;if(seed===townSeed)return;
   const m=(seed&&randomTown(seed))||legacyTown();
@@ -1037,6 +1038,9 @@ function buildTown(seed,init){
   /* 조수 바우는 모루 곁에 선다: 모루 자리의 옆 칸 가운데 비어 있는 첫 칸(마을 만들기는 건드리지 않고, 다 만든 뒤에 고른다) */
   {const a=NPCS.moru.anchor,ok=(x,y)=>x>0&&y>0&&x<W-1&&y<H-1&&m.tile[y][x]<=2&&!m.objAt[y][x];
     NPCS.bau.anchor=([[2,0],[-2,0],[1,0],[-1,0],[2,1],[-2,1],[1,1],[-1,1],[0,1]].map(d=>[a[0]+d[0],a[1]+d[1]]).find(q=>ok(q[0],q[1]))||a).slice()}
+  /* 서쪽 들판으로 가는 길목(v109): 마을 서쪽 숲 가장자리에 한 칸 길을 낸다. 마을 만들기는 건드리지 않고, 다 만든 뒤에 큰길 높이에서 가장 가까운 빈 줄을 고른다(WEST_Y, 없으면 -1) */
+  {WEST_Y=-1;for(let d=0;d<H&&WEST_Y<0;d++)for(const y of [EXIT_Y-d,EXIT_Y+d]){if(y>1&&y<H-2&&m.tile[y][0]===6&&m.tile[y][1]<=2&&!m.objAt[y][1]&&!m.objAt[y][0]){WEST_Y=y;break}}
+    if(WEST_Y>=0){m.tile[WEST_Y][0]=1;if(m.tile[WEST_Y][1]===0)m.tile[WEST_Y][1]=1}}
   if(init)return;
   useMap(TOWN);groundSeason=-1;
   for(const id of TOWN_IDS.concat('hun','bau')){const a=NPCS[id].anchor,n=N[id];n.x=n.fx=a[0];n.y=n.fy=a[1];n.t=1;n.hold=0}
@@ -1094,6 +1098,32 @@ const WILD=(function(){
   for(let y=HILL[1];y<=HILL[3];y++)for(let x=HILL[0];x<=HILL[2];x++){clear(x,y);tile[y][x]=x===HILL[0]||x===HILL[2]||y===HILL[1]||y===HILL[3]?13:12}
   tile[HILL_ST[1]][HILL_ST[0]]=14;clear(HILL_ST[0],HILL_ST[1]+1);
   for(const [x,y] of [[HILL[0]+2,HILL[1]+1],[HILL[2]-1,HILL[1]+2],[HILL[0]+1,HILL[3]-1]]){const o={t:'deco',k:'pine',x,y,sh:0,i:-1};TREES.push(o);objAt[y][x]=o}
+  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++)if((tile[y][x]===0||tile[y][x]===12)&&!objAt[y][x])GRASS.push([x,y]);
+  return{tile,objAt,TREES,ROCKS,GRASS,SAND:[]};
+})();
+// 서쪽 들판(v109, 사용자 요청: 마을을 넓히자 → 기존 마을은 그대로 두고 서쪽에 새 구역을 붙인다). 사냥터와 같은 장면(scene 'wild')이고 구역 wz는 4.
+// 나무가 드문 너른 풀밭에 둥근 못과 낮은 둔덕이 있고, 순한 짐승만 다니며 들나물과 꽃이 많이 난다. 동쪽 길(W-1,FIELD_Y)로 마을에 돌아간다. 풍경에는 저장되는 상태가 없다
+const FIELD_Y=12,FIELD_HILL=[21,3,31,8],FIELD_ST=[26,8];
+const FIELD=(function(){
+  const tile=[],objAt=[],TREES=[],ROCKS=[],GRASS=[];
+  for(let y=0;y<H;y++){tile.push(new Array(W).fill(0));objAt.push(new Array(W).fill(null))}
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(x===0||y===0||x===W-1||y===H-1)tile[y][x]=6;
+  for(let x=W-9;x<W;x++)tile[FIELD_Y][x]=1;
+  for(let x=W-9,py=FIELD_Y;x>=14;x--){const y=FIELD_Y+Math.round(Math.sin(x*.5)*1.2);tile[y][x]=1;tile[py][x]=1;py=y} /* 못 쪽으로 구불구불 이어지는 들길(끊기지 않게 꺾이는 칸을 잇는다) */
+  for(let y=3;y<H-3;y++)for(let x=3;x<W-3;x++){const dx=(x-9)/4.2,dy=(y-17)/3.1;if(dx*dx+dy*dy<=1)tile[y][x]=3} /* 둥근 못 */
+  const hl=FIELD_HILL;for(let y=hl[1];y<=hl[3];y++)for(let x=hl[0];x<=hl[2];x++)tile[y][x]=x===hl[0]||x===hl[2]||y===hl[1]||y===hl[3]?13:12;
+  tile[FIELD_ST[1]][FIELD_ST[0]]=14;
+  const rng=mulberry(5521),cells=[];
+  for(let y=2;y<H-2;y++)for(let x=2;x<W-2;x++)if(tile[y][x]===0&&!(x===FIELD_ST[0]&&y===FIELD_ST[1]+1))cells.push([x,y]);
+  for(let i=cells.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[cells[i],cells[j]]=[cells[j],cells[i]]}
+  const free=(x,y)=>{for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;const t=tile[y+dy][x+dx];if(t===1||t===3||t===6||t===14||objAt[y+dy][x+dx])return false}return true};
+  let nT=16,nR=6;
+  for(const [x,y] of cells){
+    if(!nT&&!nR)break;if(!free(x,y))continue;
+    const rock=nR>0&&(nT===0||rng()<.25),o={t:'deco',k:rock?'rock':'pine',x,y,sh:0,i:-1};
+    if(rock){ROCKS.push(o);nR--}else{TREES.push(o);nT--}
+    objAt[y][x]=o;
+  }
   for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++)if((tile[y][x]===0||tile[y][x]===12)&&!objAt[y][x])GRASS.push([x,y]);
   return{tile,objAt,TREES,ROCKS,GRASS,SAND:[]};
 })();
@@ -1281,6 +1311,11 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:109,d:'11월 26일',t:'서쪽 들판',l:[
+    '마을 서쪽 숲 가장자리에 길목이 생겼어요. 그 길로 나가면 새 구역 "서쪽 들판"이에요. 지금 하던 마을은 그대로이고, 바깥에 새 땅이 붙었어요.',
+    '들판은 나무가 드문 너른 풀밭이에요. 토끼·사슴·꿩·고라니 같은 순한 짐승만 살고, 꽃과 들나물이 많이 나요. 둥근 못에서는 낚시를 할 수 있고, 통나무 디딤으로 오르는 둔덕도 있어요.',
+    '마을과 사냥터의 숲 가장자리를 동글동글한 나무 덩어리에서 뾰족한 침엽수 숲으로 다시 그렸어요.'
+  ]},
   {v:108,d:'11월 26일',t:'자연스러운 언덕 · 둥근 물가',l:[
     '사냥터 언덕을 돌담 같은 모습에서 풀 덮인 둔덕으로 다시 그렸어요. 뒤와 옆은 둥글게 솟은 풀 둔덕과 덤불, 남쪽만 흙 벼랑이 보이고, 계단은 통나무 디딤이에요.',
     '개울과 연못의 모서리를 둥글게 깎았어요. 네모나던 물가가 진짜 연못처럼 둥글게 마무리돼요.',
@@ -2530,8 +2565,15 @@ function buildGround(){
   }
   for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(tile[y][x]===6){
     const px=x*T,py=y*T,h=hash(x,y);
-    circ(c,px+8,py+10,13,F[0]);circ(c,px+25,py+13,13,F[1]);circ(c,px+15,py+25,14,sea===3?F[0]:F[2]);circ(c,px+10+h*10,py+9,5,F[3]);
-    if(sea===3){ell(c,px+8,py+2,8,3.5,F[3]);ell(c,px+25,py+5,8,3.5,F[2]);ell(c,px+15,py+16,9,3.5,F[3])}
+    /* v109(사용자 의견: 동글동글한 나무 덩어리가 마음에 안 든다): 숲 가장자리를 빽빽한 침엽수 숲으로. 어두운 덤불 바탕 위에 뾰족한 나무를 세 줄로 엇갈려 세운다 */
+    c.fillStyle=F[1];c.fillRect(px-2,py-2,T+4,T+4);
+    for(let r=0;r<3;r++)for(let k=0;k<2;k++){
+      const tx=px+(k?24:8)+(r%2?-8:0)+Math.round((hash(x*3+k+r*5,y*7+r)-.5)*6),ty=py+13+r*10,col=F[(r+k+x+y)%2?0:2],hi=sea===3?F[3]:F[3];
+      poly(c,[tx-10,ty,tx+10,ty,tx,ty-14],col);poly(c,[tx-8,ty-7,tx+8,ty-7,tx,ty-19],col);poly(c,[tx-5,ty-14,tx+5,ty-14,tx,ty-24],col);
+      poly(c,[tx-6,ty-1,tx-1,ty-1,tx-3,ty-8],hi);poly(c,[tx-4,ty-9,tx,ty-9,tx-2,ty-15],hi);
+      c.fillStyle='rgba(0,0,0,.18)';c.fillRect(tx+2,ty-6,5,5);
+      if(sea===3){poly(c,[tx-3,ty-18,tx+3,ty-18,tx,ty-24],'#f4f8fb');c.fillStyle='#f4f8fb';c.fillRect(tx-6,ty-8,5,2);c.fillRect(tx+2,ty-2,6,2)}
+    }
   }
   // 씨앗으로 지은 마을은 내 땅이 어디인지 마을마다 다르다. 둘레에 말뚝을 박아 알려 준다 (길이나 물에 걸리는 자리는 건너뛴다)
   if(tile===TOWN.tile&&townSeed){
@@ -3514,7 +3556,7 @@ function hud(){
   if(started)specSync(); /* 전문 갈래의 단계가 찼으면 올린다 */
   syncGuide();syncAsk();
   {const b=$('hSeason'),t=SEASONS[season()]+' '+((S.day-1)%7+1)+'일';if(b.textContent!==t)b.textContent=t;b.style.setProperty('--sc',SEASON_COL[season()])}
-  $('hDay').textContent=(S.weather==='rain'?(season()===3?'눈':'비'):S.wx==='drought'?'가뭄':S.wx==='wind'?'바람':S.wx==='rainbow'?'무지개':'맑음')+(isMarket()?' · 장날':'')+(fest()?' · '+fest().n:'')+(cupDay()?' · 사냥 대회':'')+(scene==='cave'&&cave?' · 동굴 '+cave.floor+'층':'')+(scene==='sea'?' · 먼바다':'')+(scene==='resort'?' · 운종가':'')+(scene==='wild'&&wz?(wz===2?' · 금원':wz===3?' · 눈고개':' · 깊은 산'):'')+(mailNew()?' · 편지 '+mailNew():'');
+  $('hDay').textContent=(S.weather==='rain'?(season()===3?'눈':'비'):S.wx==='drought'?'가뭄':S.wx==='wind'?'바람':S.wx==='rainbow'?'무지개':'맑음')+(isMarket()?' · 장날':'')+(fest()?' · '+fest().n:'')+(cupDay()?' · 사냥 대회':'')+(scene==='cave'&&cave?' · 동굴 '+cave.floor+'층':'')+(scene==='sea'?' · 먼바다':'')+(scene==='resort'?' · 운종가':'')+(scene==='wild'&&wz?(wz===2?' · 금원':wz===3?' · 눈고개':wz===4?' · 서쪽 들판':' · 깊은 산'):'')+(mailNew()?' · 편지 '+mailNew():'');
   const m=Math.floor(S.min);$('hTime').textContent=String(Math.floor(m/60)).padStart(2,'0')+':'+String(Math.floor(m%60/10)*10).padStart(2,'0');
   $('hCoin').textContent=S.coins.toLocaleString('ko-KR')+'냥';
   $('hLv').textContent='Lv.'+S.level;$('hXp').style.width=Math.round(S.xp/needXp(S.level)*100)+'%';
@@ -3646,7 +3688,9 @@ function arrive(){
     let i;while((i=S.pickups.findIndex(p=>p.x===P.x&&p.y===P.y))>=0)grab(i);
     if(glintHere()>=0){float('반짝이는 곳! 행동으로 파내요');tip('glint','반짝이는 곳 위에서 행동을 세 번 누르면 묻힌 것을 파내요. 가끔 그곳에서만 나오는 보물이 나와요')}
     // 지도 끝의 길목을 밟으면 마을과 사냥터를 오간다
-    if(scene==='wild'&&wz===2){if(P.y===H-1)leaveRoyal()} /* 금원의 남쪽 문은 궁궐로 돌아가는 길 */
+    if(scene==='wild'&&wz===4){if(P.x===W-1)leaveField()} /* 서쪽 들판의 동쪽 길 끝은 마을 */
+    else if(scene==='town'&&P.x===0&&P.y===WEST_Y)enterField();
+    else if(scene==='wild'&&wz===2){if(P.y===H-1)leaveRoyal()} /* 금원의 남쪽 문은 궁궐로 돌아가는 길 */
     else if(scene==='town'&&P.x===W-1&&P.y===EXIT_Y)enterWild();else if(scene==='wild'&&P.x===0){if(wz===3)leaveSnow();else if(wz)leaveDeep();else leaveWild()}
     else if(scene==='wild'&&!wz&&P.x===W-1)enterDeep(); /* 숲의 동쪽 길 끝은 깊은 산 */
     else if(scene==='wild'&&wz===1&&P.x===W-1)enterSnow(); /* 깊은 산의 동쪽 길 끝은 눈고개 */
@@ -4746,6 +4790,7 @@ function enterWild(){
 }
 function leaveWild(quiet){
   if(scene!=='wild')return;
+  if(wz===4){leaveField(quiet);return} /* 들판에서 장승 길 등으로 곧장 돌아올 때 */
   if(wz)leaveDeep(true); /* 깊은 산(이나 눈고개)에서 곧장 나가게 되면 숲을 거친 셈으로 친다 */
   scene='town';useMap(TOWN);wildBeasts=beasts;beasts=townBeasts;S.wpick=S.pickups;S.pickups=S.pickTown||[];delete S.pickTown;
   buildGround();mg=null;fishing=null;drops=[];if(!quiet)warp(W-2,EXIT_Y,[-1,0]);syncPlace();
@@ -4753,7 +4798,32 @@ function leaveWild(quiet){
 // ───────── 깊은 산 ─────────
 // 사냥터 숲의 동쪽 길 끝에서 들어간다(레벨 DEEP_LV부터). 여우·늑대 무리가 살고, 레벨이 오르면 무리가 커지고 곰과 대왕 멧돼지가 나타난다.
 // 장면은 그대로 'wild'이고 구역 wz만 1이 된다. 숲의 짐승과 주울 것은 wildBeasts·S.wpick에, 깊은 산의 것은 deepBeasts·S.dpick에 따로 둔다
-let wz=0,deepBeasts=null;
+let wz=0,deepBeasts=null,fieldBeasts=null;
+/* 서쪽 들판 드나들기(v109): 마을 서쪽 길목(0,WEST_Y)을 밟으면 들어가고, 들판의 동쪽 길 끝을 밟으면 돌아온다. 짐승과 주울 것은 fieldBeasts·S.fpick에 따로 둔다(날이 바뀌면 새로 난다) */
+function fieldPickups(){
+  const a=[],put=id=>{if(!ITEMS[id])return;const [x,y]=pick(FIELD.GRASS);if(!a.some(p=>p.x===x&&p.y===y))a.push({x,y,id})};
+  for(let i=0;i<6;i++)put('flower');for(let i=0;i<3;i++)put(['ssuk','naengi','sanddalgi','deodeok'][season()]||'ssuk');
+  for(let i=0;i<2;i++)put('mushroom');for(let i=0;i<2;i++)put('branch');if(season()===2)for(let i=0;i<3;i++)put('dotori');
+  return a;
+}
+function spawnField(){
+  if(fieldBeasts){beasts=fieldBeasts;return}
+  beasts=[];const sea=season(),plan=['rabbit','deer','pheasant','gorani','rabbit','raccoon','deer','rabbit'].filter(k=>BEASTS[k]&&BEASTS[k].s.includes(sea));
+  for(const k of plan)for(let g=0;g<200;g++){const q=pick(GRASS);if(q[0]>W-8||beasts.some(b=>b.x===q[0]&&b.y===q[1]))continue;beasts.push(mkBeast(k,q[0],q[1]));break}
+  fieldBeasts=beasts;
+}
+function enterField(){
+  if(scene!=='town'||WEST_Y<0)return;
+  scene='wild';wz=4;useMap(FIELD);townBeasts=beasts;S.pickTown=S.pickups;S.pickups=S.fpick||fieldPickups();S.away='field';
+  spawnField();miniRef=null;buildGround();mg=null;fishing=null;drops=[];warp(W-2,FIELD_Y,[-1,0]);syncPlace();hud();S.seenField=1;
+  toast('서쪽 들판에 들어왔어요. 동쪽 길로 나가면 마을이에요');
+  tip('field','들판에는 순한 짐승만 살아요. 들나물과 꽃이 많이 나고, 둥근 못에서는 낚시를, 둔덕 위에서는 멀리 내려다볼 수 있어요');
+}
+function leaveField(quiet){
+  if(scene!=='wild'||wz!==4)return;
+  fieldBeasts=beasts;S.fpick=S.pickups;wz=0;scene='town';useMap(TOWN);beasts=townBeasts;S.pickups=S.pickTown||[];delete S.pickTown;S.away=null;
+  miniRef=null;buildGround();mg=null;fishing=null;drops=[];if(!quiet)warp(1,WEST_Y,[1,0]);syncPlace();hud();
+}
 const mkBeast=(k,x,y)=>({k,x,y,fx:x,fy:y,t:1,dir:[1,0],wait:rnd(1,4),hp:BEASTS[k].hp,flee:0,stun:0,calm:0,bite:0,mad:0});
 function deepPickups(){
   const a=[],put=id=>{const [x,y]=pick(DEEP.GRASS);if(x>4&&!a.some(p=>p.x===x&&p.y===y))a.push({x,y,id})};
@@ -7600,7 +7670,7 @@ function nextDay(forced){
   if(scene==='wild')leaveWild(true);
   if(scene==='resort')leaveResort(true);
   if(scene==='palace')leavePalace(true);
-  S.wildN=10;wildBeasts=null;S.wpick=null;S.deepN=9;deepBeasts=null;S.dpick=null;S.snowN=8;snowBeasts=null;S.npick=null;S.royN=8;royalBeasts=null;S.rpick=null;wz=0;huntStreak=0;
+  S.wildN=10;wildBeasts=null;S.wpick=null;fieldBeasts=null;S.fpick=null;S.deepN=9;deepBeasts=null;S.dpick=null;S.snowN=8;snowBeasts=null;S.npick=null;S.royN=8;royalBeasts=null;S.rpick=null;wz=0;huntStreak=0;
   const cupMsg=S.cup&&S.cup.on&&!S.cup.done?cupSettle(true):''; /* 마감하지 않고 잠든 사냥 대회는 아침에 셈한다 */
   const was=season(),prevW=S.weather;
   // 쫓지 못한 까마귀가 앉아 있던 밭은 쪼아 먹힌다(다 익은 것은 잃고, 자라던 것은 하루 뒷걸음). 가뭄 든 날 물을 못 준 작물도 하루 시든다
@@ -9625,7 +9695,7 @@ function openMap(town){
   fogStep(); /* 막 들어온 곳이라 안개를 아직 못 읽었을 수도 있으니 먼저 맞춘다 */
   /* v92: 마을 밖에서는 지금 있는 곳(사냥터·궁궐·운종가·먼바다·동굴)의 큰 지도를 먼저 보여 준다. 거기서 "마을 지도 보기"로 넘어간다 */
   if(!town&&scene!=='town'&&scene!=='home'){
-    const nm={wild:['사냥터 숲','깊은 산','금원','눈고개'][wz]||'사냥터',palace:'한양 궁궐',sea:'먼바다',resort:'운종가',cave:'동굴'}[scene]||'지금 있는 곳';
+    const nm={wild:['사냥터 숲','깊은 산','금원','눈고개','서쪽 들판'][wz]||'사냥터',palace:'한양 궁궐',sea:'먼바다',resort:'운종가',cave:'동굴'}[scene]||'지금 있는 곳';
     openModal('지도 · '+nm,body=>{
       const m=el('canvas');m.style.cssText='display:block;width:100%;max-width:540px;margin:0 auto 8px;border-radius:10px;border:1.5px solid var(--line);image-rendering:pixelated';
       drawMini(m,10,null,[P.x,P.y],{tile,objAt},fogArr&&fogRef===tile?fogArr:null);body.appendChild(m);
@@ -9688,7 +9758,7 @@ function begin(st){
   S.sound=false;S.bgm=false;bgmStop(); /* 소리는 열 때마다 꺼진 채로 시작한다(사용자 요청). 설정 창에서 켠다 */
   applyBridges();syncRouteGear(true);started=true;$('title').hidden=true;scene='town';
   // 사냥터에서 저장된 채 끝났더라도 마을에서 다시 시작한다
-  useMap(TOWN);wildBeasts=null;deepBeasts=null;snowBeasts=null;wz=0;huntStreak=0;cop=null;jailNight=false;comer=null;comeCool=rnd(40,80);cave=null;if(S.pickTown){if(S.pickups.length){if(S.away==='sea')S.spick=S.pickups;else if(S.away==='deep')S.dpick=S.pickups;else if(S.away==='snow')S.npick=S.pickups;else if(S.away==='royal')S.rpick=S.pickups;else if(S.away!=='palace')S.wpick=S.pickups}S.pickups=S.pickTown;delete S.pickTown}S.away=null;royalBeasts=null;mate=null;$('bDeco').hidden=true;warp(SPAWN[0],SPAWN[1],[0,1]);
+  useMap(TOWN);wildBeasts=null;deepBeasts=null;snowBeasts=null;fieldBeasts=null;if(S.away==='field'&&S.pickTown){S.fpick=S.pickups;S.pickups=S.pickTown;delete S.pickTown;S.away=null}wz=0;huntStreak=0;cop=null;jailNight=false;comer=null;comeCool=rnd(40,80);cave=null;if(S.pickTown){if(S.pickups.length){if(S.away==='sea')S.spick=S.pickups;else if(S.away==='deep')S.dpick=S.pickups;else if(S.away==='snow')S.npick=S.pickups;else if(S.away==='royal')S.rpick=S.pickups;else if(S.away!=='palace')S.wpick=S.pickups}S.pickups=S.pickTown;delete S.pickTown}S.away=null;royalBeasts=null;mate=null;$('bDeco').hidden=true;warp(SPAWN[0],SPAWN[1],[0,1]);
   // 가축 우리를 지도에 얹고, 새로 생긴 화덕·우리 자리에 남아 있던 주울 것은 치운다
   crownNames();applyPens();applyWorks();applyMarket();applyFest();applyYard();garden=null;rollGlints();dig=null;S.pickups=S.pickups.filter(p=>!(TOWN.objAt[p.y]&&TOWN.objAt[p.y][p.x]));spawnHerd();placing=false;syncPlace();
   if(groundSeason!==season())buildGround();
