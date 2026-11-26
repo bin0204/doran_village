@@ -1373,6 +1373,11 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:119,d:'11월 26일',t:'사신 행차 큰 장',l:[
+    '철마다 나흗날, 사신 행차가 한양에 들어와요. 운종가 큰길 동쪽 끝에 하루 큰 장이 서요(봄·가을은 대륙, 여름·겨울은 섬나라).',
+    '통행 문서가 없어도 그 나라 상인과 사고팔 수 있고, 값도 조금 더 좋아요.',
+    '사신에게 예물을 올리면 답례품과 경험치를 받아요(장마다 한 번).'
+  ]},
   {v:118,d:'11월 26일',t:'남쪽 바닷길 나루',l:[
     '먼바다의 남쪽 끝 너머에 섬나라 상인들의 나루가 열렸어요. 수군 군관에게 뱃길 문서를 받아야 해요(800냥, 객주부터는 삯 없음).',
     '구리 덩이·유황·칠기 함·쥘부채·후추를 살 수 있어요.',
@@ -1740,6 +1745,7 @@ function fixState(s){
   s.fog=s.fog&&typeof s.fog==='object'?s.fog:{}; /* 지도의 안개: 곳마다 가 본 칸 */
   if(s.farmTown&&typeof s.farmTown==='object'){s.ffarm=s.farm;s.farm=s.farmTown;delete s.farmTown} /* 들판에 있는 채로 저장됐으면 밭을 되돌린다 */
   s.ffarm=s.ffarm&&typeof s.ffarm==='object'?s.ffarm:{}; /* 서쪽 들판의 밭 */
+  s.fairGift=s.fairGift|0; /* 사신에게 예물을 올린 날(v119) */
   s.ptPass=s.ptPass?1:0;s.pt=s.pt&&typeof s.pt==='object'&&s.pt.left&&typeof s.pt.left==='object'?s.pt:null; /* 바닷길 나루의 뱃길 문서와 오늘 거래(v118) */
   s.pass=s.pass?1:0;s.bd=s.bd&&typeof s.bd==='object'&&s.bd.left&&typeof s.bd.left==='object'?s.bd:null; /* 국경 통행 문서, 국경 장터의 오늘 거래(v116) */
   if(typeof s.tut!=='number')s.tut=(s.day>1||s.level>1)?-1:0; /* 길라잡이: 새 마을만 0에서 시작, 하던 마을은 끝난 것으로 */
@@ -3600,7 +3606,8 @@ function renderTown(c){
     if(d)list.push([d[1]-.4,()=>blit(c,spr('ladderD',()=>bake(36,36,2,4,0,0,c2=>ladderArt(c2,true)),false),d[0]*T,d[1]*T)]);
   }
   for(const o of TREES)if(inV(o))list.push([o.y,()=>drawTree(c,o)]);
-  if(scene==='wild'&&(wz===5||wz===6))for(const f of MKT[mkNow()].folk){ /* 국경 장터·바닷길 나루의 사람들 */
+  if(scene==='resort'&&fairNow())list.push([FAIR_PAL[1]+.1,()=>fairArt(c,fairNow())]);
+  if((scene==='wild'&&(wz===5||wz===6))||(scene==='resort'&&fairNow()))for(const f of mkFolk()){ /* 국경 장터·바닷길 나루·사신 행차 큰 장의 사람들 */
     const x=(f.x+.5)*T,y=(f.y+.9)*T,d=[Math.sign(P.x-f.x),Math.sign(P.y-f.y)],near=Math.abs(P.x-f.x)+Math.abs(P.y-f.y)<=3;
     list.push([f.y+.1,()=>drawChar(c,x,y,f.look,near&&(d[0]||d[1])?(d[0]&&d[1]?[0,d[1]]:d):[0,1],false,now+f.x)]);
     if(near&&!mg)labels.push(()=>label(c,x,y+9,f.n));
@@ -3975,7 +3982,7 @@ function hud(){
   if(started)specSync(); /* 전문 갈래의 단계가 찼으면 올린다 */
   syncGuide();syncAsk();
   {const b=$('hSeason'),t=SEASONS[season()]+' '+((S.day-1)%7+1)+'일';if(b.textContent!==t)b.textContent=t;b.style.setProperty('--sc',SEASON_COL[season()])}
-  $('hDay').textContent=(S.weather==='rain'?(season()===3?'눈':'비'):S.wx==='drought'?'가뭄':S.wx==='wind'?'바람':S.wx==='rainbow'?'무지개':'맑음')+(isMarket()?' · 장날':'')+(fest()?' · '+fest().n:'')+(cupDay()?' · 사냥 대회':'')+(scene==='cave'&&cave?' · 동굴 '+cave.floor+'층':'')+(scene==='sea'?' · 먼바다':'')+(scene==='resort'?' · 운종가':'')+(scene==='wild'&&wz?(wz===2?' · 금원':wz===3?' · 눈고개':wz===4?' · 서쪽 들판':wz===5?' · 국경 장터':wz===6?' · 바닷길 나루':' · 깊은 산'):'')+(mailNew()?' · 편지 '+mailNew():'');
+  $('hDay').textContent=(S.weather==='rain'?(season()===3?'눈':'비'):S.wx==='drought'?'가뭄':S.wx==='wind'?'바람':S.wx==='rainbow'?'무지개':'맑음')+(isMarket()?' · 장날':'')+(fest()?' · '+fest().n:'')+(cupDay()?' · 사냥 대회':'')+(fairNow()&&S.seenRes?' · 사신 행차':'')+(scene==='cave'&&cave?' · 동굴 '+cave.floor+'층':'')+(scene==='sea'?' · 먼바다':'')+(scene==='resort'?' · 운종가':'')+(scene==='wild'&&wz?(wz===2?' · 금원':wz===3?' · 눈고개':wz===4?' · 서쪽 들판':wz===5?' · 국경 장터':wz===6?' · 바닷길 나루':' · 깊은 산'):'')+(mailNew()?' · 편지 '+mailNew():'');
   const m=Math.floor(S.min);$('hTime').textContent=String(Math.floor(m/60)).padStart(2,'0')+':'+String(Math.floor(m%60/10)*10).padStart(2,'0');
   $('hCoin').textContent=S.coins.toLocaleString('ko-KR')+'냥';
   $('hLv').textContent='Lv.'+S.level;$('hXp').style.width=Math.round(S.xp/needXp(S.level)*100)+'%';
@@ -5264,11 +5271,13 @@ const PT_WANT={ginseng:2,silk:1.55,chinaware:1.4,ink:1.4,tigerskin:1.5,leopardsk
   PT_SELL={copper:{s:'metal',n:4},sulfur:{s:'metal',n:5},lacquer:{s:'craft',n:2},jfan:{s:'craft',n:4},pepper:{s:'craft',n:4}};
 const MKT={bd:{want:BD_WANT,sell:BD_SELL,folk:BD_FOLK,k:7919,role:'조선 사역원',hint:'산삼·더덕·털가죽·사슴뿔·전복'},
   pt:{want:PT_WANT,sell:PT_SELL,folk:PT_FOLK,k:6841,role:'조선 왜학 역관',hint:'산삼·비단·청화 자기·먹·콩·보리'}};
-const mkNow=()=>wz===6?'pt':'bd';
+const mkNow=()=>scene==='resort'?(fairNow()||'bd'):wz===6?'pt':'bd';
+const mkFolk=()=>scene==='resort'&&fairNow()?fairFolk(fairNow()):MKT[mkNow()].folk;
 function bdRates(mk){
   const M=MKT[mk||mkNow()],rng=mulberry((S.day*M.k+townSeed*13+5)>>>0),ids=Object.keys(M.want).filter(k=>ITEMS[k]),hot=ids[Math.floor(rng()*ids.length)],want={},buy={};
-  for(const k of ids)want[k]=Math.ceil(ITEMS[k].p*M.want[k]*(.85+rng()*.3)*(k===hot?1.35:1));
-  for(const k in M.sell)buy[k]=Math.ceil(ITEMS[k].p*.8*(.85+rng()*.4));
+  const fx=scene==='resort'?1:0; /* 사신 행차 큰 장에서는 조금 더 쳐주고 조금 더 싸다 */
+  for(const k of ids)want[k]=Math.ceil(ITEMS[k].p*M.want[k]*(.85+rng()*.3)*(k===hot?1.35:1)*(1+.1*fx));
+  for(const k in M.sell)buy[k]=Math.ceil(ITEMS[k].p*.8*(.85+rng()*.4)*(1-.08*fx));
   return{hot,want,buy};
 }
 function bdToday(mk){mk=mk||mkNow();const M=MKT[mk];if(!S[mk]||S[mk].day!==S.day){S[mk]={day:S.day,sold:0,left:{}};for(const k in M.sell)S[mk].left[k]=M.sell[k].n}return S[mk]}
@@ -5292,6 +5301,44 @@ function leaveBorder(quiet){
   wz=3;useMap(SNOW);S.pickups=S.npick||snowPickups();S.away='snow';spawnSnow(); /* 장터에서 날이 바뀌었으면 눈고개를 새로 채운다 */
   miniRef=null;buildGround();mg=null;fishing=null;drops=[];if(!quiet)warp(W-2,SNOW_Y,[-1,0]);syncPlace();hud();
 }
+/* ───────── 사신 행차 큰 장(v119) ─────────
+   철마다 나흗날, 사신 행차가 한양에 들어 운종가 큰길 동쪽 끝에 하루 큰 장이 선다(fairOf: 봄·가을은 대륙, 여름·겨울은 섬나라).
+   통행 문서가 없어도 그 나라 상인과 사고팔 수 있다. 그날의 수량과 한도는 그 나라 장터의 것(S.bd·S.pt)을 함께 쓰므로 돈이 더 불지는 않고, 값만 조금 좋다(bdRates의 fx).
+   사신에게는 장마다 한 번 예물을 올리고 답례품을 받는다(S.fairGift=그날). 사람은 FAIR_AT 자리에 t 'trader'로 놓는다(applyFair, 가마는 FAIR_PAL) */
+const FAIR_AT={envoy:[32,13],sell:[30,13],buy:[28,13]},FAIR_PAL=[33,13]; /* 큰길의 아랫줄에 두 칸씩 띄워 세운다(윗줄은 지나다니는 길) */
+const FAIR_WISH=['ginseng','antler','abalone','j_jang','j_kimchi','d_jjigae'],FAIR_BACK={bd:[['silk',1],['tea',2]],pt:[['lacquer',1],['pepper',1]]};
+const fairOf=day=>(day-1)%7===3?(seasonOf(day)%2?'pt':'bd'):null,fairNow=()=>S?fairOf(S.day):null;
+const fairCache={};
+function fairFolk(mk){
+  if(fairCache[mk])return fairCache[mk];
+  const F=MKT[mk].folk,lk=k=>F.find(q=>q.k===k).look,at=(k,o)=>Object.assign(o,{k,x:FAIR_AT[k][0],y:FAIR_AT[k][1]});
+  return fairCache[mk]=mk==='bd'?[at('envoy',{n:'대륙 사신',look:{skin:'#eec9a4',hair:'#1f1f24',shirt:'#8a1f1f',bot:'#6a1818',rib:'#e9b930',sex:'m',hat:'skull',robe:1,beard:1}}),at('sell',{n:'대륙 상인',look:lk('silk')}),at('buy',{n:'큰 상인',buy:1,look:lk('fur')})]
+    :[at('envoy',{n:'섬나라 사신',look:{skin:'#eec9a4',hair:'#1f1f24',shirt:'#2a2a34',bot:'#3a3a48',rib:'#e9e2cf',sex:'m',hat:'mage',robe:2}}),at('sell',{n:'섬나라 상인',look:lk('craft')}),at('buy',{n:'큰 상인',buy:1,look:lk('buy')})];
+}
+function applyFair(){
+  const oa=RESORT.objAt,spots=Object.values(FAIR_AT).concat([FAIR_PAL]);
+  for(const [x,y] of spots){const o=oa[y][x];if(o&&(o.t==='trader'||o.t==='fairpal'))oa[y][x]=null}
+  if(!fairNow())return;
+  for(const k in FAIR_AT){const [x,y]=FAIR_AT[k];if(!oa[y][x])oa[y][x]={t:'trader',k,x,y}}
+  if(!oa[FAIR_PAL[1]][FAIR_PAL[0]])oa[FAIR_PAL[1]][FAIR_PAL[0]]={t:'fairpal',x:FAIR_PAL[0],y:FAIR_PAL[1]};
+}
+function envoyTalk(f){
+  const mk=fairNow();if(!mk)return;
+  if(S.fairGift===S.day){dialog({who:f.n,text:'(역관이 옮겨 줘요.) 예물은 고맙게 받았소. 두 나라 사이가 오래 평안하기를 바라오.'});return}
+  const list=FAIR_WISH.filter(k=>ITEMS[k]),wish=list[Math.floor(mulberry((S.day*4513+townSeed)>>>0)()*list.length)],back=FAIR_BACK[mk];
+  dialog({who:f.n,text:'(역관이 옮겨 줘요.) 먼 길을 왔소. 조선의 '+jo(ITEMS[wish].n,'이','가')+' 그리 좋다 들었소.\n· 예물: '+ITEMS[wish].n+' 1 (가진 것 '+have(wish)+')\n· 답례: '+back.map(q=>ITEMS[q[0]].n+' '+q[1]).join(', ')+', 경험치 100',
+    choices:[[have(wish)>0?'예물 올리기':'지금은 없어요',have(wish)>0?()=>{gain(wish,-1);for(const q of back)gain(q[0],q[1]);addXp(100);S.fairGift=S.day;sfx('level');float('답례품을 받았어요');touch()}:null],['물러나기',null]]});
+}
+/* 가마와 깃발: 큰길 동쪽 끝에 세워 둔 행차의 탈것. 대륙은 붉은 가마에 금빛 술, 섬나라는 검은 옻칠 가마에 흰 휘장 */
+function fairArt(c,mk){
+  const X=FAIR_PAL[0]*T+16,Y=FAIR_PAL[1]*T+30,bd=mk==='bd',body=bd?'#a52c24':'#26262c',trim=bd?'#e9b930':'#e9e2cf',roofC=bd?'#3f5650':'#4d5861';
+  c.fillStyle='#5e3f24';c.fillRect(X-22,Y-9,44,3);c.fillStyle='#8a5a34';c.fillRect(X-22,Y-9,44,1.2);
+  rr(c,X-11,Y-27,22,22,2,body);c.fillStyle=trim;c.fillRect(X-11,Y-27,22,2);c.fillRect(X-11,Y-8,22,2);rr(c,X-6,Y-22,12,10,1,bd?'#efe2bd':'#efe6cc');c.fillStyle=bd?'#8a3a2e':'#4a3828';c.fillRect(X-.6,Y-22,1.2,10);c.fillRect(X-6,Y-17.6,12,1.2);
+  if(bd){poly(c,[X-15,Y-27,X+15,Y-27,X+9,Y-35,X-9,Y-35],roofC);poly(c,[X-15,Y-27,X-19,Y-31,X-12,Y-28],roofC);poly(c,[X+15,Y-27,X+19,Y-31,X+12,Y-28],roofC);circ(c,X,Y-36,2.5,trim);for(const q of [-10,10]){c.fillStyle=trim;c.fillRect(X+q-.5,Y-5,1,5)}}
+  else{poly(c,[X-14,Y-27,X+14,Y-27,X+10,Y-33,X-10,Y-33],roofC);c.fillStyle='#2f363c';c.fillRect(X-10,Y-35,20,3);}
+  for(const sg of [-1,1]){const fx=X+sg*19,col=bd?(sg<0?'#b5332a':'#e9b930'):(sg<0?'#27406b':'#e9e2cf');c.fillStyle='#4a3020';c.fillRect(fx-1,Y-58,2,56);
+    if(bd)poly(c,[fx+1,Y-58,fx+1,Y-42,fx+sg*14+1,Y-50],col);else{rr(c,fx+(sg<0?-11:1),Y-56,10,26,0,col);c.fillStyle=sg<0?'#e9e2cf':'#27406b';c.fillRect(fx+(sg<0?-8:4),Y-50,4,1.4);c.fillRect(fx+(sg<0?-6.7:5.3),Y-52,1.4,6)}}
+}
 /* 먼바다의 남쪽 끝 → 바닷길 나루. 뱃길 문서(S.ptPass)가 있어야 한다(삯은 국경과 같다) */
 function portGate(){
   if(S.ptPass){enterPort();return}
@@ -5314,7 +5361,8 @@ function leavePort(quiet){
   miniRef=null;buildGround();mg=null;fishing=null;drops=[];dropKeys();if(!quiet)warp(17,H-4,[0,-1]);syncPlace();hud();
 }
 function traderTalk(k){
-  const M=MKT[mkNow()],f=M.folk.find(q=>q.k===k);if(!f)return;
+  const M=MKT[mkNow()],f=mkFolk().find(q=>q.k===k);if(!f)return;
+  if(k==='envoy'){envoyTalk(f);return}
   if(f.say){dialog({who:f.n,text:f.say});return}
   const R=bdRates(),B=bdToday();
   if(k==='guide'){
@@ -5327,16 +5375,16 @@ function traderTalk(k){
   openBdBuy(k);
 }
 function openBdBuy(k){
-  const M=MKT[mkNow()],f=M.folk.find(q=>q.k===k),R=bdRates(),B=bdToday();
+  const M=MKT[mkNow()],f=mkFolk().find(q=>q.k===k),R=bdRates(),B=bdToday();
   openModal(f.n,body=>{
     body.appendChild(el('p','note','가진 돈 '+won(S.coins)+' · 물건은 날마다 조금씩만 들어와요'));
-    for(const id in M.sell){if(M.sell[id].s!==k)continue;const p=R.buy[id],left=B.left[id]|0;
+    for(const id in M.sell){if(k!=='sell'&&M.sell[id].s!==k)continue;const p=R.buy[id],left=B.left[id]|0;
       row(body,icon('item',id),ITEMS[id].n,['남은 것 '+left+'/'+M.sell[id].n+' · 가진 것 '+have(id),(EAT[id]?'기력 +'+EAT[id]+' · ':'')+'만물상 값 '+sellPrice(id)+'냥'],[[won(p),()=>{if(S.coins<p||B.left[id]<1)return;B.left[id]--;addCoins(-p);gain(id,1);sfx('coin');openBdBuy(k)},S.coins<p||left<1]]);}
   });
 }
 function openBdSell(){
   const M=MKT[mkNow()],R=bdRates(),B=bdToday(),room=()=>Math.max(0,bdCap()-B.sold);
-  openModal(M.folk.find(q=>q.buy).n,body=>{
+  openModal(mkFolk().find(q=>q.buy).n,body=>{
     body.appendChild(el('p','note','오늘 더 팔 수 있는 값 '+won(room())+' · 찾는 것: '+ITEMS[R.hot].n));
     const ids=Object.keys(R.want).filter(id=>have(id)>0);
     if(!ids.length)body.appendChild(el('p',null,'팔 물건이 없어요. '+M.hint+' 같은 것을 가져와요.'));
@@ -5618,7 +5666,7 @@ function enterResort(){
   if(scene!=='palace')return;
   scene='resort';useMap(RESORT);S.away='resort';miniRef=null;buildGround();mg=null;fishing=null;drops=[];warp(1,13,[1,0]);syncPlace();hud();
   const first=!S.seenRes;S.seenRes=1;hear('mall',true);touch();
-  toast(first?'한양의 저잣거리, 운종가예요. 팔도에서 온 사람들이 가게를 열었어요. 서쪽 문으로 나가면 궁궐이에요':'운종가에 들어왔어요');
+  toast(first?'한양의 저잣거리, 운종가예요. 서쪽 문으로 나가면 궁궐이에요':fairNow()?'사신 행차 날이에요 · 큰길 동쪽 끝에 큰 장':'운종가에 들어왔어요');
   if(first){addXp(30);tip('mall','가게 문 앞에서 행동하거나 주인에게 말을 걸면 물건을 볼 수 있어요. 주인과 친해지면 값을 깎아 줘요')}
 }
 function leaveResort(quiet){
@@ -8344,8 +8392,9 @@ function nextDay(forced){
   if(S.wx==='wind')msgs.push('바람이 세요 · 과일나무 밑에 열매');
   if(pecked)msgs.push('까마귀가 밭 '+pecked+'칸을 쪼아 먹었어요');
   if(crowN)msgs.push('까마귀가 밭에 앉았어요 · 다가가서 쫓기');
-  applyMarket();applyFest();
+  applyMarket();applyFest();applyFair();
   {const f=fest(),nx=festOf(S.day+1);if(f)msgs.push('오늘은 '+f.n+' · 동쪽 마당에서 잔치');else if(nx)msgs.push('내일은 '+jo(nx.n,'이에요','예요'))}
+  if(S.seenRes){const fm=fairNow(),fn=fairOf(S.day+1);if(fm)msgs.push('오늘은 '+(fm==='bd'?'대륙':'섬나라')+' 사신 행차 · 운종가에 큰 장');else if(fn)msgs.push('내일은 사신 행차 날이에요')}
   if(isMarket())msgs.push('오늘은 장날 · 동쪽 마당에 보부상');else if(marketIn()===1)msgs.push('내일은 장날이에요');
   if(cupMsg){msgs.push('사냥 대회 셈: '+cupMsg);sendMail('mujin','{name} 보시오.\n어제 사냥 대회의 셈을 마쳤소. 그대는 '+cupMsg.split(' · ').slice(0,2).join(', ')+'이었소. 상은 이미 보냈으니 살펴보시오. 다음 대회에서 또 겨룹시다.\n— 무진')}
   {const n=morningMail(),all=mailNew();if(all)msgs.push(n?'새 편지 '+all+'통 · 집 문 앞 우편함':'안 읽은 편지 '+all+'통')}
@@ -10410,7 +10459,7 @@ function begin(st){
   // 사냥터에서 저장된 채 끝났더라도 마을에서 다시 시작한다
   useMap(TOWN);wildBeasts=null;deepBeasts=null;snowBeasts=null;fieldBeasts=null;if(S.away==='field'&&S.pickTown){S.fpick=S.pickups;S.pickups=S.pickTown;delete S.pickTown;S.away=null}wz=0;huntStreak=0;cop=null;jailNight=false;comer=null;comeCool=rnd(40,80);cave=null;if(S.pickTown){if(S.pickups.length){if(S.away==='sea')S.spick=S.pickups;else if(S.away==='deep')S.dpick=S.pickups;else if(S.away==='snow')S.npick=S.pickups;else if(S.away==='royal')S.rpick=S.pickups;else if(S.away!=='palace')S.wpick=S.pickups}S.pickups=S.pickTown;delete S.pickTown}S.away=null;royalBeasts=null;mate=null;$('bDeco').hidden=true;warp(SPAWN[0],SPAWN[1],[0,1]);
   // 가축 우리를 지도에 얹고, 새로 생긴 화덕·우리 자리에 남아 있던 주울 것은 치운다
-  crownNames();applyPens();applyWorks();applyMarket();applyFest();applyYard();garden=null;rollGlints();dig=null;S.pickups=S.pickups.filter(p=>!(TOWN.objAt[p.y]&&TOWN.objAt[p.y][p.x]));spawnHerd();placing=false;syncPlace();
+  crownNames();applyPens();applyWorks();applyMarket();applyFest();applyFair();applyYard();garden=null;rollGlints();dig=null;S.pickups=S.pickups.filter(p=>!(TOWN.objAt[p.y]&&TOWN.objAt[p.y][p.x]));spawnHerd();placing=false;syncPlace();
   if(groundSeason!==season())buildGround();
   // 예전 저장에는 모습 정보가 없다: 한 번 옷장을 열어 고르게 한다
   if(!S.sex){S.sex='m';setTimeout(()=>{if(S&&!busy())openWardrobe()},1500)}
