@@ -1267,6 +1267,10 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:91,d:'11월 26일',t:'스탯 다시 나누기',l:[
+    '"나"의 "신분" 창 스탯 아래에 "스탯 다시 나누기"가 생겼어요. 모든 스탯을 0으로 돌리고 그만큼 점수를 돌려받아 내 뜻대로 다시 찍어요.',
+    '처음 한 번은 삯이 없어요. 그 뒤로는 할 때마다 2,000냥씩 오르고, 한 번 하면 열흘 뒤에 다시 할 수 있어요. 이미 오른 길의 자리는 그대로예요.'
+  ]},
   {v:90,d:'11월 26일',t:'처음에는 여러 길을',l:[
     '길에 들어설 때 스탯이 필요 없어졌어요. 레벨 5만 되면 수라간·왕실·상인·무관·문관 어느 길이든 스승을 찾아가 시작할 수 있어요.',
     '둘째 자리의 스탯 조건도 낮아졌어요(6~8 → 4~5). 레벨 10쯤이면 두 길에서 둘째 자리까지 가 볼 수 있어요.',
@@ -5911,6 +5915,17 @@ function openStatus(){
       row(body,el('span','badge',s.n[0]),s.n+' '+v,[s.d,v>=STAT_MAX?'끝까지 올렸어요':'저절로 오르는 중 '+Math.floor(S.stx[k]*10)+'%'],
         [['+1',()=>{if(S.sp<1||S.stats[k]>=STAT_MAX)return;S.sp--;S.stats[k]++;sfx('pick');touch();hud();openStatus()},S.sp<1||v>=STAT_MAX]]);
     }
+    /* 스탯 다시 나누기(v91): 모든 스탯을 0으로 돌려 점수로 되받는다. 환산으로 고르게 줄어든 스탯을 내 뜻대로 다시 찍으라고 넣었다.
+       처음 한 번은 삯이 없고, 그 뒤로는 할 때마다 2,000냥씩 오르며 열흘에 한 번만(스탯을 이리저리 옮겨 가며 여러 길의 조건을 채우지 못하게). S.stRe=한 횟수, S.stReDay=마지막으로 한 날 */
+    {const n=S.stRe|0,fee=n*2000,wait=n?Math.max(0,(S.stReDay|0)+10-S.day):0,tot=Object.keys(STATS).reduce((t,k)=>t+(S.stats[k]|0),0);
+      const b=el('button','btn',wait?'스탯 다시 나누기 · '+wait+'일 뒤에 할 수 있어요':'스탯 다시 나누기 ('+(fee?won(fee):'처음 한 번은 삯 없음')+')');b.type='button';b.disabled=!!wait||!tot||S.coins<fee;
+      let sure=false;b.onclick=()=>{
+        if(!sure){sure=true;b.textContent='한 번 더 누르면 모든 스탯이 0이 되고 '+tot+'점이 남은 점수로 돌아와요';b.classList.add('pri');return}
+        if(fee)addCoins(-fee);for(const k in STATS){S.sp+=S.stats[k]|0;S.stats[k]=0}
+        S.stRe=n+1;S.stReDay=S.day;sfx('level');touch();hud();saveAll();openStatus();toast('스탯을 모두 점수로 돌렸어요. 다시 나눠 찍어요');
+      };
+      body.appendChild(b);
+      body.appendChild(el('p','note','모든 스탯을 0으로 돌리고 점수를 다시 나눠요. 이미 오른 길의 자리는 그대로예요. 한 번 하면 열흘 뒤에 다시 할 수 있고, 삯은 할 때마다 2,000냥씩 올라요.'+(fee&&S.coins<fee?' (돈이 모자라요)':'')))}
     // 살아갈 길은 이웃에게 들은 것만 적힌다. 다음 자리의 조건도 그 길의 스승에게 물어 들은 뒤에만 보인다
     body.appendChild(el('p','sub','들은 이야기와 걸어가는 길'));
     const note=t=>body.appendChild(el('p','note',t));
