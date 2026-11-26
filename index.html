@@ -1282,6 +1282,11 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:105,d:'11월 26일',t:'세밀해진 집들',l:[
+    '초가지붕에 짚의 결과 겹겹이 얹은 이엉 줄, 지붕을 누르는 새끼줄 그물이 생겼어요. 처마 끝에는 짚이 삐죽삐죽 나와요.',
+    '기와지붕은 기와 골마다 밝은 등과 어두운 고랑이 지고, 처마 끝에 둥근 막새가 줄지어 달렸어요.',
+    '벽에는 흙벽의 얼룩과 나무 기둥·가로 인방이, 바닥에는 막돌 기단이 생겼어요. 문에는 문틀과 널 줄, 띠쇠가 보여요.'
+  ]},
   {v:104,d:'11월 26일',t:'모든 일에 팔과 발',l:[
     '일을 하는 동안 내내 팔이 보여요. 낚시하는 동안은 낚싯대를 들고 있고, 나무 베기는 도끼, 못질·대장간·떡메는 망치, 나무 흔들기·요리·젖 짜기·글공부 같은 일은 손을 뻗고 있어요.',
     '연장을 휘두르는 순간에는 발도 같이 디뎌요.',
@@ -2481,20 +2486,30 @@ function roof(c,x,w,ty,kind,col){
   if(kind==='tile'){
     const k=col||'#4a4f57';
     poly(c,[x-10,ty+8,x+w+10,ty+8,x+w-10,ty-24,x+10,ty-24],k);
-    c.fillStyle=shade(k,.75);for(let i=x-4;i<x+w+6;i+=8)c.fillRect(i,ty-20,2,26);
-    rr(c,x+6,ty-30,w-12,8,3,shade(k,.8));
+    /* v105: 기와 골(세로 줄)마다 밝은 등과 어두운 고랑, 가로로 기와 이음 줄, 처마 끝의 막새(둥근 끝), 용마루 양끝의 망와 */
+    for(let i=x-6;i<x+w+8;i+=6){c.fillStyle=shade(k,.72);c.fillRect(i,ty-22,2,28);c.fillStyle=shade(k,1.22);c.fillRect(i+3,ty-22,1.5,28)}
+    c.fillStyle=shade(k,.62);for(let j=0;j<3;j++)c.fillRect(x-8+j*2,ty-14+j*8,w+16-j*4,1.5);
+    rr(c,x+6,ty-30,w-12,8,3,shade(k,.8));c.fillStyle=shade(k,1.25);c.fillRect(x+9,ty-29,w-18,1.5);
+    rr(c,x+3,ty-33,7,10,2,shade(k,.7));rr(c,x+w-10,ty-33,7,10,2,shade(k,.7));
     poly(c,[x-10,ty+8,x-16,ty,x-6,ty+4],k);poly(c,[x+w+10,ty+8,x+w+16,ty,x+w+6,ty+4],k);
     c.fillStyle=shade(k,.6);c.fillRect(x-10,ty+6,w+20,4);
+    for(let i=x-8;i<x+w+8;i+=6)circ(c,i+1.5,ty+8,2.2,shade(k,.85));
   }else{
-    const k=col||'#d9b55a';
+    const k=col||'#c9a750';
     c.fillStyle=k;c.beginPath();c.moveTo(x-10,ty+8);c.quadraticCurveTo(x+w/2,ty-56,x+w+10,ty+8);c.closePath();c.fill();
-    c.fillStyle=shade(k,.84);for(let i=x;i<x+w;i+=10)c.fillRect(i,ty-8,2,14);
-    c.fillStyle=shade(k,.7);c.fillRect(x-10,ty+4,w+20,4);
+    /* v105: 짚의 결(가닥마다 밝고 어두운 줄), 겹겹이 얹은 이엉 줄, 지붕을 누르는 새끼줄 그물, 처마 끝의 삐죽한 짚 */
+    c.save();c.beginPath();c.moveTo(x-10,ty+8);c.quadraticCurveTo(x+w/2,ty-56,x+w+10,ty+8);c.closePath();c.clip();
+    for(let i=x-10,n=0;i<x+w+10;i+=3,n++){c.fillStyle=n%3===0?shade(k,.8):n%3===1?shade(k,1.14):shade(k,.92);c.fillRect(i,ty-30,1.5,40)}
+    c.strokeStyle=shade(k,.66);c.lineWidth=1.6;for(let j=0;j<3;j++){c.beginPath();c.moveTo(x-10,ty+2-j*8);c.quadraticCurveTo(x+w/2,ty-40-j*10,x+w+10,ty+2-j*8);c.stroke()}
+    c.strokeStyle='rgba(110,80,40,.55)';c.lineWidth=1;for(let i=x-6;i<x+w+10;i+=12){c.beginPath();c.moveTo(i,ty+8);c.lineTo(i+10,ty-28);c.moveTo(i+10,ty+8);c.lineTo(i,ty-28);c.stroke()}
+    c.restore();
+    c.fillStyle=shade(k,.66);c.fillRect(x-10,ty+4,w+20,4);
+    c.fillStyle=shade(k,.9);for(let i=x-9;i<x+w+9;i+=4)c.fillRect(i,ty+7,2,3+((i>>2)%2)*2);
   }
 }
 // 창호: 한지 바른 문살 창. 밤에는 호롱불 빛이 비친다
 function drawWindow(c,cx,wy,night){rr(c,cx-9,wy-1,18,18,2,'#6b4a2a');rr(c,cx-8,wy,16,16,1,night?'#ffe27a':'#f6efdc');c.fillStyle='rgba(107,74,42,.75)';c.fillRect(cx-4,wy,1.5,16);c.fillRect(cx+3,wy,1.5,16);c.fillStyle='rgba(90,70,50,.55)';c.fillRect(cx-1,wy,2,16);c.fillRect(cx-8,wy+7,16,2)}
-function drawDoor(c,dx,by){rr(c,dx-9,by-26,18,26,[8,8,0,0],'#7a5230');circ(c,dx+5,by-12,1.6,'#f7d24a')}
+function drawDoor(c,dx,by){rr(c,dx-11,by-28,22,28,[9,9,0,0],'#5a3a22');rr(c,dx-9,by-26,18,26,[8,8,0,0],'#7a5230');c.fillStyle='#5e3f24';for(const k of [-4.5,0,4.5])c.fillRect(dx+k-.6,by-25,1.2,25);c.fillStyle='#4a3020';c.fillRect(dx-9,by-18,18,1.5);c.fillRect(dx-9,by-7,18,1.5);circ(c,dx+5,by-12,2,'#8a6a2a');circ(c,dx+5,by-12,1.2,'#f7d24a')} /* v105: 문틀·널 줄·띠쇠 */
 function drawHome(c,b,night){
   const x=b.x*T,y=b.y*T,w=b.w*T,by=y+b.h*T,L=S.house,dx=b.door[0]*T+T/2,mx=x+w/2;
   if(S.camp){
@@ -2726,7 +2741,12 @@ function bldArt(c,b,night){
   const x=b.x*T,y=b.y*T,w=b.w*T,by=y+b.h*T,dx=b.door[0]*T+T/2;
   ell(c,x+w/2,by,w/2+4,6,'rgba(0,0,0,.18)');
   rr(c,x+2,y-4,w-4,by-y+4,4,b.wall);
-  c.fillStyle='#6b4a2a';c.fillRect(x+2,y-4,4,by-y+4);c.fillRect(x+w-6,y-4,4,by-y+4);c.fillStyle='#9a9a94';c.fillRect(x-2,by-4,w+4,4);
+  /* v105: 흙벽의 얼룩, 나무 기둥과 가로 인방, 막돌로 쌓은 기단 */
+  for(let i=0;i<14;i++){const a=hash(b.x*7+i*3,b.y*5+i),q=hash(b.y*3+i*11,b.x+i*2);c.fillStyle=i%2?'rgba(120,90,60,.13)':'rgba(255,255,255,.2)';c.fillRect(x+8+a*(w-18),y+2+q*(by-y-14),3,2)}
+  c.fillStyle='#6b4a2a';c.fillRect(x+2,y-4,4,by-y+4);c.fillRect(x+w-6,y-4,4,by-y+4);c.fillRect(x+2,y+10,w-4,3);
+  c.fillStyle='#8a6a48';c.fillRect(x+3,y-4,1.2,by-y+4);c.fillRect(x+w-5,y-4,1.2,by-y+4);
+  c.fillStyle='#8f8f88';c.fillRect(x-2,by-5,w+4,5);
+  for(let i=x-2,n=0;i<x+w+2;i+=7,n++){c.fillStyle=n%2?'#a9a9a2':'#9a9a94';c.fillRect(i,by-5,6,4);c.fillStyle='#75756e';c.fillRect(i+6,by-5,1,5)}
   roof(c,x,w,y-4,b.tile?'tile':'thatch',null);
   if(b.id==='moru'){ /* 2층 다락: 조수 바우가 산다(v96). 지붕 위로 작은 방 하나와 제 지붕 */
     const lw=46,lx=x+w/2-lw/2,ly=y-58;
