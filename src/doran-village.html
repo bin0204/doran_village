@@ -1250,6 +1250,11 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:82,d:'11월 26일',t:'큼직한 놀이판 · 귀해진 장비',l:[
+    '이웃·스승과 하는 놀이의 판이 커졌어요. 예법 수련, 안목 겨루기, 활쏘기, 수련장, 씨름, 투호, 줄타기, 탈춤, 뱃놀이, 제기, 떡메, 대패질, 수라간 요리, 흥정 같은 놀이를 화면에 맞춰 최대 1.7배로 그리고 글씨도 키웠어요.',
+    '장비가 귀해졌어요. 일하다 찾거나 짐승이 떨어뜨릴 확률이 절반으로 줄었어요. 잔치와 부탁의 상은 그대로예요.',
+    '더 높은 자리의 레벨 간격이 넓어졌어요. 18·21·24·28에서 20·25·30·36으로 바뀌었어요. 이미 오른 자리는 그대로예요.'
+  ]},
   {v:81,d:'11월 26일',t:'다친 모습 · 지도의 안개 · 수수한 길 장비',l:[
     '짐승에게 물리거나 맞붙다 맞으면 알림 글 대신 눈으로 보여요. 화면이 잠깐 흔들리고 가장자리가 붉어지며, 내 모습이 붉게 깜빡이고 잃은 기력이 머리 위에 붉은 숫자로 떠요.',
     '지도는 이제 가 본 곳만 밝혀져요. 작은 지도도 큰 지도도 처음에는 어둡고, 직접 걸어 다닌 둘레가 차츰 밝아져요. 곳마다 따로 기억해요.',
@@ -1624,7 +1629,8 @@ const courtTitle=()=>{const C=S.court;return C.rank===0?(S.sex==='f'?'궁녀':'�
 // 나쁜 길은 임금이 아니라 악명(inf)과 레벨로 저절로 오른다(mainRogueUp)
 const MAIN_LV=12; /* v81: 10→12 */
 /* v80 균형: 높은 자리의 레벨을 12·16·20·25에서 18·21·24·28로 올렸다(길의 으뜸 자리가 레벨 14라 그 뒤로 이어지게) */
-const MAIN_TIERS=[{lv:18,stat:15,done:20,h:3,inf:80,prize:2500},{lv:21,stat:17,done:30,h:3,inf:130,prize:5000},{lv:24,stat:19,done:42,h:4,inf:200,prize:9000},{lv:28,stat:20,done:56,h:5,inf:300,prize:15000}];
+/* v82: 높은 자리의 레벨 간격을 넓힘(18·21·24·28 → 20·25·30·36, 사용자 요청) */
+const MAIN_TIERS=[{lv:20,stat:15,done:20,h:3,inf:80,prize:2500},{lv:25,stat:17,done:30,h:3,inf:130,prize:5000},{lv:30,stat:19,done:42,h:4,inf:200,prize:9000},{lv:36,stat:20,done:56,h:5,inf:300,prize:15000}];
 const MAIN={
   cook:{n:'수라간의 길',fit:['cook3','cook4','cook5','cook6'],stat:'cook',dn:'올린 수라상',done:()=>S.job.served,perk:'수라상 하사금이 늘어요',titles:()=>S.sex==='f'?['부제조상궁','제조상궁','수라간 큰어른','나라의 손맛']:['사옹원 첨정','사옹원 정','사옹원 제조','사옹원 도제조']},
   court:{n:'왕실의 길',fit:['court3','court4','court5','court6'],stat:'grace',dn:'예법 수련',done:()=>S.court.done,perk:'내탕금이 늘어요',titles:()=>{const t=S.court&&S.court.mate==='princess'?'국서':'왕비';return['어진 '+t,'덕 높은 '+t,'백성의 어버이','성군의 짝']}},
@@ -2683,7 +2689,11 @@ function drawStock(c,a){
 // ───────── 화면 그리기 ─────────
 const FONT='Jua,"Apple SD Gothic Neo","Malgun Gothic",sans-serif';
 function bubble(c,x,y,txt,col){circ(c,x,y,9,'#fff');poly(c,[x-3,y+7,x+3,y+7,x,y+13],'#fff');c.fillStyle=col;c.font='15px '+FONT;c.textAlign='center';c.textBaseline='middle';c.fillText(txt,x,y+1)}
-function label(c,x,y,txt){c.font='12px '+FONT;c.textAlign='center';c.textBaseline='middle';const w=c.measureText(txt).width+10;rr(c,x-w/2,y-8,w,16,5,'rgba(251,245,230,.93)');c.fillStyle='#33261c';c.fillText(txt,x,y+1)} /* 이름표: 한지 빛 바탕에 먹빛 글씨 */
+let lblT=null; /* 키운 미니게임 판(v82)의 이름표: 자리는 판을 따라 옮기고, 글씨는 화면을 넘지 않을 만큼만 키운다 */
+function label(c,x,y,txt){
+  if(lblT){const t=lblT;lblT=null;c.font='12px '+FONT;const w=c.measureText(txt).width+10,L=Math.max(.8,Math.min(t.K,1.3,(view.w-10)/w)),X=clamp(t.cx+(x-t.cx)*t.K,cam.x+w*L/2+3,cam.x+view.w-w*L/2-3),Y=t.cy+(y-t.cy)*t.K;
+    c.save();c.translate(X,Y);c.scale(L,L);label(c,0,0,txt);c.restore();lblT=t;return}
+  c.font='12px '+FONT;c.textAlign='center';c.textBaseline='middle';const w=c.measureText(txt).width+10;rr(c,x-w/2,y-8,w,16,5,'rgba(251,245,230,.93)');c.fillStyle='#33261c';c.fillText(txt,x,y+1)} /* 이름표: 한지 빛 바탕에 먹빛 글씨 */
 function resize(){
   const r=$('stage').getBoundingClientRect();dpr=Math.min(window.devicePixelRatio||1,2);
   // 도트가 뭉개지지 않게 화면 배율을 0.5 단위로 맞춘다 (도트 한 칸 = 화면 정수 픽셀)
@@ -3846,7 +3856,7 @@ function updMg(dt){
   }else if(m.kind==='mine'){m.r-=(26+m.i*9)*dt;if(m.r<5)mgHit(0)}
   else{m.t+=dt;m.p=Math.max(0,m.p-.22*dt);if(m.t>7)mgEnd()}
 }
-function drawMg(c,labels){
+function drawMgIn(c,labels){
   const m=mg;if(!m)return;
   if(m.kind==='kindle'||m.kind==='pee'){
     const bx=(rx(P)+.5)*T,by=(ry(P)+.9)*T-68,w=84,u=m.kind==='pee'?Math.min(1,m.t/2.2):m.p;
@@ -3942,7 +3952,7 @@ function drawMg(c,labels){
   }
   if(m.kind==='rope'){
     // 두 말뚝 사이의 줄과 줄 타는 사람(기운 만큼 몸이 눕는다). 왼쪽 깃발은 바람, 아래 막대는 기운 정도
-    const p=ritePad(),w=176,h=92,x0=p.cx-w/2,y0=p.cy-h/2,ry0=y0+48,wx=x0+22+(w-44)*clamp(m.pr,0,1),sag=Math.sin(clamp(m.pr,0,1)*Math.PI)*4;
+    const p=mgPad(c),w=176,h=92,x0=p.cx-w/2,y0=p.cy-h/2,ry0=y0+48,wx=x0+22+(w-44)*clamp(m.pr,0,1),sag=Math.sin(clamp(m.pr,0,1)*Math.PI)*4;
     rr(c,x0,y0,w,h,12,'rgba(42,29,19,.86)');
     rr(c,x0+12,ry0-22,4,40,1,'#8a5a34');rr(c,x0+w-16,ry0-22,4,40,1,'#8a5a34');
     c.strokeStyle='#e6d3a3';c.lineWidth=1.6;c.beginPath();c.moveTo(x0+14,ry0-18);c.quadraticCurveTo(wx,ry0-18+sag*2,x0+w-14,ry0-18);c.stroke();
@@ -3955,7 +3965,7 @@ function drawMg(c,labels){
   }
   if(m.kind==='dance'){
     // 탈 쓴 춤꾼과 굴러오는 북점. 왼쪽 동그라미에 겹칠 때 누른다
-    const p=ritePad(),w=180,h=92,x0=p.cx-w/2,y0=p.cy-h/2,hx=x0+32,ty=y0+64,hop=m.hop>0?Math.sin(m.hop/.22*Math.PI)*7:Math.abs(Math.sin(m.t*5.2))*2.5,dx=p.cx+8,dy=y0+40-hop;
+    const p=mgPad(c),w=180,h=92,x0=p.cx-w/2,y0=p.cy-h/2,hx=x0+32,ty=y0+64,hop=m.hop>0?Math.sin(m.hop/.22*Math.PI)*7:Math.abs(Math.sin(m.t*5.2))*2.5,dx=p.cx+8,dy=y0+40-hop;
     rr(c,x0,y0,w,h,12,'rgba(42,29,19,.86)');
     if(m.home){ /* 집에서 하는 장단 놀이: 춤꾼 대신 가야금이나 다듬잇돌을 그린다. 맞출 때마다 살짝 튄다 */
       c.save();c.translate(p.cx-26,y0+8-(m.hop>0?2:0));c.scale(1.7,1.7);furnArt(c,m.home==='tune'?'u_gayageum':'dadeumi',0,0,0);c.restore();
@@ -3971,7 +3981,7 @@ function drawMg(c,labels){
   }
   if(m.kind==='drill'){
     // 받아치기 수련: 목검을 든 나와 짚 인형. 왼쪽 위의 등이 붉게 켜지면("쳐라!") 친다. 아래 다섯 점은 번마다의 결과
-    const p=ritePad(),w=170,h=92,x0=p.cx-w/2,y0=p.cy-h/2,gy=y0+68,go=m.st===1&&!m.fin,px=p.cx-24,ddx=p.cx+26,sh=m.sw>0?Math.sin(m.sw*50)*2.5:0;
+    const p=mgPad(c),w=170,h=92,x0=p.cx-w/2,y0=p.cy-h/2,gy=y0+68,go=m.st===1&&!m.fin,px=p.cx-24,ddx=p.cx+26,sh=m.sw>0?Math.sin(m.sw*50)*2.5:0;
     rr(c,x0,y0,w,h,12,go?'rgba(120,34,24,.92)':'rgba(42,29,19,.86)');ell(c,p.cx,gy+2,58,6,'rgba(0,0,0,.25)');
     rr(c,ddx-2+sh,gy-30,4,32,1,'#8a5a34');ell(c,ddx+sh,gy-22,9,12,'#d9b55a');line(c,ddx-13+sh,gy-27,ddx+13+sh,gy-27,'#d9b55a',4.5);c.fillStyle='rgba(138,90,52,.6)';c.fillRect(ddx-8+sh,gy-25,16,1.5);c.fillRect(ddx-7+sh,gy-18,14,1.5);
     circ(c,ddx+sh,gy-40,6.5,'#e2c476');rr(c,ddx-6.5+sh,gy-43,13,2.6,1,'#c8392f');
@@ -3984,7 +3994,7 @@ function drawMg(c,labels){
   }
   if(m.kind==='ssi'){
     // 모래판 위의 두 씨름꾼(파란 샅바가 나, 붉은 샅바가 상대). 저울이 기운 쪽으로 밀리고, 상대가 힘을 쓰면 머리 위에 붉은 느낌표가 뜬다
-    const p=ritePad(),w=180,h=96,x0=p.cx-w/2,y0=p.cy-h/2,gy=y0+64,g=clamp(m.g,-1,1),cx=p.cx+g*30,live=!m.fin&&m.rest<=0;
+    const p=mgPad(c),w=180,h=96,x0=p.cx-w/2,y0=p.cy-h/2,gy=y0+64,g=clamp(m.g,-1,1),cx=p.cx+g*30,live=!m.fin&&m.rest<=0;
     rr(c,x0,y0,w,h,12,'rgba(42,29,19,.86)');
     ell(c,p.cx,gy,76,12,'#b89a5e');ell(c,p.cx,gy-1,72,10,'#d9c08a');
     const man=(x,dir,band,rot)=>{c.save();c.translate(x,gy-2);c.rotate(rot);
@@ -3998,7 +4008,7 @@ function drawMg(c,labels){
   }
   if(m.kind==='boat'){
     // 연못 위의 배(왼쪽에 머문다)와 떠내려오는 연꽃·바위. 밤에는 물이 어둡고 불티가 떨어진다
-    const p=ritePad(),w=184,h=96,x0=p.cx-w/2,y0=p.cy-h/2,wx=x0+8,wy=y0+8,ww=w-16,wh=h-16,bx=wx+30,ly=v=>wy+12+v*(wh-24),by=ly(m.y)+(m.bump>0?Math.sin(m.bump*40)*2:0);
+    const p=mgPad(c),w=184,h=96,x0=p.cx-w/2,y0=p.cy-h/2,wx=x0+8,wy=y0+8,ww=w-16,wh=h-16,bx=wx+30,ly=v=>wy+12+v*(wh-24),by=ly(m.y)+(m.bump>0?Math.sin(m.bump*40)*2:0);
     rr(c,x0,y0,w,h,12,'rgba(42,29,19,.86)');rr(c,wx,wy,ww,wh,8,m.night?'#1f3a52':'#4f93b8');
     c.save();c.beginPath();c.rect(wx,wy,ww,wh);c.clip();
     for(let i=0;i<7;i++){const L=ww+30,rx2=wx+(((i*53-m.t*BOAT_SP*.6)%L)+L)%L-15,ry2=wy+8+((i*29)%(wh-14));line(c,rx2,ry2,rx2+12,ry2,'rgba(255,255,255,.22)',1.2)}
@@ -4017,7 +4027,7 @@ function drawMg(c,labels){
   }
   if(m.kind==='tuho'){
     // 항아리와 꽂힌 살, 날아가는 살. 아래 막대의 초록 칸이 항아리 입구
-    const p=ritePad(),w=160,h=92,x0=p.cx-w/2,y0=p.cy-h/2,cx=p.cx,py=y0+36,sy=y0+h-24;
+    const p=mgPad(c),w=160,h=92,x0=p.cx-w/2,y0=p.cy-h/2,cx=p.cx,py=y0+36,sy=y0+h-24;
     rr(c,x0,y0,w,h,12,'rgba(42,29,19,.86)');
     ell(c,cx,py+16,14,4.5,'rgba(0,0,0,.3)');poly(c,[cx-8,py-12,cx+8,py-12,cx+12,py+4,cx+9,py+16,cx-9,py+16,cx-12,py+4],'#7a8f9a');ell(c,cx,py-12,8,3,'#2a3238');rr(c,cx-15,py-8,4,9,2,'#7a8f9a');rr(c,cx+11,py-8,4,9,2,'#7a8f9a');ell(c,cx-4,py+2,2,5,'rgba(255,255,255,.25)');
     for(let i=0;i<m.hit-(m.fly>0&&m.res?1:0);i++)line(c,cx-5+i*2.5,py-12,cx-10+i*5,py-30,'#e6d3a3',1.8);
@@ -4028,7 +4038,7 @@ function drawMg(c,labels){
   }
   if(m.kind==='pound'){
     // 떡판과 떡, 왼쪽에서 들어오는 솔이 손, 오른쪽의 떡메. 아래 막대: 붉은 칸은 솔이가 뒤집는 때, 초록 칸이 칠 때
-    const p=ritePad(),w=170,h=86,x0=p.cx-w/2,y0=p.cy-h/2,cx=p.cx,by=y0+50,hit=m.sw>0,inn=!m.fin&&m.p<m.inF;
+    const p=mgPad(c),w=170,h=86,x0=p.cx-w/2,y0=p.cy-h/2,cx=p.cx,by=y0+50,hit=m.sw>0,inn=!m.fin&&m.p<m.inF;
     rr(c,x0,y0,w,h,12,'rgba(42,29,19,.84)');
     rr(c,cx-44,by,88,9,3,'#8a5a34');rr(c,cx-40,by+9,8,7,2,'#6e4424');rr(c,cx+32,by+9,8,7,2,'#6e4424');
     ell(c,cx,by-(hit?2:5),hit?31:26,hit?6:9,'#fbf6ea');ell(c,cx-7,by-(hit?3:8),8,2.5,'rgba(255,255,255,.9)');
@@ -4040,7 +4050,7 @@ function drawMg(c,labels){
   }
   if(m.kind==='haul'){
     // 바다와 그물(걷을수록 오른쪽 배로 줄어든다). 위 막대는 팽팽함, 아래 가는 막대는 걷은 만큼
-    const p=ritePad(),w=176,h=86,x0=p.cx-w/2,y0=p.cy-h/2,wave=m.ws===2,warn=m.ws===1,nx=x0+14+(w-66)*clamp(m.pr,0,1),ex=x0+w-46;
+    const p=mgPad(c),w=176,h=86,x0=p.cx-w/2,y0=p.cy-h/2,wave=m.ws===2,warn=m.ws===1,nx=x0+14+(w-66)*clamp(m.pr,0,1),ex=x0+w-46;
     rr(c,x0,y0,w,h,12,'rgba(42,29,19,.84)');rr(c,x0+8,y0+8,w-16,40,6,wave?'#3a74b4':'#4f93d0');
     c.strokeStyle='rgba(255,255,255,'+(wave?.9:warn?.6:.3)+')';c.lineWidth=wave?2.5:1.2;
     for(let i=0;i<3;i++){c.beginPath();for(let x=0;x<=w-24;x+=8){const X=x0+12+x,Y=y0+15+i*11+Math.sin(now*(wave?9:3)+i+x*.12)*(wave?4:1.5);if(x)c.lineTo(X,Y);else c.moveTo(X,Y)}c.stroke()}
@@ -4053,7 +4063,7 @@ function drawMg(c,labels){
   }
   if(m.kind==='jegi'){
     // 바닥과 발, 떠 있는 제기. 초록 띠가 찰 수 있는 높이
-    const p=ritePad(),w=130,h=96,x0=p.cx-w/2,y0=p.cy-h/2,gy=y0+h-16,win=jegiWin(m),jx=p.cx+m.dx*60,jy=gy-8-Math.max(-.06,m.y)*120;
+    const p=mgPad(c),w=130,h=96,x0=p.cx-w/2,y0=p.cy-h/2,gy=y0+h-16,win=jegiWin(m),jx=p.cx+m.dx*60,jy=gy-8-Math.max(-.06,m.y)*120;
     rr(c,x0,y0,w,h,12,'rgba(42,29,19,.84)');rr(c,x0+8,gy,w-16,4,2,'#8a7a5a');
     c.fillStyle='rgba(143,208,106,.3)';c.fillRect(x0+8,gy-8-win*120,w-16,win*120);
     rr(c,p.cx-9+m.dx*30,gy-(m.kick>0?13:6),18,7,3,m.cd>0?'#7a5a4a':'#3a2a22');
@@ -4064,7 +4074,7 @@ function drawMg(c,labels){
   }
   if(m.kind==='pour'){
     // 왼쪽에 손님, 가운데 사발(초록 띠가 바라는 만큼), 오른쪽에 주전자. 누르고 있으면 주전자가 기울고 식혜가 차오른다
-    const p=ritePad(),w=176,h=84,x0=p.cx-w/2,y0=p.cy-h/2,gid=m.g[Math.min(m.i,m.g.length-1)],cw=40,ih=50,cx=p.cx+6,iy=y0+h-14,on=m.on&&!m.next&&holding();
+    const p=mgPad(c),w=176,h=84,x0=p.cx-w/2,y0=p.cy-h/2,gid=m.g[Math.min(m.i,m.g.length-1)],cw=40,ih=50,cx=p.cx+6,iy=y0+h-14,on=m.on&&!m.next&&holding();
     rr(c,x0,y0,w,h,12,'rgba(42,29,19,.84)');
     c.drawImage(charSprite(NPCS[gid],'front',0),x0+14,y0+20,32,48);
     rr(c,cx-cw/2-4,iy-ih-3,cw+8,ih+8,[3,3,10,10],'#f6f1e6');rr(c,cx-cw/2,iy-ih,cw,ih,2,'#33423a');
@@ -4078,7 +4088,7 @@ function drawMg(c,labels){
   }
   if(m.kind==='plane'){
     // 널판과 대패. 깎인 곳은 밝아지고, 옹이는 짙은 마디(걸리면 붉게). 대패는 누르고 있을 때 널에 붙는다
-    const p=ritePad(),w=196,h=26,x0=p.cx-w/2,y0=p.cy-h/2,cw=w/PLANE_N;
+    const p=mgPad(c),w=196,h=26,x0=p.cx-w/2,y0=p.cy-h/2,cw=w/PLANE_N;
     rr(c,x0-10,y0-24,w+20,h+36,12,'rgba(42,29,19,.84)');rr(c,x0,y0,w,h,3,'#a8763f');
     c.fillStyle='#f0d9a8';for(let i=0;i<PLANE_N;i++)if(m.cells[i])c.fillRect(x0+i*cw,y0+2,cw+.6,h-4);
     c.fillStyle='rgba(90,60,30,.22)';c.fillRect(x0,y0+8,w,1);c.fillRect(x0,y0+17,w,1);
@@ -4099,7 +4109,7 @@ function drawMg(c,labels){
   }
   if(m.kind==='bow'){
     // 과녁판과 움직이는 두 줄. 꽂힌 화살은 검은 점으로 남는다
-    const p=ritePad(),x=p.cx,y=p.cy,mv=!m.fin&&m.rev<=0,ax=mv&&m.stage===0?Math.sin(m.ph)*40:m.ax,ay=mv&&m.stage===1?Math.sin(m.ph)*40:m.ay;
+    const p=mgPad(c),x=p.cx,y=p.cy,mv=!m.fin&&m.rev<=0,ax=mv&&m.stage===0?Math.sin(m.ph)*40:m.ax,ay=mv&&m.stage===1?Math.sin(m.ph)*40:m.ay;
     rr(c,x-52,y-52,104,104,14,'rgba(42,29,19,.84)');rr(c,x-36,y-36,72,72,4,'#f6f1e6');
     c.lineWidth=3;c.strokeStyle='#2a2220';c.strokeRect(x-26,y-26,52,52);circ(c,x,y,12,'#d9412e');circ(c,x,y,5.5,'#a8281e');
     for(const q of m.marks)circ(c,x+q[0],y+q[1],2.4,'#2a2220');
@@ -4121,7 +4131,7 @@ function drawMg(c,labels){
   }
   if(m.kind==='eye'){
     // 두 물건을 나란히 보여 준다. 고른 뒤에는 값을 밝히고, 비싼 쪽을 초록으로 칠한다
-    const p=ritePad(),q=m.pairs[Math.min(m.i,m.pairs.length-1)],show=m.rev>0||m.fin;
+    const p=mgPad(c),q=m.pairs[Math.min(m.i,m.pairs.length-1)],show=m.rev>0||m.fin;
     rr(c,p.cx-82,p.cy-46,164,94,16,'rgba(42,29,19,.84)');
     for(let s=0;s<2;s++){
       const x=p.cx+(s?41:-41),y=p.cy-14,id=q[s];
@@ -4137,13 +4147,14 @@ function drawMg(c,labels){
   if(m.kind==='haggle'){
     // 값 눈금(100%~160%). 객주가 망설이기 시작하면 눈금이 떨린다
     const buy=!!m.buy,warn=!m.fin&&(buy?m.mult<m.lim+m.warn:m.mult>m.lim-m.warn),sh=warn?Math.sin(now*60)*2.2:0,bx=(rx(P)+.5)*T+sh,by=(ry(P)+.9)*T+12,w=120,x0=bx-w/2,u=buy?clamp((m.mult-.4)/.6,0,1):clamp((m.mult-1)/.6,0,1); /* 깎기는 100%에서 40%까지 줄어드는 눈금 */ // 좌판과 객주가 가리지 않게 발 아래에 그린다
+    padAt(c,bx,by-4); /* 판을 키운다(v82): 위쪽을 축으로 아래로 자란다 */
     rr(c,x0-4,by-4,w+8,22,10,'rgba(42,29,19,.8)');rr(c,x0,by,w,14,7,'#f3ead6');rr(c,x0,by,Math.max(8,w*u),14,7,warn?'#f08a2a':m.fin&&!m.ok?'#9aa3a8':'#f7c531');
     for(let i=1;i<6;i++)line(c,x0+w*i/6,by+9,x0+w*i/6,by+14,'rgba(60,40,20,.45)',1);
     labels.push(()=>label(c,bx,by+32,m.note||(warn?(buy?'장수가 언짢아해요! 지금 불러요':'객주가 망설여요! 지금 불러요'):'값 '+Math.round(m.mult*100)+'%'+(m.want?' (+인기 30%)':'')+' · 행동으로 값 부르기')));return;
   }
   if(m.kind==='rite'){
     // 네 방향 화살표 판: 보여 줄 때는 차례대로 노랗게 켜지고, 따라 할 때는 누른 것이 잠깐 켜진다
-    const p=ritePad(),k=Math.floor(m.t/.6),lit=m.fin?-1:m.phase==='show'?(m.t>=0&&k<m.seq.length&&m.t-k*.6<.42?m.seq[k]:-1):(m.flash>0?m.lit:-1);
+    const p=mgPad(c),k=Math.floor(m.t/.6),lit=m.fin?-1:m.phase==='show'?(m.t>=0&&k<m.seq.length&&m.t-k*.6<.42?m.seq[k]:-1):(m.flash>0?m.lit:-1);
     rr(c,p.cx-56,p.cy-56,112,112,18,'rgba(42,29,19,.8)');
     for(let d=0;d<4;d++){
       const x=p.cx+DIRS[d][0]*32,y=p.cy+DIRS[d][1]*32,dx=DIRS[d][0],dy=DIRS[d][1],on=lit===d;
@@ -4156,7 +4167,7 @@ function drawMg(c,labels){
   }
   if(m.kind==='cook'){
     // 가로 눈금: 초록 띠가 알맞은 불, 붉은 바늘이 지금 불. 아래 막대는 익은 정도, 그 밑 가는 줄은 탄 정도
-    const bx=(rx(P)+.5)*T,by=(ry(P)+.9)*T-78,w=120,x0=bx-w/2,b=cookBand(m),hot=m.heat>b.c+b.hw;
+    const bx=(rx(P)+.5)*T,by=(ry(P)+.9)*T-78,w=120,x0=bx-w/2,b=cookBand(m),hot=m.heat>b.c+b.hw;padAt(c,bx,by+36); /* 판을 키운다(v82): 아래쪽을 축으로 위로 자란다 */
     rr(c,x0-4,by-4,w+8,34,9,'rgba(42,29,19,.78)');rr(c,x0,by,w,12,6,'#f3ead6');
     rr(c,x0+w*.86,by,w*.14,12,[0,6,6,0],'#f2b8a8');
     rr(c,x0+Math.max(0,b.c-b.hw)*w,by,Math.min(1,b.hw*2)*w,12,3,'#8fd06a');
@@ -5553,7 +5564,7 @@ function eyePick(s){
   m.pickd=s;const ok=s===m.ans;if(ok){m.good++;sfx('pick')}else{m.bad++;sfx('err')}
   m.note=ok?'맞아요!':s<0?'머뭇거렸어요':'아쉬워요';m.rev=1;
 }
-function eyeClick(wx,wy){const p=ritePad();if(Math.abs(wx-p.cx)<=82&&Math.abs(wy-p.cy)<=48)eyePick(wx<p.cx?0:1)}
+function eyeClick(wx,wy){const p=ritePad(),K=mgK();if(Math.abs(wx-p.cx)<=82*K&&Math.abs(wy-p.cy)<=48*K)eyePick(wx<p.cx?0:1)}
 function updEye(m,dt){
   if(m.fin){m.end-=dt;if(m.end<=0)mgEnd();return}
   if(m.rev>0){
@@ -5655,7 +5666,21 @@ function riteRound(m){
   for(let i=0;i<m.rounds[m.r];i++){let d=Math.floor(Math.random()*4);if(i&&d===m.seq[i-1]&&Math.random()<.7)d=(d+1+Math.floor(Math.random()*3))%4;m.seq.push(d)}
   m.phase='show';m.t=-.8;m.k=-1;m.i=0;
 }
-const ritePad=()=>{const py=(ry(P)+.9)*T;let cy=py-116;if(cy-74<cam.y)cy=py+78;return{cx:(rx(P)+.5)*T,cy}};
+// 미니게임 판 키우기(v82, 사용자 요청: 너무 작고 읽기 어렵다): 머리 위의 판을 화면 크기에 맞춰 mgK()배(1~1.7)로 그린다.
+// ritePad()=판의 가운데(화면 밖으로 나가지 않게 안으로 민다. 화면이 낮으면 캐릭터를 덮는다). 그릴 때는 mgPad(c)가 가운데를 축으로 늘림을 걸고,
+// drawMg가 끝에 풀면서 그 판의 이름표도 같이 옮긴다(label의 lblT). 누른 자리를 보는 riteClick·eyeClick은 같은 배율로 거꾸로 센다
+const mgK=()=>clamp(Math.min((view.w-16)/200,(view.h-24)/175),1,1.7);
+const ritePad=()=>{const K=mgK(),py=(ry(P)+.9)*T,ex=100*K+4,ey=60*K+16;
+  return{cx:clamp((rx(P)+.5)*T,cam.x+ex,Math.max(cam.x+ex,cam.x+view.w-ex)),cy:clamp(py-44-ey,cam.y+ey,Math.max(cam.y+ey,cam.y+view.h-ey))}};
+let padT=null;
+function padAt(c,x,y){const K=mgK();padT={cx:x,cy:y,K};c.save();c.translate(x,y);c.scale(K,K);c.translate(-x,-y)}
+function mgPad(c){const p=ritePad();padAt(c,p.cx,p.cy);return p}
+function drawMg(c,labels){
+  padT=null;const n=labels.length;drawMgIn(c,labels);
+  if(!padT)return;
+  c.restore();const t=padT;padT=null;
+  for(let i=n;i<labels.length;i++){const f=labels[i];labels[i]=()=>{lblT=t;f();lblT=null}}
+}
 function ritePress(d){
   const m=mg;if(!m||m.kind!=='rite'||m.fin||m.phase!=='input'||d<0||d>3)return;
   m.flash=.2;m.lit=d;m.t=0;
@@ -5671,8 +5696,8 @@ function ritePress(d){
   }
 }
 function riteClick(wx,wy){
-  const p=ritePad();
-  for(let d=0;d<4;d++)if(Math.hypot(wx-(p.cx+DIRS[d][0]*32),wy-(p.cy+DIRS[d][1]*32))<=19){ritePress(d);return}
+  const p=ritePad(),K=mgK();
+  for(let d=0;d<4;d++)if(Math.hypot(wx-(p.cx+DIRS[d][0]*32*K),wy-(p.cy+DIRS[d][1]*32*K))<=19*K){ritePress(d);return}
 }
 function updRite(m,dt){
   if(m.fin){m.end-=dt;if(m.end<=0)mgEnd();return}
@@ -7527,11 +7552,11 @@ const FIND_AT={fresh:'민물 낚시',sea:'바다 낚시',deep:'먼바다 낚시'
 // 일하다가 장비를 얻는다: 그 일(src)에서 나오는 것 가운데 아직 없는 것이 운(p)에 따라 나온다. quiet면 알리지 않고 id만 돌려준다(부르는 쪽이 말에 넣는다)
 // 귀한 것일수록 드물다: 남은 것 가운데 하나를 짚고, 그 등급의 드묾(GEAR_RARE)만큼 다시 가린다. 그래서 수수한 것을 다 모은 뒤에는 한참 만에 하나씩 나온다.
 // 상으로 받는 것(quiet: 잔치·부탁)은 등급으로 가리지 않는다. 짐승이 떨어뜨리는 것은 DROP_RARE를 쓴다(gearDrop)
-const GEAR_RARE=[1,.5,.2,.1,.06],DROP_RARE=[1,.8,.5,.3,.15];
+const GEAR_RARE=[1,.5,.2,.1,.06],DROP_RARE=[1,.8,.5,.3,.15],GEAR_K=.5; /* GEAR_K(v82): 일하다 찾거나 짐승이 떨어뜨릴 확률을 통째로 절반으로(사용자 요청: 어려워야 얻는 맛이 난다). 잔치·부탁의 상은 그대로 */
 function gearFind(src,p,how,quiet){
   const pool=Object.keys(GEAR).filter(k=>GEAR[k].find===src&&!S.gear.own[k]);
   if(!pool.length)return null;
-  const id=pick(pool);if(Math.random()>=p*(quiet?1:GEAR_RARE[GEAR[id].g])*(1+gearFx('luck')*2))return null;
+  const id=pick(pool);if(Math.random()>=p*(quiet?1:GEAR_RARE[GEAR[id].g]*GEAR_K)*(1+gearFx('luck')*2))return null;
   gearGet(id);
   if(!quiet)setTimeout(()=>{if(!S)return;if(busy()||mg||fishing)toast(how+' '+jo(GEAR[id].n,'을','를')+' 얻었어요! "장비"에서 걸쳐요');else gearSay(id,how)},900);
   return id;
@@ -7629,7 +7654,7 @@ function gearGet(id){
 const gearSay=(id,how)=>dialog({who:'장비',role:GEAR_GRADE[GEAR[id].g]+' '+gearSlot(GEAR[id].s)+' · 레벨 '+GEAR[id].lv+'부터',text:how+' '+jo(GEAR[id].n,'을','를')+' 얻었어요!\n'+gearTxt(id)+'\n('+(S.level<GEAR[id].lv?'레벨 '+GEAR[id].lv+'이 되면 걸칠 수 있어요. 그때까지 잘 간직해요.':'아래 "나"의 "장비"에서 걸치거나 바꿀 수 있어요.')+')'});
 // 짐승을 잡았을 때: 그 짐승이 떨어뜨리는 장비가 있으면 운에 따라 나온다
 function gearDrop(kind){
-  for(const id in GEAR){const d=GEAR[id].drop;if(!d||d[0]!==kind||Math.random()>=d[1]*DROP_RARE[GEAR[id].g]*(1+gearFx('luck')*2))continue;
+  for(const id in GEAR){const d=GEAR[id].drop;if(!d||d[0]!==kind||Math.random()>=d[1]*DROP_RARE[GEAR[id].g]*GEAR_K*(1+gearFx('luck')*2))continue;
     if(gearGet(id))setTimeout(()=>{if(S&&!busy())gearSay(id,BEASTS[kind].n+'에게서')},900);return}
 }
 // 대장간에서 짓기: 연장 벼리기와 같은 두드리기 놀이를 한다. 재료와 삯은 다 두드려 냈을 때만 든다
