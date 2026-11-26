@@ -1247,6 +1247,10 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:79,d:'11월 26일',t:'쓰임이 있는 가구',l:[
+    '집 안의 가구를 바라보고 행동하면 그 가구로 할 수 있는 일이 나와요. 평상과 보료에서 낮잠, 다기로 차 마시기, 책장과 서책으로 책 읽기, 벼루로 글씨 쓰기, 바둑판 묘수풀이, 물레로 실 잣기 같은 것들이에요.',
+    '가야금과 다듬잇돌은 장단에 맞춰 직접 뜯고 두드려요. 반닫이와 머릿장, 경대에서는 옷을 갈아입을 수 있어요.',
+    '상 위에 올려 둔 것의 쓰임도 그 상 앞에서 함께 나와요. 기력이나 스탯이 붙는 것은 쓰임마다 하루 한 번이에요.']},
   {v:78,d:'11월 26일',t:'수라간 갈래의 음식',l:[
     '수라간의 전문 갈래마다 그 갈래에서만 짓는 음식이 생겼어요. 입문·숙련·달인에 하나씩 배워요.',
     '탕과 찜은 갈비찜·전복찜·신선로, 구이와 전은 산적·민어전·화양적, 병과와 음청은 약식·수정과·오색 다식이에요. 수라간이나 집 아궁이의 음식 목록에 나와요.']},
@@ -1410,6 +1414,7 @@ function fixState(s){
   s.plots=s.plots||[];s.npcs=s.npcs||{};s.known=s.known||{};s.quests=s.quests||[];s.shopFurn=s.shopFurn||[];
   s.gseen=s.gseen||{}; /* 길잡이에서 이미 본 일 */
   s.spec=s.spec&&typeof s.spec==='object'?s.spec:{}; /* 길마다 고른 전문 갈래 {id,st} */
+  s.fuse=s.fuse&&typeof s.fuse==='object'?s.fuse:{}; /* 가구의 쓰임을 마지막으로 누린 날 */
   // 마을 씨앗(seed): 0이면 처음 만든 모양의 마을(예전 저장), 아니면 그 씨앗으로 지은 마을. gen은 생성기 판 번호. 이 함수는 그 마을이 지어진 뒤(buildTown)에 불러야 한다
   s.seed=s.seed>>>0;s.gen=s.seed?(s.gen|0)||1:0;
   for(let i=0;i<TOWN.TREES.length;i++)if(!s.trees[i])s.trees[i]={d:1,h:0};
@@ -3150,6 +3155,47 @@ const furnAt=(x,y)=>S.placed.find(f=>furnOn(f,x,y)); /* 그 칸에 놓인 것 �
 /* 놓인 가구의 자리: f 깔개 · m 바닥에 놓인 것(길을 막는다) · t 상 위에 올린 것(놓을 때 z:'t'로 적는다) · h 매단 것 */
 const furnSlot=p=>p.z==='t'?'t':p.z==='w'?'w':FURN[p.id].walk?'f':FURN[p.id].hang?'h':'m'; /* w 벽에 건 것(놓을 때 z:'w') */
 const mainAt=(x,y)=>S.placed.find(f=>furnOn(f,x,y)&&furnSlot(f)==='m');
+// ───────── 쓰임이 있는 가구 (v79) ─────────
+// 집 안에 놓은 가구를 바라보고 행동하면 그 가구로 할 수 있는 일이 나온다. 그 칸에 겹쳐 놓은 것(상 위의 다기, 서안 위의 벼루)의 쓰임도 함께 나온다.
+// 덤(기력·스탯·경험치)은 쓰임마다 하루 한 번만 붙는다(S.fuse[열쇠]=날짜, furnOnce). 되풀이해서 스탯을 올릴 수 없게 하려는 것이다.
+// ids=이 쓰임이 달린 가구, n=단추에 적는 말, fn=하는 일. 가구에 쓰임을 더하려면 ids에 넣거나 한 줄을 더한다
+const furnOnce=k=>{if(S.fuse[k]===S.day)return false;S.fuse[k]=S.day;touch();return true};
+const furnTime=n=>{S.min=Math.min(1380,S.min+n)};
+const FURN_USE={
+  nap:{ids:['pyeongsang','daecheong','sofa'],n:'낮잠 자기',fn:()=>{if(!furnOnce('nap')){toast('오늘은 이미 한숨 잤어요');return}S.en=Math.min(maxEn(),S.en+25);furnTime(90);hud();sfx('heart');toast('한숨 자고 일어났어요 · 기력 +25 · 한 시간 반이 지났어요')}},
+  tea:{ids:['dagi'],n:'차 마시기',fn:()=>{if(!furnOnce('tea')){toast('오늘 차는 이미 마셨어요');return}S.en=Math.min(maxEn(),S.en+12);train('grace',1);furnTime(20);hud();sfx('heart');toast('차를 우려 한 잔 마셨어요 · 기력 +12 · 기품이 조금 올랐어요')}},
+  read:{ids:['shelf','sabang','seochaek'],n:'책 읽기',fn:()=>{if(!furnOnce('read')){toast('오늘은 책을 충분히 읽었어요');return}train('lore',2);addXp(8);furnTime(40);hud();sfx('pick');toast('책을 꺼내 읽었어요 · 학식이 조금 올랐어요 · 경험치 +8')}},
+  write:{ids:['byeoru'],n:'글씨 쓰기',fn:()=>{if(!furnOnce('write')){toast('오늘은 먹을 다 썼어요');return}train('lore',1);train('grace',1);addXp(6);furnTime(30);hud();sfx('pick');toast('먹을 갈아 글씨를 썼어요 · 학식과 기품이 조금 올랐어요')}},
+  baduk:{ids:['badukpan'],n:'묘수풀이',fn:()=>{if(!furnOnce('baduk')){toast('오늘 묘수풀이는 다 풀었어요');return}train('lore',2);train('trade',1);addXp(8);furnTime(40);hud();sfx('pick');toast('바둑판에 돌을 놓으며 묘수를 풀었어요 · 학식과 수완이 조금 올랐어요')}},
+  groom:{ids:['gyeongdae'],n:'매무새 다듬기',fn:()=>{if(furnOnce('groom')){train('grace',1);toast('거울 앞에서 매무새를 다듬었어요 · 기품이 조금 올랐어요')}openWardrobe()}},
+  chest:{ids:['bandaji','meorijang','hwachojang','u_jagae','jagae','baegwe'],n:'옷 꺼내 입기',fn:()=>openWardrobe()},
+  tune:{ids:['u_gayageum'],n:'가야금 뜯기',fn:()=>startDance('tune')},
+  beat:{ids:['dadeumi'],n:'다듬이질',fn:()=>startDance('beat')},
+  spin:{ids:['mulle'],n:'실 잣기',fn:()=>{if(!furnOnce('spin')){toast('오늘 자을 솜은 다 자았어요');return}addCoins(45);train('trade',1);furnTime(40);sfx('coin');toast('물레를 돌려 실 한 타래를 자았어요 · 실 값 45냥 · 수완이 조금 올랐어요')}},
+  warm:{ids:['stove','hwaro'],n:'불 쬐기',fn:()=>{if(season()!==3){toast('화로에 손을 쬐어요. 추운 겨울에는 몸이 풀려서 기력이 차요');return}if(!furnOnce('warm')){toast('따뜻해요. 오늘은 이미 몸을 녹였어요');return}S.en=Math.min(maxEn(),S.en+15);hud();sfx('heart');toast('화로 곁에서 언 몸을 녹였어요 · 기력 +15')}},
+  care:{ids:['tank','plant','u_bunjae','g_sol'],n:'돌보기',fn:()=>{if(!furnOnce('care')){toast('오늘은 이미 돌봤어요');return}addXp(5);sfx('water');toast('물을 갈고 잎을 닦아 줬어요 · 경험치 +5')}}
+};
+/* 바라보는 칸에 놓인 것들의 쓰임 */
+function furnUses(){
+  if(scene!=='home'||!S)return[];const x=P.x+P.dir[0],y=P.y+P.dir[1],here=S.placed.filter(p=>furnOn(p,x,y)&&furnSlot(p)!=='f'),out=[];
+  for(const k in FURN_USE)if(here.some(p=>FURN_USE[k].ids.includes(p.id)))out.push(k);
+  return out;
+}
+function furnAct(f){
+  if(f.id==='agungi'){openCook(true);return}
+  const uses=furnUses(),party=PARTY_AT[f.id]&&!S.inQ;
+  if(!uses.length){if(party)partyTalk(f);else toast(FURN[f.id].n+' · 아늑함 +'+FURN[f.id].c);return}
+  if(uses.length===1&&!party){FURN_USE[uses[0]].fn();return}
+  const ch=uses.map(k=>[FURN_USE[k].n,FURN_USE[k].fn]);if(party)ch.push(['집들이',()=>partyTalk(f)]);ch.push(['그만둔다',null]);
+  dialog({who:FURN[f.id].n,text:'무엇을 할까요?',choices:ch});
+}
+/* 가야금 뜯기·다듬이질(집에서 하는 장단 놀이)의 끝맺음: 하루 첫 번에만 기품과 경험치가 붙고, 그 뒤로는 재미로만 한다 */
+function tuneEnd(m){
+  const beat=m.home==='beat';if(!m.fin){toast(beat?'다듬이질을 그만뒀어요':'가야금을 내려놓았어요');return}
+  const sc=Math.max(0,m.perf*2+m.good-m.bad),first=furnOnce(beat?'beat':'tune');furnTime(25);
+  if(first){train('grace',sc>=28?3:sc>=15?2:1);addXp(6+Math.round(sc/3))}
+  saveAll();toast((beat?'다듬이 소리가 고르게 울렸어요':'가야금 한 가락을 뜯었어요')+' · '+sc+'점'+(first?' · 기품이 조금 올랐어요':' · 오늘은 더 해도 기품이 늘지 않아요'));
+}
 const isDoor=(x,y)=>(scene==='palace'?PBLD:scene==='resort'?RBLD:BLD).some(b=>b.door[0]===x&&b.door[1]===y);
 // 이웃은 마을에, 왕실 사람들은 궁궐에 있다
 const npcHere=id=>(NPCS[id].at||'town')===scene;
@@ -3429,7 +3475,7 @@ function act(tg,x,y){
   case 'work':if(workDone(tg.k))workUse(tg.k);else openWork(tg.k);break;
   case 'shoal':startFishing(x,y);if(fishing)fishing.deep=tg;break;
   case 'bed':askSleep();break;
-  case 'furn':if(tg.f.id==='agungi'){openCook(true);break}if(PARTY_AT[tg.f.id]&&!S.inQ){partyTalk(tg.f);break}toast(FURN[tg.f.id].n+' · 아늑함 +'+FURN[tg.f.id].c);break;
+  case 'furn':furnAct(tg.f);break;
   }
 }
 function interact(){
@@ -3877,12 +3923,16 @@ function drawMg(c,labels){
     // 탈 쓴 춤꾼과 굴러오는 북점. 왼쪽 동그라미에 겹칠 때 누른다
     const p=ritePad(),w=180,h=92,x0=p.cx-w/2,y0=p.cy-h/2,hx=x0+32,ty=y0+64,hop=m.hop>0?Math.sin(m.hop/.22*Math.PI)*7:Math.abs(Math.sin(m.t*5.2))*2.5,dx=p.cx+8,dy=y0+40-hop;
     rr(c,x0,y0,w,h,12,'rgba(42,29,19,.86)');
+    if(m.home){ /* 집에서 하는 장단 놀이: 춤꾼 대신 가야금이나 다듬잇돌을 그린다. 맞출 때마다 살짝 튄다 */
+      c.save();c.translate(p.cx-26,y0+8-(m.hop>0?2:0));c.scale(1.7,1.7);furnArt(c,m.home==='tune'?'u_gayageum':'dadeumi',0,0,0);c.restore();
+    }else{
     line(c,dx-9,dy-2,dx-17,dy-10+Math.sin(m.t*5.2)*4,'#f3ead6',3);line(c,dx+9,dy-2,dx+17,dy-10-Math.sin(m.t*5.2)*4,'#f3ead6',3);
     rr(c,dx-8,dy-6,16,15,4,'#f3ead6');rr(c,dx-8,dy+2,16,3,1,'#c8392f');rr(c,dx-6,dy+9,4,7,1.5,'#2e4a8a');rr(c,dx+2,dy+9,4,7,1.5,'#2e4a8a');
     ell(c,dx,dy-14,8,8.5,'#fbf6ea');circ(c,dx-3,dy-16,1.3,'#1f1612');circ(c,dx+3,dy-16,1.3,'#1f1612');circ(c,dx-5,dy-11.5,1.6,'#d9412e');circ(c,dx+5,dy-11.5,1.6,'#d9412e');c.strokeStyle='#1f1612';c.lineWidth=1.2;c.beginPath();c.arc(dx,dy-12.5,3.2,.25,2.9);c.stroke();
+    }
     rr(c,x0+12,ty-1,w-24,2,1,'#6a5a48');c.strokeStyle='#fffbe8';c.lineWidth=2;c.beginPath();c.arc(hx,ty,9,0,7);c.stroke();
     for(const n of m.notes){const x=hx+(n.t-m.t)*112;if(x<x0+12||x>x0+w-10||n.j>0)continue;circ(c,x,ty,6,n.j<0?'#6a5a48':'#f2c531');circ(c,x,ty,2.4,n.j<0?'#4a3e32':'#c8392f')}
-    labels.push(()=>label(c,p.cx,y0-11,'탈춤 장단 · 얼쑤 '+m.perf+' · 좋다 '+m.good));
+    labels.push(()=>label(c,p.cx,y0-11,(m.home==='tune'?'가야금 뜯기':m.home==='beat'?'다듬이질':'탈춤 장단')+' · 얼쑤 '+m.perf+' · 좋다 '+m.good));
     labels.push(()=>label(c,p.cx,y0+h+11,m.note||'북점이 동그라미에 겹칠 때 행동!'));return;
   }
   if(m.kind==='drill'){
@@ -4720,10 +4770,12 @@ function ropeEnd(m){
 }
 // 탈춤 장단: 굴러오는 북점이 왼쪽 동그라미에 겹칠 때 행동을 눌러 추임새를 넣는다. 딱 맞으면 "얼쑤!"(2점), 조금 어긋나면 "좋다!"(1점), 헛누르면 1점 깎인다
 const DANCE_FEE=30,DANCE_GAPS=[.6,.6,.3,.3,.6,.6,.3,.3,.6,.6,.45,.45,.3,.3,.6,.3,.3,.3,.6,.6];
-function startDance(){
-  if(!payFee(DANCE_FEE))return;
+function startDance(mode){
+  /* mode가 'tune'(가야금)·'beat'(다듬이)면 집에서 하는 장단 놀이: 판돈도 상금도 없다(tuneEnd). 그 밖에는 놀이마당의 탈춤 장단 */
+  const home=mode==='tune'||mode==='beat'?mode:null;
+  if(!home&&!payFee(DANCE_FEE))return;
   let t=1.4;const notes=[];for(const gp of DANCE_GAPS){notes.push({t,j:0,s:0});t+=gp}
-  mg={kind:'dance',o:{x:P.x,y:P.y,sh:0},notes,t:0,len:t+.3,perf:0,good:0,bad:0,hop:0,note:'',nt:0,cool:0,fin:false,end:0};P.path=[];P.after=null;N.deoksoe.hold=60;
+  mg={kind:'dance',home,o:{x:P.x,y:P.y,sh:0},notes,t:0,len:t+.3,perf:0,good:0,bad:0,hop:0,note:'',nt:0,cool:0,fin:false,end:0};P.path=[];P.after=null;if(!home)N.deoksoe.hold=60;
   tip('dance','북점이 왼쪽 동그라미에 겹칠 때 행동을 눌러요. 장구 소리에 맞추면 쉬워요(설정에서 효과음을 켜요)');
 }
 function dancePress(m){
@@ -4741,6 +4793,7 @@ function updDance(m,dt){
   if(m.t>=m.len){m.fin=true;m.end=1.1;m.note='한 판 끝! 얼쑤 '+m.perf+' · 좋다 '+m.good;m.nt=9}
 }
 function danceEnd(m){
+  if(m.home){tuneEnd(m);return}
   N.deoksoe.hold=0;if(!m.fin){toast('탈춤 구경을 그만뒀어요. 판돈은 돌려받지 못해요');return}
   const q=playTake(),sc=Math.max(0,m.perf*2+m.good-m.bad),pay=Math.round(sc*5*playMul()*q.c);S.min=Math.min(1380,S.min+20); /* 점수마다 5냥(v74: 6냥에서 낮춤) */
   if(pay)addCoins(pay);addXp(Math.round((8+sc)*q.c));addFriend('deoksoe',q.n<3?(sc>=28?6:3):1);if(q.n<3)train('grace',sc>=28?3:1);if(sc>(S.danceBest|0))S.danceBest=sc;saveAll();
@@ -9487,7 +9540,7 @@ function actLabel(){
   if(tg.t==='water')return scene==='palace'?'':scene==='resort'?'뱃놀이':S.kit>0&&!tg.sea&&bridgeSpan()?'다리\n놓기':'낚시';
   if(tg.t==='bld')return tg.b.id==='home'?(S.camp?'눕기':'들어\n가기'):tg.b.id==='shop'?'가게':tg.b.pal?(tg.b.id==='hall'?'진상':tg.b.id==='kitchen'?'수라간':tg.b.id==='pav'?'쉬기':tg.b.id==='jail'?'옥사':tg.b.id==='mine'&&quarterTier()?'들어\n가기':'살피기'):'똑똑';
   if(tg.t==='work')return workDone(tg.k)?(tg.k==='boat'?'배 타기':'쓰기'):'짓기';
-  if(tg.t==='furn')return tg.f.id==='agungi'?'요리':PARTY_AT[tg.f.id]&&!S.inQ?'집들이':'살피기';
+  if(tg.t==='furn')return tg.f.id==='agungi'?'요리':furnUses().length?'쓰기':PARTY_AT[tg.f.id]&&!S.inQ?'집들이':'살피기';
   if(tg.t==='soil'){const p=S.farm[tg.x+','+tg.y];if(p)return !p.c?'심기':p.g>=CROPS[p.c].days?'거두기':soilTodo(tg.x,tg.y)?'물 주기':'살피기'}
   return ACT_TXT[tg.t]||'행동';
 }
