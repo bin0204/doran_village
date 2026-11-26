@@ -289,7 +289,7 @@ const ITEMS={
   giftbox:{n:'선물 꾸러미',p:120,nodex:1}, /* 운종가 방물전에서 산다. 누구에게 주어도 가장 좋아하는 선물로 친다 */
   // 새 짐승의 전리품(v62)
   raccoonfur:{n:'너구리 털',p:70}, badgerhide:{n:'오소리 가죽',p:110}, sakfur:{n:'삵 가죽',p:180}, goralhorn:{n:'산양 뿔',p:200},
-  martenfur:{n:'담비 털',p:260}, lynxfur:{n:'스라소니 털',p:420}, leopardskin:{n:'표범 가죽',p:700}, wtigerskin:{n:'백호 가죽',p:1800},
+  martenfur:{n:'담비 털',p:210}, lynxfur:{n:'스라소니 털',p:340}, leopardskin:{n:'표범 가죽',p:600}, wtigerskin:{n:'백호 가죽',p:1500},
   // 도감을 넓히려고 더한 것들(v60). 물고기: 민물·바다·철마다·먼바다
   pirami:{n:'피라미',p:14}, loach:{n:'미꾸라지',p:22}, ssogari:{n:'쏘가리',p:110}, gamulchi:{n:'가물치',p:130},
   jogi:{n:'조기',p:30}, galchi:{n:'갈치',p:55}, neopchi:{n:'넙치',p:120},
@@ -384,13 +384,32 @@ const FURN={
   u_bunjae:{n:'소나무 분재',c:6,mall:1}, u_baek:{n:'백자 달항아리 한 쌍',c:7,mall:1}, u_gayageum:{n:'가야금',c:8,mall:1},
   u_byeong:{n:'화조도 병풍',c:9,mall:1}, u_chaek:{n:'책가도 병풍',c:10,mall:1}, u_jagae:{n:'자개 삼층장',c:12,mall:1},
   // 천장에 매다는 등(v70). 잡화점에서 판다
-  deungrong:{n:'등롱',buy:260,c:3}
+  deungrong:{n:'등롱',buy:260,c:3},
+  // 벽에 거는 족자(v71). 잡화점에서 판다
+  jokja:{n:'산수 족자',buy:200,c:3},
+  // 살림 늘리기(v73): 벽걸이·올리는 소품·깔개·큰 가구를 고루 더했다. 잡화점(buy), 장날 보부상(mkt), 운종가(mall), 수련장에서 받는 것(hwalgeori)
+  sireong:{n:'벽시렁',buy:170,c:3}, buchae:{n:'합죽선',buy:130,c:2}, tal:{n:'양반탈',c:5,mkt:600}, gatgeori:{n:'갓걸이',c:5,mkt:550},
+  otgeori:{n:'옷 건 횃대',c:6,mall:1}, hwalgeori:{n:'활과 화살통',c:6},
+  dagi:{n:'다기',buy:180,c:3}, byeoru:{n:'벼루와 붓',buy:160,c:3}, kkotbyeong:{n:'매화 꽃병',buy:140,c:3}, gwasil:{n:'과일 소쿠리',buy:90,c:2}, seochaek:{n:'서책 더미',buy:110,c:2},
+  bangseok:{n:'비단 방석',buy:120,c:2,walk:1}, daejari:{n:'대자리',buy:260,c:4,walk:1},
+  dwiju:{n:'뒤주',buy:380,c:4}, badukpan:{n:'바둑판',buy:300,c:4}, dadeumi:{n:'다듬잇돌과 방망이',buy:150,c:3}, jukbuin:{n:'죽부인',buy:200,c:3},
+  mulle:{n:'물레',c:6,mkt:650}, sabang:{n:'사방탁자',c:8,mall:1}, meorijang:{n:'머릿장',c:9,mall:1}, daecheong:{n:'대청 평상',c:10,mall:1}
 };
 // 가구를 겹쳐 놓는 자리(v70). 한 칸에 깔개 하나 + 바닥에 놓는 것 하나 + (그것이 상·궤면) 그 위에 올린 것 하나 + 매단 것 하나까지 놓인다
 //   walk=깔개(가구 밑에 깔리고 밟고 다닌다) · surf=위에 작은 것을 올릴 수 있는 상·궤(값은 윗면까지의 높이) · top=상 위에 올릴 수 있는 작은 것(바닥에도 놓인다) · hang=천장에 매다는 것(가구 위에도, 빈 바닥 위에도)
-for(const [k,h] of Object.entries({table:14,soban:13,seoan:13,bandaji:17,pyeongsang:11,baegwe:15,jagae:16,hwachojang:22}))FURN[k].surf=h;
-for(const k of ['plant','lamp','tank','g_sol','g_dami','jar','r_celadon','r_pearl','r_crystal','k_vase','deungjan','euncho','okhyang','geumham','gyeongdae','u_bunjae','u_baek'])FURN[k].top=1;
+for(const [k,h] of Object.entries({table:14,soban:13,seoan:13,bandaji:17,pyeongsang:11,baegwe:15,jagae:16,hwachojang:22,dwiju:19,meorijang:21,sabang:36,daecheong:11}))FURN[k].surf=h;
+for(const k of ['plant','lamp','tank','g_sol','g_dami','jar','r_celadon','r_pearl','r_crystal','k_vase','deungjan','euncho','okhyang','geumham','gyeongdae','u_bunjae','u_baek','dagi','byeoru','kkotbyeong','gwasil','seochaek'])FURN[k].top=1;
 for(const k of ['g_eunha','r_lantern','punggyeong','jori','deungrong'])FURN[k].hang=1;
+/* wall=벽에 거는 것(v71): 위쪽이 벽인 칸을 누르면 그 벽에 걸린다(놓을 때 z:'w'). 값은 벽면에 맞춰 올려 그리는 높이. 창이 난 벽에는 못 건다. 예전에 바닥에 세워 둔 것(z 없음)은 그대로 서 있다 */
+for(const [k,h] of Object.entries({g_parang:28,r_tigerpic:26,jokja:26,sireong:26,buchae:27,tal:27,gatgeori:27,otgeori:26,hwalgeori:26}))FURN[k].wall=h;
+/* 큰 가구(v72): size=[가로 칸, 세로 칸]. 놓을 때 누른 칸이 왼쪽 위가 되고, 놓인 것에는 s:1이 붙는다(예전에 한 칸으로 놓아 둔 것은 s가 없어 한 칸 그대로다).
+   wide=한 칸짜리 그림을 넓히는 법: 'm' 오른쪽에 거울처럼 한 번 더(병풍·평상·보료), 's' 가로로 늘려서(가야금), 'b' 따로 그린 큰 그림(furnBigArt) */
+for(const [k,q] of Object.entries({screen:[2,1,'m'],k_screen:[2,1,'m'],u_byeong:[2,1,'m'],u_chaek:[2,1,'m'],kkotsal:[2,1,'m'],pyeongsang:[2,1,'m'],sofa:[2,1,'m'],u_gayageum:[2,1,'s'],mat:[2,2,'b'],
+  daejari:[2,1,'m'],meorijang:[2,1,'m'],daecheong:[2,2,'b']})){FURN[k].size=[q[0],q[1]];FURN[k].wide=q[2]}
+/* 돌려 놓기(v73): 두 칸짜리는 세로로도 놓인다(놓인 것에 r:1). 바닥에 눕는 것(깔개·가야금)은 그림을 그대로 돌리고, 서 있는 것은 옆에서 본 모습을 따로 그린다(furnSideArt).
+   SIDE_COL은 병풍·가리개를 옆에서 볼 때의 테와 면 빛깔 */
+const SIDE_COL={screen:['#6b4a2a','#f3ead6'],k_screen:['#7a2f2a','#1f3a6a'],u_byeong:['#5e3f24','#f6efdc'],u_chaek:['#5e3f24','#e6d3a8'],kkotsal:['#7a4f2c','#f3ead6']};
+const furnTurns=id=>{const z=FURN[id]&&FURN[id].size;return !!z&&z[0]!==z[1]};
 const FURN_GLOW={lamp:1,g_dami:1,stove:1,agungi:1,r_lantern:1,deungrong:1,deungjan:1,euncho:1,seokdeung:1}; /* 밤에 둘레를 밝히는 것 */
 // 가구 세트: 한 묶음을 빠짐없이 집 안에 놓으면 아늑함이 c만큼 더해진다. open: 처음부터 이름을 아는 묶음, h: 구하는 곳
 const SETS={
@@ -405,7 +424,10 @@ const SETS={
   royal:{n:'궁중 안방',c:12,h:'금원에서 찾은 도안으로 짜요',ids:['kkotsal','gyeongdae','hwachojang']},
   relic:{n:'옛사람의 보물',c:10,h:'반짝이는 곳을 파면 나와요',ids:['r_lantern','r_tigerpic','r_celadon','r_pearl','r_crystal']},
   king:{n:'임금의 하사품',c:8,h:'진상으로 공을 쌓으면 임금이 내려요',ids:['k_vase','k_screen']},
-  mall:{n:'운종가의 호사',c:14,h:'한양 운종가의 화방에서 사요',ids:['u_bunjae','u_baek','u_gayageum','u_byeong','u_chaek','u_jagae']}
+  mall:{n:'운종가의 호사',c:14,h:'한양 운종가의 화방에서 사요',ids:['u_bunjae','u_baek','u_gayageum','u_byeong','u_chaek','u_jagae']},
+  /* v73에 더한 두 묶음 */
+  seonbi:{n:'선비의 사랑방',c:7,open:1,h:'잡화점과 운종가 화방에서 사요',ids:['sabang','byeoru','seochaek','badukpan','buchae']},
+  anbang:{n:'안방 살림',c:7,open:1,h:'잡화점과 운종가, 장날 보부상에게서 사요',ids:['meorijang','bangseok','dadeumi','mulle','otgeori']}
 };
 // 옷: 저고리(top)·치마나 바지(bot)·고름(rib) 색과 쓰개(hat). 은하 만물상에서 사고 옷장에서 갈아입는다
 const OUTFITS={
@@ -474,13 +496,14 @@ const OUTFITS={
 // 옛말로 바꿔 보여 주기: 대사와 이름에 남아 있는 요즘 말을 조선 마을에 맞게 고친다
 const JZ=[['빵집','떡집'],['갓 구운 빵','갓 찐 떡'],['빵','떡'],['오븐','시루'],['타르트','화전'],['파이','정과'],['잡화점','만물상'],['로켓 발사대','하늘을 나는 수레'],['녹음기','소리 단지'],['기계','기구'],['텐트','움막']];
 const jz=s=>{for(const [a,b] of JZ)if(s.indexOf(a)>=0)s=s.split(a).join(b);return s};
-const SHOP_FURN=['chair','plant','table','rug','lamp','shelf','sofa','tank','stove'];
+const SHOP_FURN=Object.keys(FURN).filter(k=>FURN[k].buy); /* 잡화점에 들어오는 가구: 값(buy)이 붙은 것 모두. 예전에는 아홉 가지를 따로 적어 둬서 새로 넣은 등롱·족자가 나오지 않았다 */
 const HOUSES=[
   {n:'움막',room:[5,4],plots:4},
-  {n:'초가삼간',cost:600,wood:10,stone:0,room:[6,5],plots:6},
-  {n:'너른 초가집',cost:2000,wood:20,stone:10,room:[8,6],plots:8},
-  {n:'기와집',cost:6000,wood:40,stone:25,room:[10,7],plots:10},
-  {n:'솟을대문 기와집',cost:15000,wood:60,stone:50,room:[12,8],plots:12}
+  /* v75 균형: 집 값을 올렸다(600 · 2,000 · 6,000 · 15,000 → 900 · 4,000 · 12,000 · 30,000). 사냥터가 늘면서 하루 벌이가 커졌기 때문이다 */
+  {n:'초가삼간',cost:900,wood:10,stone:0,room:[6,5],plots:6},
+  {n:'너른 초가집',cost:4000,wood:20,stone:10,room:[8,6],plots:8},
+  {n:'기와집',cost:12000,wood:40,stone:25,room:[10,7],plots:10},
+  {n:'솟을대문 기와집',cost:30000,wood:60,stone:50,room:[12,8],plots:12}
 ];
 const TITLES=['새내기 주민','동네 일꾼','마을 살림꾼','든든한 이웃','마을의 자랑','고을의 일꾼','고을의 기둥','이름난 재주꾼','온 고을의 자랑','나라가 아는 이름','살아 있는 전설'],TITLE_LV=[1,2,3,4,5,8,11,14,18,22,26];
 // 연장: 모루의 대장간에서 세 번까지 벼린다. d[단계]=그 단계의 쓸모, FORGE[다음 단계]=드는 값과 재료
@@ -493,7 +516,7 @@ const TOOLS={
   bow:{n:'활',d:['4칸 앞까지 쏴요','5칸 앞까지 · 과녁이 커져요','6칸 앞까지 · 과녁이 더 커져요','7칸 앞까지 · 과녁이 아주 커요']}
 };
 const TOOL_IDS=Object.keys(TOOLS);
-const FORGE=[null,{cost:250,iron:3,wood:4},{cost:800,iron:6,wood:8},{cost:2000,iron:10,wood:12}];
+const FORGE=[null,{cost:400,iron:3,wood:4},{cost:1500,iron:6,wood:8},{cost:4000,iron:10,wood:12}]; /* v75 균형: 벼리는 값 250 · 800 · 2,000 → 400 · 1,500 · 4,000 */
 const FORGE_AT=[30,8];
 // 가축과 우리: 우리는 모루가 재목을 대고, 자리는 내 땅에서 직접 고른다. w=차지하는 칸 수, cap=기를 수 있는 마릿수
 const PENS={coop:{n:'닭장',w:2,cost:400,wood:15,stone:0,cap:4},barn:{n:'외양간',w:3,cost:1500,wood:30,stone:10,cap:2},
@@ -1204,7 +1227,7 @@ function spawnPickups(s){
   for(const k in n)put(k==='shell'||k==='sora'||k==='ge'?TOWN.SAND:TOWN.GRASS,k,n[k]); /* 조개·소라·꽃게는 바닷가 모래밭에 */
   put(TOWN.SAND,'miyeok',2); /* 삼신상에 올릴 미역: 바닷가에 날마다 두 줄기 */
 }
-function rollShop(s){const a=SHOP_FURN.slice();s.shopFurn=[];for(let i=0;i<4;i++)s.shopFurn.push(a.splice(Math.floor(Math.random()*a.length),1)[0])}
+function rollShop(s){const a=SHOP_FURN.slice();s.shopFurn=[];for(let i=0;i<6;i++)s.shopFurn.push( /* 가짓수가 늘어 하루 넷에서 여섯으로 */a.splice(Math.floor(Math.random()*a.length),1)[0])}
 function rollQuests(s){
   // 이웃마다 부탁하는 물건이 다르다. 일부는 레벨이 올라야 나온다
   const WANT={moru:['wood','stone','crucian','mushroom','hide'],sol:['apple','persimmon','flower','mushroom','turnip','carrot','chestnut','wood'],
@@ -1224,6 +1247,26 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:75,d:'11월 26일',t:'사냥과 성장 다듬기',l:[
+    '사냥이 너무 쉬웠어요. 과녁이 커지는 데 한도가 생겼고, 센 짐승일수록 과녁이 더 크게 흔들려요. 과녁을 키우는 장비는 한도를 넘는 만큼 흔들림을 늦춰 줘요.',
+    '레벨이 오를수록 다음 레벨까지 필요한 경험치가 더 많이 늘어요. 지금 레벨은 그대로이고, 다음 레벨부터 달라져요.',
+    '집을 키우는 값과 연장을 벼리는 값이 올랐어요.']},
+  {v:74,d:'11월 26일',t:'고르게 다듬기',l:[
+    '놀이마당은 같은 날 여러 판을 벌이면 구경꾼이 줄어요. 첫 두 판은 그대로이고 그 뒤로는 상금과 경험치가 조금씩 줄어요. 다음 날이면 다시 모여요.',
+    '탈춤 장단의 박자를 조금 더 정확히 맞춰야 하고, 점수마다 받는 돈이 6냥에서 5냥이 됐어요.',
+    '수련장의 수련은 하루 세 번까지 무예로 붙고, 뱃놀이의 경험치와 기품은 하루 첫 번에만 붙어요. 기력은 탈 때마다 차요.',
+    '아늑함이 50을 넘으면 그 위로는 아침 경험치가 천천히 늘어요. 담비·스라소니·표범·백호의 털과 가죽 값이 조금 내렸어요.']},
+  {v:73,d:'11월 26일',t:'살림 스물한 가지와 돌려 놓기',l:[
+    '가구가 스물한 가지 늘었어요. 벽에 거는 것(벽시렁, 합죽선, 양반탈, 갓걸이, 옷 건 횃대), 상 위에 올리는 것(다기, 벼루와 붓, 매화 꽃병, 과일 소쿠리, 서책 더미), 깔개(비단 방석, 대자리), 큰 가구(머릿장, 사방탁자, 뒤주, 네 칸짜리 대청 평상) 같은 것들이에요.',
+    '잡화점에 날마다 다른 것이 들어오고, 귀한 것은 장날 보부상과 한양의 가게에서 팔아요. 수련장에서 활을 잘 쏘면 받는 것도 있어요.',
+    '두 칸짜리 가구는 세로로 돌려 놓을 수 있어요. 꾸미기에서 고르면 나오는 단추로 가로·세로를 바꿔요.',
+    '세트가 둘 늘었어요: 선비의 사랑방, 안방 살림.']},
+  {v:72,d:'11월 26일',t:'크기가 다른 가구',l:[
+    '가구마다 차지하는 자리가 달라졌어요. 병풍과 가리개, 평상, 보료와 안석, 가야금은 가로 두 칸, 화문석 돗자리는 네 칸을 차지해요. 꾸미기 목록에 [2칸]·[4칸]으로 적혀 있어요.',
+    '전에 한 칸으로 놓아 둔 것은 그대로예요. 한 번 거뒀다가 다시 놓으면 큰 모습이 돼요. 평상처럼 넓은 받침에는 칸마다 하나씩 올릴 수 있어요.']},
+  {v:71,d:'11월 26일',t:'그림과 액자를 벽에',l:[
+    '그림과 액자를 벽에 걸 수 있어요. 꾸미기에서 [벽걸이] 가구를 고르고 벽 바로 아래 칸을 누르면 그 벽에 걸려요. 그 칸에는 다른 가구도 그대로 놓을 수 있어요.',
+    '벽에 거는 산수 족자가 잡화점에 들어와요. 전에 바닥에 세워 둔 액자는 한 번 거뒀다가 다시 걸면 돼요.']},
   {v:70,d:'11월 26일',t:'겹쳐 놓는 꾸미기와 이부자리',l:[
     '집 안 가구를 겹쳐 놓을 수 있어요. 깔개는 가구 밑에 깔리고, 화분이나 좌등 같은 작은 것은 상이나 궤 위에 올리고, 등롱이나 풍경은 가구 위 천장에 매달아요.',
     '천장에 매다는 등롱이 잡화점에 들어와요. 상 위에 등을 달아 보세요.',
@@ -1524,7 +1567,9 @@ function gain(id,n){
 }
 const hearts=id=>Math.min(5,Math.floor(S.npcs[id].pts/100));
 const perk=id=>hearts(id)>=3;
-const needXp=l=>60+40*(l-1);
+/* 다음 레벨까지 필요한 경험치. v75 균형: 레벨이 오를수록 더 가파르게 늘린다(예전에는 60+40×(레벨-1)이라 레벨 20까지 7,980이면 됐다. 이제 24,852).
+   하루에 600쯤 번다고 치면 레벨 10은 엿새, 12는 열흘, 16은 스무 날, 20은 마흔 날쯤 — 높은 자리가 바라는 일 횟수(20·30·42·56번)와 걸음이 맞는다 */
+const needXp=l=>60+40*(l-1)+8*(l-1)*(l-1);
 // 스탯 값과, 일을 하면서 저절로 오르는 몫(열 번 쌓이면 1 오른다)
 const sv=k=>S.stats?S.stats[k]||0:0;
 function train(k,n){
@@ -1719,6 +1764,53 @@ function furnArt(c,id,x,y,t){
     rr(c,3,17,26,40,3.5,'#3f6a8a');rr(c,3,17,26,8,[3.5,3.5,0,0],'#c8392f');rr(c,3,17,26,2.6,[3.5,3.5,0,0],'#fbf6ea');
     c.fillStyle='rgba(233,185,48,.75)';for(let j=0;j<3;j++)for(let i=0;i<3;i++)c.fillRect(8+i*7+(j%2)*3,31+j*8,2,2);
     c.fillStyle='rgba(0,0,0,.12)';c.fillRect(3,54,26,3);break;
+  /* ── v73에 더한 살림 ── 벽걸이 여섯 */
+  case 'sireong':rr(c,2,12,28,3,1,'#8a5a34');poly(c,[4,15,7,15,4,20],'#6b4226');poly(c,[28,15,25,15,28,20],'#6b4226');ell(c,8,8,3.6,4.2,'#6b4a34');ell(c,8,4.6,2.6,1.1,'#3a2a20');ell(c,16,8.5,3,3.6,'#dfe9e6');ell(c,16,5.6,2,.9,'#9fb3c4');rr(c,21,6,6,6,1,'#c9a85a');rr(c,20.5,5,7,2,1,'#8a5a34');
+    rr(c,6,-3,20,2.5,1,'#8a5a34');circ(c,11,-5.5,2.4,'#fbf6ea');circ(c,16,-5.5,2.4,'#fbf6ea');circ(c,21,-5.5,2.4,'#2e4a8a');break;
+  case 'buchae':c.fillStyle='#fbf6ea';c.beginPath();c.moveTo(16,19);c.arc(16,19,17,Math.PI*1.14,Math.PI*1.86);c.closePath();c.fill();c.strokeStyle='#8a5a34';c.lineWidth=1;for(let i=0;i<=6;i++){const a=Math.PI*(1.14+i*.12);c.beginPath();c.moveTo(16,19);c.lineTo(16+Math.cos(a)*17,19+Math.sin(a)*17);c.stroke()}
+    c.strokeStyle='#6b4a2a';c.lineWidth=1.6;c.beginPath();c.arc(16,19,17,Math.PI*1.14,Math.PI*1.86);c.stroke();circ(c,12,8,2,'#c8392f');circ(c,19,6,1.6,'#4f7a4a');circ(c,16,19,1.8,'#e9b930');line(c,16,20,16,26,'#c8392f',1.2);break;
+  case 'tal':line(c,16,-8,16,-3,'#6b4a2a',1);ell(c,16,7,10,12,'#b8875a');ell(c,16,6,8.6,10.4,'#d0a070');poly(c,[8,2,13,0,14,3,9,4.5],'#2a2220');poly(c,[24,2,19,0,18,3,23,4.5],'#2a2220');poly(c,[14,8,18,8,16,12],'#a8784a');
+    c.strokeStyle='#2a2220';c.lineWidth=1.4;c.beginPath();c.arc(16,11,5.5,.2,Math.PI-.2);c.stroke();circ(c,9.5,9,1.8,'#c8392f');circ(c,22.5,9,1.8,'#c8392f');c.strokeStyle='#8a5a34';c.lineWidth=1;c.beginPath();c.arc(16,-1,5,Math.PI*1.1,Math.PI*1.9);c.stroke();break;
+  case 'gatgeori':rr(c,14,-8,4,5,1,'#6b4a2a');rr(c,11,-4,10,12,[3,3,1,1],'#1f1a18');c.fillStyle='rgba(255,255,255,.12)';c.fillRect(12.5,-3,2,10);ell(c,16,8.5,14,3.6,'rgba(31,26,24,.82)');ell(c,16,8,10,2,'#1f1a18');line(c,9,10,11,20,'#3a2a22',1);line(c,23,10,21,20,'#3a2a22',1);
+    for(let i=0;i<3;i++){circ(c,10+i*.6,13+i*2.6,1.2,'#e9b930');circ(c,22-i*.6,13+i*2.6,1.2,'#e9b930')}break;
+  case 'otgeori':rr(c,1,-7,30,2.6,1,'#6b4a2a');circ(c,2,-5.7,2,'#8a5a34');circ(c,30,-5.7,2,'#8a5a34');
+    poly(c,[3,-4,15,-4,17,2,13,3,13,7,5,7,5,3,1,2],'#e58aa6');poly(c,[7,-4,9,2,11,-4],'#fbf6ea');line(c,9,2,7,8,'#c8392f',1.4);line(c,9,2,11,7,'#c8392f',1.4);
+    poly(c,[18,-4,30,-4,31,20,17,20],'#2e4a8a');rr(c,18,-4,12,3,0,'#fbf6ea');c.fillStyle='rgba(255,255,255,.14)';for(let i=0;i<3;i++)c.fillRect(20+i*4,0,1.2,20);break;
+  case 'hwalgeori':c.strokeStyle='#7a4f2c';c.lineWidth=2.4;c.beginPath();c.arc(20,7,14,Math.PI*.62,Math.PI*1.38);c.stroke();line(c,11.4,-4.2,11.4,18.2,'#e6d3a3',.9);rr(c,5.2,5,2.6,4,1,'#c8392f');
+    rr(c,19,-2,8,21,[2,2,3,3],'#7a4f2c');rr(c,19,3,8,2,0,'#e9b930');rr(c,19,13,8,2,0,'#e9b930');for(let i=0;i<3;i++){line(c,21+i*2,-2,21+i*2,-8,'#c9a86a',1);poly(c,[20+i*2,-8,22+i*2,-8,21+i*2,-11],i%2?'#fbf6ea':'#c8392f')}break;
+  /* 상 위에 올리는 소품 다섯 */
+  case 'dagi':ell(c,16,28,11,2.4,'rgba(0,0,0,.16)');rr(c,4,22,24,4.5,2,'#8a5a34');rr(c,5,21.5,22,2,1,'#a9793f');ell(c,12,18,5.5,4.2,'#dfe9e6');ell(c,12,14.6,3.2,1.2,'#c3d2cf');circ(c,12,13.4,1.1,'#8a5a34');line(c,17,17,20.5,14.5,'#dfe9e6',2);
+    c.strokeStyle='#dfe9e6';c.lineWidth=1.4;c.beginPath();c.arc(7,18,3,Math.PI*.5,Math.PI*1.5);c.stroke();rr(c,20,18,4.4,3.6,1.2,'#f6f1e6');rr(c,24.6,18.6,3.6,3,1,'#f6f1e6');break;
+  case 'byeoru':ell(c,16,28,11,2.4,'rgba(0,0,0,.16)');rr(c,3,15,13,12,1,'#fbf6ea');c.fillStyle='rgba(60,60,60,.5)';for(let i=0;i<3;i++)c.fillRect(5,18+i*2.6,8-i*2,1);rr(c,17,18,12,9,1.5,'#2a2a30');rr(c,18.5,19.5,9,4,1,'#0f0f14');rr(c,18.5,24,9,1.6,.5,'#3a3a44');
+    line(c,14,13,23,22,'#8a5a34',1.6);poly(c,[22.4,21.4,25,24.6,23.6,22.6],'#1f1a18');break;
+  case 'kkotbyeong':ell(c,16,28,7,2.2,'rgba(0,0,0,.16)');poly(c,[12,27,20,27,22,20,19,14,19,11,13,11,13,14,10,20],'#f6f1e6');poly(c,[12.5,20,19.5,20,19.5,23,12.5,23],'#3f6fb0');ell(c,16,11,3.2,1.1,'#c9ced6');
+    line(c,16,11,13,3,'#5e3f24',1.3);line(c,14.5,7,19,1,'#5e3f24',1.1);line(c,13.4,4.4,9,3,'#5e3f24',1);for(const [px,py] of [[13,2.6],[19,.8],[9,2.6],[16.6,4.2],[11.6,6]])circ(c,px,py,1.7,'#f4a6c0');circ(c,13,2.6,.6,'#e9b930');circ(c,19,.8,.6,'#e9b930');break;
+  case 'gwasil':ell(c,16,28,11,2.4,'rgba(0,0,0,.16)');poly(c,[5,19,27,19,24,27,8,27],'#c9a85a');c.fillStyle='rgba(138,90,52,.5)';for(let i=0;i<5;i++)c.fillRect(8+i*4,20,1.2,7);c.fillRect(6,22.5,20,1.1);ell(c,16,19,11,2.6,'#b8943f');
+    circ(c,11,16.5,3.6,'#d9412e');circ(c,17.5,15.5,3.8,'#f08a2a');circ(c,22.5,17.5,3,'#e9b930');circ(c,14,13.5,2.6,'#8fbf4a');line(c,11,13,11.6,11.4,'#5e3f24',1);break;
+  case 'seochaek':ell(c,16,28,11,2.4,'rgba(0,0,0,.16)');rr(c,5,21,22,5.5,1,'#e6d3a8');rr(c,6,15.5,21,5.5,1,'#2e4a6a');rr(c,4.5,10,22,5.5,1,'#efe2c4');c.fillStyle='rgba(60,44,30,.6)';for(const yy of [21,15.5,10])for(let i=0;i<4;i++)c.fillRect(7.5,yy+1+i*1.1,1.4,.6);
+    rr(c,18,11.2,6,3,.5,'#fbf6ea');break;
+  /* 깔개 둘: 비단 방석, 대자리(오른쪽으로 이어지게 그려 두 칸으로 넓힌다) */
+  case 'bangseok':rr(c,4,7,24,21,5,'#8a2a3c');rr(c,5,8,22,19,4,'#c8392f');rr(c,8,11,16,13,2,'#e9b930');rr(c,9.5,12.5,13,10,1.5,'#c8392f');circ(c,16,17.5,3,'#f6a3c4');circ(c,16,17.5,1.2,'#e9b930');
+    for(const [px,py] of [[5,8],[27,8],[5,27],[27,27]])circ(c,px,py,1.5,'#e9b930');break;
+  case 'daejari':rr(c,2,6,30,22,[2,0,0,2],'#8a6a34');rr(c,3.5,7.5,28.5,19,[1,0,0,1],'#d9c68a');c.fillStyle='rgba(138,106,52,.45)';for(let i=0;i<7;i++)c.fillRect(6+i*4,7.5,1,19);c.fillStyle='#8a6a34';c.fillRect(3.5,12,28.5,1);c.fillRect(3.5,22,28.5,1);break;
+  /* 바닥에 놓는 가구: 뒤주, 바둑판, 다듬잇돌, 죽부인, 물레, 사방탁자, 머릿장(반쪽. 거울처럼 이어 두 칸) */
+  case 'dwiju':ell(c,16,29,13,3,'rgba(0,0,0,.18)');rr(c,4,24,4,5,1,'#4a2a18');rr(c,24,24,4,5,1,'#4a2a18');rr(c,4,9,24,17,1.5,'#7a4f2c');rr(c,5.5,11,21,13,1,'#8a5a34');c.fillStyle='rgba(74,42,24,.5)';c.fillRect(11.5,11,1,13);c.fillRect(19.5,11,1,13);
+    rr(c,2.5,6,27,5,1.5,'#6b4226');rr(c,13.5,9,5,6,1,'#d9b24a');circ(c,16,12.5,1.1,'#4a2a18');break;
+  case 'badukpan':ell(c,16,29,13,3,'rgba(0,0,0,.18)');rr(c,5,22,4,6,1.5,'#7a4f2c');rr(c,23,22,4,6,1.5,'#7a4f2c');rr(c,3,9,26,15,1.5,'#b9853a');rr(c,3,8,26,13,1.5,'#dba66c');c.fillStyle='rgba(74,50,26,.55)';for(let i=0;i<6;i++){c.fillRect(6+i*4,9.5,.8,10);c.fillRect(5.5,10+i*1.9,21,.7)}
+    for(const [px,py,k] of [[10,12,0],[14,14,1],[18,12,0],[22,16,1],[14,18,0],[18,16,1]])circ(c,px,py,1.5,k?'#fbf6ea':'#1f1a18');break;
+  case 'dadeumi':ell(c,16,29,13,3,'rgba(0,0,0,.18)');rr(c,4,18,24,10,2,'#7d8790');rr(c,4,17,24,7,2,'#a3adb6');rr(c,7,14,18,5,1.5,'#fbf6ea');c.fillStyle='rgba(0,0,0,.08)';c.fillRect(7,16.5,18,1);
+    line(c,6,10,17,13,'#8a5a34',3);line(c,15,8,26,11.5,'#a9793f',3);circ(c,6,10,1.8,'#6b4226');circ(c,26,11.5,1.8,'#8a5a34');break;
+  case 'jukbuin':ell(c,16,28,13,2.6,'rgba(0,0,0,.16)');c.save();c.translate(16,18);c.rotate(-.42);rr(c,-14,-5.5,28,11,5.5,'#b89a4a');rr(c,-13,-4.5,26,9,4.5,'#d9c68a');c.strokeStyle='rgba(138,106,52,.7)';c.lineWidth=.9;
+    for(let i=-3;i<=3;i++){c.beginPath();c.moveTo(i*4-3,-4.5);c.lineTo(i*4+3,4.5);c.stroke();c.beginPath();c.moveTo(i*4+3,-4.5);c.lineTo(i*4-3,4.5);c.stroke()}c.restore();break;
+  case 'mulle':ell(c,16,29,14,3,'rgba(0,0,0,.18)');rr(c,2,25,28,3,1,'#6b4226');rr(c,8,10,2.6,16,1,'#7a4f2c');rr(c,25,17,2.4,9,1,'#7a4f2c');c.strokeStyle='#8a5a34';c.lineWidth=2;c.beginPath();c.arc(9.5,10,9,0,7);c.stroke();
+    c.lineWidth=1;for(let i=0;i<6;i++){const a=i*Math.PI/3+t;c.beginPath();c.moveTo(9.5,10);c.lineTo(9.5+Math.cos(a)*9,10+Math.sin(a)*9);c.stroke()}circ(c,9.5,10,2,'#5e3f24');line(c,18,6,26,18,'#fbf6ea',.8);line(c,9.5,1,26,18,'#fbf6ea',.8);rr(c,24,16,5,2.4,1,'#e6d3a8');break;
+  case 'sabang':ell(c,16,29,12,3,'rgba(0,0,0,.18)');c.fillStyle='#5e3f24';for(const px of [4,26])c.fillRect(px,-10,2.4,38);for(const yy of [-10,2,14])rr(c,3,yy,26,2.4,.5,'#7a4f2c');rr(c,4,18,24,9,1,'#6b3a22');rr(c,5.5,19.5,10,6,.5,'#8a4a2a');rr(c,16.5,19.5,10,6,.5,'#8a4a2a');circ(c,14,22.5,.9,'#d9b24a');circ(c,18,22.5,.9,'#d9b24a');
+    rr(c,8,-4,6,6,1,'#e6d3a8');rr(c,9,-5.5,6,1.6,.5,'#2e4a6a');ell(c,21,-1.5,3,3.6,'#dfe9e6');poly(c,[9,14,13,14,12,7,10,7],'#3f6fb0');circ(c,20,11,2.6,'#c8392f');break;
+  case 'meorijang':ell(c,18,29,15,3,'rgba(0,0,0,.18)');rr(c,3,26,4,3,1,'#3a2014');rr(c,2,3,30,24,[2,0,0,2],'#5e3020');rr(c,4,5,28,13,1,'#7a3f28');rr(c,6,7,24,9,.5,'#8a4a2a');rr(c,4,20,28,5.5,1,'#7a3f28');
+    c.fillStyle='#d9b24a';c.fillRect(4,8,2.4,3);c.fillRect(4,13,2.4,3);rr(c,27.5,9,4.5,5,1,'#d9b24a');circ(c,29.5,11.5,1,'#5e3020');circ(c,24,22.8,1.2,'#d9b24a');rr(c,1,1.5,31,2.6,[1,0,0,1],'#4a2618');break;
+  /* 산수 족자: 위아래에 나무 축을 댄 긴 그림. 벽에 건다 */
+  case 'jokja':rr(c,7,-8,18,3,1.2,'#6b4a2a');rr(c,9,-6,14,26,.5,'#fbf6ea');rr(c,7,19,18,3,1.2,'#6b4a2a');poly(c,[10,13,13,3,16,9,19,0,22,13],'#5a6a6a');poly(c,[10,13,14,8,18,13],'#7d8a86');circ(c,19.5,-2.5,1.5,'#c8392f');
+    c.fillStyle='rgba(60,70,70,.45)';c.fillRect(11,15.5,9,1);c.fillRect(12,17,6,.8);break;
   /* 등롱: 천장에 매다는 등. 나무 테에 한지를 바르고 아래에 술을 달았다 */
   case 'deungrong':rr(c,12,2,8,3,1,'#5e3f24');circ(c,16,14,12,'rgba(255,210,120,.2)');rr(c,8,5,16,18,4,'#f7e6b0');c.fillStyle='#5e3f24';c.fillRect(8,5,16,2);c.fillRect(8,21,16,2);c.fillRect(11.5,5,1.3,18);c.fillRect(19.2,5,1.3,18);
     ell(c,16,14,3.5,5,'rgba(247,166,58,.55)');line(c,16,23,16,29,'#c8392f',1.6);circ(c,16,30,1.8,'#c8392f');break;
@@ -2729,14 +2821,52 @@ function roomArtOld(c,sky){
   for(let y=1;y<rh;y++)line(c,0,y*T,rw*T,y*T,'rgba(120,80,40,.22)',1);
   rr(c,dxr*T+1,rh*T,30,T-8,[0,0,7,7],'#5e4330');rr(c,dxr*T+5,rh*T+2,22,15,4,'#c9703f');
 }
+/* 큰 깔개의 그림(네 칸짜리 화문석). (0,0)은 왼쪽 위 칸의 왼쪽 위 */
+function furnBigArt(c,id){
+  if(id==='daecheong'){ /* 대청 평상: 네 칸을 덮는 넓은 마루 */
+    ell(c,32,61,31,3.5,'rgba(0,0,0,.18)');rr(c,2,52,4,9,1,'#5e3f24');rr(c,58,52,4,9,1,'#5e3f24');rr(c,1,8,62,47,2,'#8a5a34');c.fillStyle='#b98a5a';for(let i=0;i<10;i++)c.fillRect(2.6+i*6,9.5,5,43);
+    c.fillStyle='rgba(0,0,0,.1)';c.fillRect(2.5,30.5,59,1.2);rr(c,1,52.5,62,4,1,'#6b4526');return;
+  }
+  rr(c,2,5,60,55,3,'#8a5a34');rr(c,3.5,6.5,57,52,2,'#d9c27a');c.fillStyle='#b89a4a';for(let i=0;i<10;i++)c.fillRect(5,10+i*5,54,1.5);
+  rr(c,21,21,22,23,2,'#c8392f');rr(c,24,24,16,17,1,'#f2d86a');rr(c,28.5,28.5,7,8,1,'#c8392f');
+  for(const [px,py] of [[9,12],[55,12],[9,54],[55,54]])rr(c,px-3,py-3,6,6,1,'#c8392f');
+}
+/* 놓인 가구 하나 그리기: 큰 가구는 한 칸짜리 그림을 넓혀서 그린다(FURN[id].wide) */
+/* 세로로 돌려 놓은 서 있는 가구를 옆에서 본 모습(가로 한 칸, 세로 두 칸). (0,0)은 위 칸의 왼쪽 위 */
+function furnSideArt(c,id){
+  const sc=SIDE_COL[id];
+  if(sc){ /* 병풍·가리개: 지그재그로 접힌 폭을 옆에서 본 모습. 뒤쪽 폭부터 그린다 */
+    ell(c,16,60,11,3,'rgba(0,0,0,.16)');
+    for(let i=0;i<4;i++){const xa=i%2?22:10,xb=i%2?10:22,ya=10+i*12.5,yb=ya+12.5;poly(c,[xa,ya-34,xb,yb-34,xb,yb,xa,ya],sc[0]);poly(c,[xa+(xb>xa?1.5:-1.5),ya-31,xb-(xb>xa?1.5:-1.5),yb-31.5,xb-(xb>xa?1.5:-1.5),yb-3,xa+(xb>xa?1.5:-1.5),ya-2.5],i%2?shade(sc[1],.86):sc[1])}
+    return;
+  }
+  if(id==='pyeongsang'){ell(c,16,61,15,3,'rgba(0,0,0,.18)');rr(c,2,52,3,9,1,'#5e3f24');rr(c,27,52,3,9,1,'#5e3f24');rr(c,1,6,30,49,2,'#8a5a34');c.fillStyle='#b98a5a';for(let i=0;i<8;i++)c.fillRect(2.5,7.5+i*5.6,27,4.6);rr(c,1,52,30,3.5,1,'#6b4526');return}
+  if(id==='sofa'){ell(c,16,60,14,3,'rgba(0,0,0,.16)');rr(c,3,8,26,51,4,'#8a2a3c');rr(c,4,8,24,47,4,'#a8324a');rr(c,6,12,20,40,3,'#c0485e');rr(c,5,0,22,13,4,'#7a3a5a');rr(c,7,2,18,9,3,'#8f4a6c');circ(c,16,6.5,2.2,'#f2c531');rr(c,2,15,6,9,3,'#3f6fb0');rr(c,24,15,6,9,3,'#3f6fb0');return}
+  /* 머릿장을 마구리 쪽에서 본 모습 */
+  ell(c,16,61,13,3,'rgba(0,0,0,.18)');rr(c,4,58,4,3,1,'#3a2014');rr(c,24,58,4,3,1,'#3a2014');rr(c,3,0,26,40,[2,2,0,0],'#4a2618');rr(c,5,2,22,36,1,'#5e3020');rr(c,3,36,26,23,[0,0,2,2],'#5e3020');rr(c,6,39,20,13,1,'#7a3f28');rr(c,6,54,20,3.5,1,'#7a3f28');c.fillStyle='#d9b24a';c.fillRect(6,42,2.2,3);c.fillRect(6,46.5,2.2,3);circ(c,22,45.5,1.3,'#d9b24a');
+}
+function drawPlaced(c,f,x,y){
+  const F=FURN[f.id];
+  if(!f.s||!F.size){drawFurn(c,f.id,x,y,now);return}
+  if(f.r){
+    /* 돌려 놓은 것: 바닥에 눕는 것(깔개·가야금)은 그림을 그대로 돌리고, 서 있는 것은 옆모습을 그린다 */
+    if(F.walk||F.wide==='s'){c.save();c.translate(x+T,y);c.rotate(Math.PI/2);drawPlaced(c,{id:f.id,s:1},0,0);c.restore()}
+    else blit(c,spr('fS'+f.id,()=>bake(40,112,4,28,0,0,c2=>furnSideArt(c2,f.id))),x,y);
+    return;
+  }
+  if(F.wide==='b'){blit(c,spr('fB'+f.id,()=>bake(72,76,4,8,0,0,c2=>furnBigArt(c2,f.id))),x,y);return}
+  if(F.wide==='s'){c.save();c.translate(x,y);c.scale(F.size[0],1);drawFurn(c,f.id,0,0,now);c.restore();return}
+  drawFurn(c,f.id,x,y,now);c.save();c.translate(x+F.size[0]*T,y);c.scale(-1,1);drawFurn(c,f.id,0,0,now);c.restore();
+}
 function renderHomeRest(c){
-  for(const f of S.placed)if(FURN[f.id].walk)drawFurn(c,f.id,f.x*T,f.y*T,now);
+  for(const f of S.placed)if(FURN[f.id].walk)drawPlaced(c,f,f.x*T,f.y*T);
   const list=[[1,()=>drawFurn(c,'bed',0,0,now)]];
   /* 깔개는 위에서 먼저 그렸다. 바닥의 가구, 그 위에 올린 것(상의 윗면 높이만큼 올려서), 매단 것(머리 위 높이에, 줄을 달아서) 차례로 얹는다 */
   for(const f of S.placed){
     const s=furnSlot(f);if(s==='f')continue;
-    if(s==='m')list.push([f.y,()=>drawFurn(c,f.id,f.x*T,f.y*T,now)]);
+    if(s==='m')list.push([f.y+furnBox(f)[1]-1,()=>drawPlaced(c,f,f.x*T,f.y*T)]);
     else if(s==='t'){const b=mainAt(f.x,f.y),h=(b&&FURN[b.id].surf)||0;list.push([f.y+.05,()=>drawFurn(c,f.id,f.x*T,f.y*T-h,now)])}
+    else if(s==='w')list.push([f.y-.6,()=>drawFurn(c,f.id,f.x*T,f.y*T-(FURN[f.id].wall||28),now)]); /* 벽면에 붙여서, 그 줄의 다른 것보다 먼저 */
     else list.push([f.y+.6,()=>{line(c,f.x*T+16,f.y*T-54,f.x*T+16,f.y*T-36,'rgba(60,44,30,.75)',1.2);drawFurn(c,f.id,f.x*T,f.y*T-34,now)}]);
   }
   list.push([ry(P)+.2,()=>drawChar(c,(rx(P)+.5)*T,(ry(P)+.9)*T,playerLook(),P.dir,P.t<1,now)]);
@@ -2934,10 +3064,14 @@ function hud(){
 const DIRS=[[0,-1],[1,0],[0,1],[-1,0]];
 let sleeping=false;
 const busy=()=>!started||sleeping||!$('dlg').hidden||!$('modal').hidden;
-const furnAt=(x,y)=>S.placed.find(f=>f.x===x&&f.y===y); /* 그 칸에 놓인 것 아무것이나 */
+/* 놓인 가구가 차지하는 칸: 큰 가구(s:1)는 (x,y)를 왼쪽 위로 size만큼 */
+const furnBox=p=>{const z=FURN[p.id].size;return !p.s||!z?[1,1]:p.r?[z[1],z[0]]:z}; /* r:1이면 돌려 놓은 것(가로 두 칸 → 세로 두 칸) */
+let decoRot=false; /* 꾸미기에서 두 칸짜리를 세로로 놓을지 */
+const furnOn=(p,x,y)=>{const b=furnBox(p);return x>=p.x&&x<p.x+b[0]&&y>=p.y&&y<p.y+b[1]};
+const furnAt=(x,y)=>S.placed.find(f=>furnOn(f,x,y)); /* 그 칸에 놓인 것 아무것이나 */
 /* 놓인 가구의 자리: f 깔개 · m 바닥에 놓인 것(길을 막는다) · t 상 위에 올린 것(놓을 때 z:'t'로 적는다) · h 매단 것 */
-const furnSlot=p=>p.z==='t'?'t':FURN[p.id].walk?'f':FURN[p.id].hang?'h':'m';
-const mainAt=(x,y)=>S.placed.find(f=>f.x===x&&f.y===y&&furnSlot(f)==='m');
+const furnSlot=p=>p.z==='t'?'t':p.z==='w'?'w':FURN[p.id].walk?'f':FURN[p.id].hang?'h':'m'; /* w 벽에 건 것(놓을 때 z:'w') */
+const mainAt=(x,y)=>S.placed.find(f=>furnOn(f,x,y)&&furnSlot(f)==='m');
 const isDoor=(x,y)=>(scene==='palace'?PBLD:scene==='resort'?RBLD:BLD).some(b=>b.door[0]===x&&b.door[1]===y);
 // 이웃은 마을에, 왕실 사람들은 궁궐에 있다
 const npcHere=id=>(NPCS[id].at||'town')===scene;
@@ -4250,6 +4384,7 @@ function jailTalk(){
 }
 // 수련장: 과녁은 활쏘기(무관의 길의 활쏘기와 같은 놀이를 수련으로), 짚 인형은 받아치기. 누구나 할 수 있고 무예가 오른다. 무진이 곁에 있으면 한마디 해 준다
 const mujinNear=()=>scene==='palace'&&Math.abs(N.mujin.x-P.x)+Math.abs(N.mujin.y-P.y)<=6;
+const DRILL_DAY=3; /* 수련이 무예와 경험치로 붙는 하루 횟수 */
 function drillAct(tg){
   const D=S.drill||{};
   if(tg.k==='rack'){toast('병기대예요. 창과 환도, 각궁이 걸려 있어요. 무관들이 수련할 때 써요');return}
@@ -4282,14 +4417,21 @@ function updDrill(m,dt){
 function drillEnd(m){
   if(!m.fin){toast('수련을 그만뒀어요');return}
   S.drill=S.drill||{};S.min=Math.min(1380,S.min+20);let g,txt;
+  /* v74 균형: 수련이 몸에 붙는 것은 하루 세 번까지(과녁과 짚 인형을 함께 센다). 그 뒤로는 무예가 오르지 않고 경험치도 거의 없다.
+     고치기 전에는 기력 4씩으로 하루에 무예를 끝까지 올릴 수 있었다 */
+  if(S.drill.day!==S.day){S.drill.day=S.day;S.drill.n=0}
+  const full=S.drill.n<DRILL_DAY;S.drill.n++;
   if(m.kind==='bow'){
-    const sc=m.score;g=sc>=36?3:sc>=24?2:sc>0?1:0;if(sc>(S.drill.bow|0))S.drill.bow=sc;addXp(6+Math.floor(sc/3));
+    const sc=m.score;g=sc>=36?3:sc>=24?2:sc>0?1:0;if(sc>(S.drill.bow|0))S.drill.bow=sc;addXp(full?6+Math.floor(sc/3):2);
     txt='과녁 수련 · 다섯 대에 '+sc+'점'+(g?' · 무예가 조금 올랐어요':'');
+    if(sc>=30&&!S.drill.bowGift){S.drill.bowGift=1;S.furn.hwalgeori=(S.furn.hwalgeori||0)+1;txt+=' · 수련장에서 벽에 거는 "활과 화살통"을 내줬어요 (집 꾸미기)'} /* 서른 점을 처음 넘기면 한 번 */
   }else{
     const av=m.hits?Math.round(m.sum/m.hits):0;g=m.hits===5&&av<=300?3:m.hits>=4&&av<=420?2:m.hits?1:0;
-    if(m.hits===5&&(!S.drill.ms||av<S.drill.ms))S.drill.ms=av;addXp(4+m.hits*3);
+    if(m.hits===5&&(!S.drill.ms||av<S.drill.ms))S.drill.ms=av;addXp(full?4+m.hits*3:2);
     txt='받아치기 수련 · 다섯 번 가운데 '+m.hits+'번'+(m.hits?', 평균 '+av+'ms':'')+(g?' · 무예가 조금 올랐어요':'');
   }
+  if(!full){g=0;txt=txt.replace(' · 무예가 조금 올랐어요','')+' · 오늘은 충분히 수련해서 더 해도 무예가 늘지 않아요(하루 '+DRILL_DAY+'번까지)'}
+  else if(S.drill.n===DRILL_DAY)txt+=' · 오늘 수련은 여기까지 몸에 붙어요';
   if(g)train('arms',g);
   if(mujinNear()){addFriend('mujin',2);saveAll();dialog({npc:'mujin',who:NPCS.mujin.name,text:(g===3?'손이 눈보다 빠르구려. 내금위에서도 드문 솜씨요.':g===2?'제법이오. 날마다 하면 몸이 먼저 움직일 것이오.':g===1?'마음이 급하면 손이 헛나가오. 숨을 고르고 다시 하시오.':'허허, 오늘은 손이 풀리지 않은 모양이오.')+'\n('+txt+')'});return}
   saveAll();toast(txt);
@@ -4309,8 +4451,8 @@ function leaveResort(quiet){
   scene='palace';useMap(PALACE);S.away='palace';miniRef=null;buildGround();mg=null;fishing=null;drops=[];if(!quiet)warp(W-2,17,[-1,0]);syncPlace();hud();
 }
 const MALL={
-  silk:{n:'비단전',npc:'chaedan',goods:[['fit','u_jang',1800],['fit','u_dang',2000],['fit','u_dopo',2500],['fit','u_cheollik',3500],['fit','u_sim',4000],['fit','u_hwal',6000]]},
-  art:{n:'화방',npc:'mukjae',goods:[['furn','u_bunjae',1200],['furn','u_baek',1800],['furn','u_gayageum',2500],['furn','u_byeong',3000],['furn','u_chaek',4500],['furn','u_jagae',7000]]},
+  silk:{n:'비단전',npc:'chaedan',goods:[['fit','u_jang',1800],['fit','u_dang',2000],['fit','u_dopo',2500],['fit','u_cheollik',3500],['fit','u_sim',4000],['fit','u_hwal',6000],['furn','otgeori',900]]},
+  art:{n:'화방',npc:'mukjae',goods:[['furn','u_bunjae',1200],['furn','u_baek',1800],['furn','u_gayageum',2500],['furn','u_byeong',3000],['furn','u_chaek',4500],['furn','u_jagae',7000],['furn','sabang',2200],['furn','meorijang',2600],['furn','daecheong',3200]]},
   trinket:{n:'방물전',npc:'yeoni',goods:[['item','giftbox',300],['gear','u_fan',2500],['gear','u_shoe',3000],['gear','u_norigae',4000],['gear','u_gat',5000]]},
   inn:{n:'주막',npc:'jumo',goods:[['eat','식혜 한 사발',25,30],['eat','파전 한 접시',40,50],['eat','장터 국밥',60,80]]}
 };
@@ -4343,8 +4485,17 @@ function resAct(b){
 }
 // 놀이마당: 덕쇠가 벌이는 놀이판 셋(투호·줄타기·탈춤 장단). 모두 판돈을 내고, 잘하면 돈을 딴다. 덕쇠와 ♥3이면 딴 돈이 1.2배
 const playMul=()=>perk('deoksoe')?1.2:1;
+// 놀이마당의 하루(v74 균형): 같은 날 여러 판을 벌이면 구경꾼이 줄어 상금과 경험치가 줄어든다. 네 놀이가 판수를 함께 센다(S.play={day,n}).
+// 첫 두 판은 그대로, 그 뒤로 70% · 50% · 30% · 20%. 무예·기품이 오르는 것과 덕쇠와 친해지는 것은 하루 세 판까지.
+// 고치기 전에는 탈춤만 되풀이해도 하루에 만 냥 가까이와 경험치 이천을 넘게 벌 수 있었다
+const PLAY_CUT=[1,1,.7,.5,.3,.2];
+const playN=()=>S.play&&S.play.day===S.day?S.play.n|0:0;
+const playCut=()=>PLAY_CUT[Math.min(PLAY_CUT.length-1,playN())];
+function playTake(){const n=playN(),c=playCut();S.play={day:S.day,n:n+1};return{n,c}} /* 한 판을 끝까지 마쳤을 때: 이번 판의 배율과 오늘 몇째 판이었는지 */
+const playNote=q=>q.c<1?'\n(오늘 '+(q.n+1)+'번째 판이라 구경꾼이 줄었어요. 상금과 경험치가 '+Math.round(q.c*100)+'%예요. 내일이면 다시 모여요.)':'';
 function playTalk(){
-  dialog({npc:'deoksoe',who:NPCS.deoksoe.name,text:'어서 오게! 오늘은 무슨 놀이를 하겠나?\n투호는 살 던지기, 줄타기는 줄 위에서 버티기, 탈춤은 장단에 맞춰 추임새 넣기, 씨름은 샅바 잡고 힘겨루기일세.\n(가진 돈 '+won(S.coins)+')',
+  const n=playN(),c=playCut();
+  dialog({npc:'deoksoe',who:NPCS.deoksoe.name,text:'어서 오게! 오늘은 무슨 놀이를 하겠나?\n투호는 살 던지기, 줄타기는 줄 위에서 버티기, 탈춤은 장단에 맞춰 추임새 넣기, 씨름은 샅바 잡고 힘겨루기일세.'+(c<1?'\n오늘은 벌써 '+n+'판을 놀아서 구경꾼이 좀 빠졌네. 상금은 '+Math.round(c*100)+'%만 걸 수 있네.':'')+'\n(가진 돈 '+won(S.coins)+')',
     choices:[['투호 ('+TUHO_FEE+'냥)',tuhoTalk],['줄타기 ('+ROPE_FEE+'냥)',startRope],['탈춤 장단 ('+DANCE_FEE+'냥)',startDance],['씨름 ('+SSI_FEE+'냥)',ssiTalk],['다음에요',null]]});
 }
 // 씨름: 삼판양승. 틈이 났을 때는 연타로 밀고, 상대가 힘을 쓸 때(붉은 표시)는 꾹 눌러 버틴다. 버티지 않으면 크게 밀린다.
@@ -4354,7 +4505,7 @@ const SSI_FEE=40,SSI_T=15,SSI_PAY=[130,220,360],SSI_OX=1000,SSI_WHO=['동네 장
 const ssiTier=()=>Math.min(2,Math.floor((S.ssiWin|0)/2));
 function ssiTalk(){
   const t=ssiTier();
-  dialog({npc:'deoksoe',who:NPCS.deoksoe.name,text:'씨름판일세! 오늘 맞수는 '+SSI_WHO[t]+'. 세 판에 두 판을 먼저 따면 이기네. 판돈은 '+won(SSI_FEE)+', 이기면 '+won(Math.round(SSI_PAY[t]*playMul()))+'을 주지.'+(t===2&&!S.ssiChamp?'\n천하장사를 꺾으면 상으로 황소가 걸려 있네!':'')+'\n(가진 돈 '+won(S.coins)+' · 이긴 판 '+(S.ssiWin|0)+'번)',
+  dialog({npc:'deoksoe',who:NPCS.deoksoe.name,text:'씨름판일세! 오늘 맞수는 '+SSI_WHO[t]+'. 세 판에 두 판을 먼저 따면 이기네. 판돈은 '+won(SSI_FEE)+', 이기면 '+won(Math.round(SSI_PAY[t]*playMul()*playCut()))+'을 주지.'+(t===2&&!S.ssiChamp?'\n천하장사를 꺾으면 상으로 황소가 걸려 있네!':'')+'\n(가진 돈 '+won(S.coins)+' · 이긴 판 '+(S.ssiWin|0)+'번)',
     choices:[['샅바를 잡는다',startSsi],['다음에요',null]]});
 }
 function startSsi(){
@@ -4385,11 +4536,11 @@ function updSsi(m,dt){
 }
 function ssiEnd(m){
   N.deoksoe.hold=0;if(!m.fin){toast('씨름판에서 내려왔어요. 판돈은 돌려받지 못해요');return}
-  let pay=m.ok?Math.round(SSI_PAY[m.tier]*playMul()):0,ox=0;S.min=Math.min(1380,S.min+25);
+  const q=playTake();let pay=m.ok?Math.round(SSI_PAY[m.tier]*playMul()*q.c):0,ox=0;S.min=Math.min(1380,S.min+25);
   if(m.ok){S.ssiWin=(S.ssiWin|0)+1;if(m.tier===2&&!S.ssiChamp){S.ssiChamp=1;ox=SSI_OX}}
-  if(pay+ox)addCoins(pay+ox);addXp(m.ok?24+m.tier*10:10);addFriend('deoksoe',m.ok?6:2);train('arms',m.ok?3:1);saveAll();
+  if(pay+ox)addCoins(pay+ox);addXp(Math.round((m.ok?24+m.tier*10:10)*q.c));addFriend('deoksoe',q.n<3?(m.ok?6:2):1);if(q.n<3)train('arms',m.ok?3:1);saveAll();
   const next=m.ok&&ssiTier()>m.tier?'\n다음부터는 '+SSI_WHO[ssiTier()]+'와 붙게 될 걸세.':'';
-  dialog({npc:'deoksoe',who:NPCS.deoksoe.name,text:(ox?'천하장사가 넘어갔네! 구경꾼들이 다 일어섰어. 상으로 건 황소는 내가 값을 쳐서 '+won(ox)+'으로 주지!':m.ok?'으랏차! '+SSI_WHO[m.tier]+'를 넘겼구먼. 허리 힘이 장사일세!':'허허, 샅바는 힘으로만 잡는 게 아닐세. 상대가 힘을 쓸 때는 버티고, 숨을 고를 때 밀어 보게.')+next+'\n('+m.w+':'+m.l+' · '+(pay+ox?won(pay+ox)+'을 받았어요':'받은 돈이 없어요')+')'});
+  dialog({npc:'deoksoe',who:NPCS.deoksoe.name,text:(ox?'천하장사가 넘어갔네! 구경꾼들이 다 일어섰어. 상으로 건 황소는 내가 값을 쳐서 '+won(ox)+'으로 주지!':m.ok?'으랏차! '+SSI_WHO[m.tier]+'를 넘겼구먼. 허리 힘이 장사일세!':'허허, 샅바는 힘으로만 잡는 게 아닐세. 상대가 힘을 쓸 때는 버티고, 숨을 고를 때 밀어 보게.')+next+'\n('+m.w+':'+m.l+' · '+(pay+ox?won(pay+ox)+'을 받았어요':'받은 돈이 없어요')+')'+playNote(q)});
 }
 // 뱃놀이: 풍류정 연못에서 사공의 배를 탄다. 누르고 있으면 배가 아래로, 떼면 위로 간다. 떠내려오는 연꽃을 줍고 바위는 피한다.
 // 돈을 버는 놀이가 아니라 쉬는 놀이다: 주운 연꽃만큼 기력이 차고 기품이 오른다. 밤에 타면 낙화놀이 구경도 겸한다
@@ -4427,10 +4578,11 @@ function updBoat(m,dt){
 }
 function boatEnd(m){
   if(!m.fin){toast('배에서 내렸어요. 삯은 돌려받지 못해요');return}
-  const sc=Math.max(0,m.got-m.hit*2),en=10+sc*2,nak=m.night&&S.nakDay!==S.day;S.min=Math.min(1380,S.min+30);
-  S.en=Math.min(maxEn(),S.en+en);addXp(10+sc*2+(nak?20:0));train('grace',sc>=13?3:sc>=7?2:1);if(nak){S.nakDay=S.day;train('grace',2)}
+  const sc=Math.max(0,m.got-m.hit*2),en=10+sc*2,nak=m.night&&S.nakDay!==S.day,first=S.boatDay!==S.day;S.boatDay=S.day;S.min=Math.min(1380,S.min+30);
+  /* v74 균형: 기력은 탈 때마다 차지만, 경험치와 기품은 하루 첫 뱃놀이에만 붙는다(전에는 돈만 있으면 하루에 기품을 열 넘게 올릴 수 있었다) */
+  S.en=Math.min(maxEn(),S.en+en);addXp((first?10+sc*2:3)+(nak?20:0));if(first)train('grace',sc>=13?3:sc>=7?2:1);if(nak){S.nakDay=S.day;train('grace',2)}
   if(m.got>(S.boatBest|0))S.boatBest=m.got;hud();sfx('heart');saveAll();
-  dialog({who:'사공 할아범',role:'풍류정 연못의 사공',text:(m.hit>=3?'허허, 배가 많이 흔들렸구려. 바위는 미리 보고 비켜 가야 하오.':sc>=13?'물길을 훤히 읽는구려. 사공 해도 되겠소!':'연못 바람이 좋지요? 또 타러 오시오.')+(nak?'\n배 위에서 본 낙화놀이가 물에 비쳐 두 배로 고왔어요.':'')+'\n(연꽃 '+m.got+'송이'+(m.hit?' · 바위에 '+m.hit+'번':'')+' · 기력 +'+en+(nak?' · 낙화놀이 구경 경험치 +20':'')+')'});
+  dialog({who:'사공 할아범',role:'풍류정 연못의 사공',text:(m.hit>=3?'허허, 배가 많이 흔들렸구려. 바위는 미리 보고 비켜 가야 하오.':sc>=13?'물길을 훤히 읽는구려. 사공 해도 되겠소!':'연못 바람이 좋지요? 또 타러 오시오.')+(nak?'\n배 위에서 본 낙화놀이가 물에 비쳐 두 배로 고왔어요.':'')+'\n(연꽃 '+m.got+'송이'+(m.hit?' · 바위에 '+m.hit+'번':'')+' · 기력 +'+en+(nak?' · 낙화놀이 구경 경험치 +20':'')+(first?'':' · 오늘 두 번째부터는 기력만 차요')+')'});
 }
 // 묵어 가기: 주막 봉놋방(싸다)과 연못가 별서(비싸지만 다음 날 하루 기력 최대치와 경험치가 오른다, STAY_FX).
 // 자기 전에 stayAt에 묵는 곳을 적어 두면 nextDay가 다음 날 아침 그 문 앞에서 눈을 뜨게 한다(wakeResort)
@@ -4468,9 +4620,9 @@ function updRope(m,dt){
 }
 function ropeEnd(m){
   N.deoksoe.hold=0;if(!m.fin){toast('줄타기를 그만뒀어요. 판돈은 돌려받지 못해요');return}
-  const pay=Math.round((m.ok?130:m.pr>=.5?30:0)*playMul());S.min=Math.min(1380,S.min+20);
-  if(pay)addCoins(pay);addXp(8+Math.round(m.pr*20));addFriend('deoksoe',m.ok?6:2);train('arms',m.ok?3:1);if(m.ok)S.ropeWin=(S.ropeWin|0)+1;saveAll();
-  dialog({npc:'deoksoe',who:NPCS.deoksoe.name,text:(m.ok?'얼쑤! 줄 위에서 춤을 추는구먼. 자네, 어름산이 해도 되겠네!':m.pr>=.5?'절반은 넘겼구먼. 판돈은 돌려주지.':'허허, 줄은 눈이 아니라 발바닥으로 보는 걸세. 또 해 보게.')+'\n('+(pay?won(pay)+'을 받았어요':'받은 돈이 없어요')+' · 줄의 '+Math.round(m.pr*100)+'%를 건넜어요)'});
+  const q=playTake(),pay=m.ok?Math.round(130*playMul()*q.c):m.pr>=.5?30:0;S.min=Math.min(1380,S.min+20); /* 절반을 넘겨 돌려받는 판돈은 줄이지 않는다 */
+  if(pay)addCoins(pay);addXp(Math.round((8+m.pr*20)*q.c));addFriend('deoksoe',q.n<3?(m.ok?6:2):1);if(q.n<3)train('arms',m.ok?3:1);if(m.ok)S.ropeWin=(S.ropeWin|0)+1;saveAll();
+  dialog({npc:'deoksoe',who:NPCS.deoksoe.name,text:(m.ok?'얼쑤! 줄 위에서 춤을 추는구먼. 자네, 어름산이 해도 되겠네!':m.pr>=.5?'절반은 넘겼구먼. 판돈은 돌려주지.':'허허, 줄은 눈이 아니라 발바닥으로 보는 걸세. 또 해 보게.')+'\n('+(pay?won(pay)+'을 받았어요':'받은 돈이 없어요')+' · 줄의 '+Math.round(m.pr*100)+'%를 건넜어요)'+playNote(q)});
 }
 // 탈춤 장단: 굴러오는 북점이 왼쪽 동그라미에 겹칠 때 행동을 눌러 추임새를 넣는다. 딱 맞으면 "얼쑤!"(2점), 조금 어긋나면 "좋다!"(1점), 헛누르면 1점 깎인다
 const DANCE_FEE=30,DANCE_GAPS=[.6,.6,.3,.3,.6,.6,.3,.3,.6,.6,.45,.45,.3,.3,.6,.3,.3,.3,.6,.6];
@@ -4483,7 +4635,7 @@ function startDance(){
 function dancePress(m){
   if(m.fin)return;let best=null,bd=9;
   for(const n of m.notes)if(!n.j){const d=Math.abs(n.t-m.t);if(d<bd){bd=d;best=n}}
-  if(best&&bd<=.16){best.j=bd<=.07?2:1;if(best.j===2)m.perf++;else m.good++;m.note=best.j===2?'얼쑤!':'좋다!';m.nt=.35;m.hop=.22;sfx(best.j===2?'coin':'pick')}
+  if(best&&bd<=.12){best.j=bd<=.055?2:1; /* v74: 얼쑤 ±0.07→±0.055초, 좋다 ±0.16→±0.12초. 전에는 박자를 꽤 놓쳐도 돈이 남았다 */if(best.j===2)m.perf++;else m.good++;m.note=best.j===2?'얼쑤!':'좋다!';m.nt=.35;m.hop=.22;sfx(best.j===2?'coin':'pick')}
   else{m.bad++;m.note='엇박!';m.nt=.3;sfx('err')}
 }
 function updDance(m,dt){
@@ -4491,14 +4643,14 @@ function updDance(m,dt){
   if(m.hop>0)m.hop-=dt;
   if(m.fin){m.end-=dt;if(m.end<=0)mgEnd();return}
   m.t+=dt;
-  for(const n of m.notes){if(!n.s&&m.t>=n.t){n.s=1;sfx('chop')}if(!n.j&&m.t-n.t>.16)n.j=-1}
+  for(const n of m.notes){if(!n.s&&m.t>=n.t){n.s=1;sfx('chop')}if(!n.j&&m.t-n.t>.12)n.j=-1}
   if(m.t>=m.len){m.fin=true;m.end=1.1;m.note='한 판 끝! 얼쑤 '+m.perf+' · 좋다 '+m.good;m.nt=9}
 }
 function danceEnd(m){
   N.deoksoe.hold=0;if(!m.fin){toast('탈춤 구경을 그만뒀어요. 판돈은 돌려받지 못해요');return}
-  const sc=Math.max(0,m.perf*2+m.good-m.bad),pay=Math.round(sc*6*playMul());S.min=Math.min(1380,S.min+20);
-  if(pay)addCoins(pay);addXp(8+sc);addFriend('deoksoe',sc>=28?6:3);train('grace',sc>=28?3:1);if(sc>(S.danceBest|0))S.danceBest=sc;saveAll();
-  dialog({npc:'deoksoe',who:NPCS.deoksoe.name,text:(sc>=32?'얼쑤! 구경꾼들이 다 자네만 보네. 타고난 광대일세!':sc>=18?'장단이 몸에 붙었구먼. 구경꾼들이 엽전을 던지네!':'허허, 장단은 귀로 듣고 어깨로 받는 걸세. 또 놀아 보게.')+'\n('+sc+'점 · '+(pay?'구경꾼들이 던진 '+won(pay)+'을 받았어요':'받은 돈이 없어요')+')'});
+  const q=playTake(),sc=Math.max(0,m.perf*2+m.good-m.bad),pay=Math.round(sc*5*playMul()*q.c);S.min=Math.min(1380,S.min+20); /* 점수마다 5냥(v74: 6냥에서 낮춤) */
+  if(pay)addCoins(pay);addXp(Math.round((8+sc)*q.c));addFriend('deoksoe',q.n<3?(sc>=28?6:3):1);if(q.n<3)train('grace',sc>=28?3:1);if(sc>(S.danceBest|0))S.danceBest=sc;saveAll();
+  dialog({npc:'deoksoe',who:NPCS.deoksoe.name,text:(sc>=32?'얼쑤! 구경꾼들이 다 자네만 보네. 타고난 광대일세!':sc>=18?'장단이 몸에 붙었구먼. 구경꾼들이 엽전을 던지네!':'허허, 장단은 귀로 듣고 어깨로 받는 걸세. 또 놀아 보게.')+'\n('+sc+'점 · '+(pay?'구경꾼들이 던진 '+won(pay)+'을 받았어요':'받은 돈이 없어요')+')'+playNote(q)});
 }
 // 점집: 하루에 한 번 50냥으로 오늘의 운세를 본다. 그날 하루 작은 복(S.fortune={day,k,v})이 붙고 gearFx가 함께 센다
 const FORTUNE=[['luck',.08,'귀한 것이 나올 운이 트였어. 오늘은 땅을 파거나 낚시를 해 봐.'],['xp',.1,'배움의 기운이 밝아. 오늘 한 일은 몸에 더 잘 붙을 거야.'],['sell',.08,'재물운이 들었어. 오늘 파는 물건은 값을 더 받겠어.'],
@@ -4555,12 +4707,12 @@ function updTuho(m,dt){
 }
 function tuhoEnd(m){
   N.deoksoe.hold=0;if(!m.fin){toast('투호를 그만뒀어요. 판돈은 돌려받지 못해요');return}
-  const pay=Math.round(TUHO_PAY[m.hit]*(perk('deoksoe')?1.2:1)),all=m.hit===5&&!S.tuhoAll;
+  const q=playTake(),pay=Math.round(TUHO_PAY[m.hit]*(perk('deoksoe')?1.2:1)*q.c),all=m.hit===5&&!S.tuhoAll;
   if(m.hit>(S.tuhoBest|0))S.tuhoBest=m.hit;S.min=Math.min(1380,S.min+20);
-  if(pay)addCoins(pay);addXp(6+m.hit*3);addFriend('deoksoe',2+m.hit);if(all){S.tuhoAll=1;gain('giftbox',2)}
+  if(pay)addCoins(pay);addXp(Math.round((6+m.hit*3)*q.c));addFriend('deoksoe',q.n<3?2+m.hit:1);if(all){S.tuhoAll=1;gain('giftbox',2)}
   saveAll();
   dialog({npc:'deoksoe',who:NPCS.deoksoe.name,text:(m.hit>=5?'허허, 다섯 대를 다 넣다니! 내 평생 몇 번 못 본 솜씨일세.':m.hit>=3?'제법이구먼! 약속대로 돈을 내주지.':m.hit===2?'아깝구먼. 두 대면 본전은 건졌네.':'허허, 오늘은 손이 안 풀렸구먼. 또 오게.')
-    +'\n('+m.hit+'대를 넣었어요'+(pay?' · '+won(pay)+'을 받았어요':'')+(all?' · 처음으로 다 넣은 기념으로 선물 꾸러미 2개를 받았어요':'')+')'});
+    +'\n('+m.hit+'대를 넣었어요'+(pay?' · '+won(pay)+'을 받았어요':'')+(all?' · 처음으로 다 넣은 기념으로 선물 꾸러미 2개를 받았어요':'')+')'+playNote(q)});
 }
 // ───────── 수라간 ─────────
 const fishCount=()=>Object.keys(FISHLOOK).reduce((a,k)=>a+have(k),0);
@@ -5511,7 +5663,12 @@ function beastInLine(){
   return null;
 }
 // 과녁 크기: 활을 벼리거나 무예가 높거나 무진과 친하면 커진다
-const aimR=()=>8.5+tl('bow')*1.2+sv('arms')*.15+(perk('mujin')?1.5:0)+(relic('c_feather')?1.5:0)+gearFx('aim')+Math.min(huntRank(),S.hrank|0)*.3; /* 사냥꾼의 이름(방에서 축하를 받은 데까지)마다 조금씩 */
+const aimRaw=()=>tl('bow')*1.2+sv('arms')*.15+(perk('mujin')?1.5:0)+(relic('c_feather')?1.5:0)+gearFx('aim')+Math.min(huntRank(),S.hrank|0)*.3; /* 사냥꾼의 이름(방에서 축하를 받은 데까지)마다 조금씩 */
+/* v75 균형: 예전에는 덤이 그대로 과녁에 더해져(최대 25쯤) 중반부터는 아무 때나 눌러도 절반 넘게 맞았다. 이제 덤 5까지는 그대로, 그 위로는 0.4배만 과녁에 붙고 과녁은 17을 넘지 않는다.
+   과녁에 못 붙은 덤은 흔들림을 늦추는 데 쓰인다(aimCalm, 15%까지). 그리고 센 짐승일수록 과녁이 크게 흔들린다(aimAmp: 레벨마다 5%, 백호는 1.8배) */
+const aimR=()=>{const b=aimRaw();return Math.min(17,8.5+(b<=5?b:5+(b-5)*.4))};
+const aimCalm=()=>1-Math.min(.15,Math.max(0,aimRaw()-5)*.015);
+const aimAmp=k=>1+Math.min(16,BEASTS[k].lv|0)*.05;
 function startHunt(b){
   if(!useEn(2))return;
   mg={kind:'hunt',b,o:b,ph:rnd(0,6),t:0,i:0,cool:0,note:''};P.path=[];P.after=null;
@@ -5519,8 +5676,8 @@ function startHunt(b){
   if(BEASTS[b.k].deep)tip('aim2','짐승마다 과녁이 흔들리는 모양이 달라요. 여우는 빠르게 떨리고, 곰은 느리지만 크게 흔들려요');
 }
 // 과녁이 짐승에서 벗어난 만큼: 짐승마다 가로·세로 폭과 박자가 다르다. 빠르기는 맞힐 때마다 조금씩 오른다(세 번까지)
-const aimOff=m=>{const a=BEASTS[m.b.k].aim;return[Math.sin(m.ph)*a[1],Math.sin(m.ph*a[3])*a[2]]};
-const aimSpeed=m=>BEASTS[m.b.k].aim[0]+Math.min(3,m.i)*.8;
+const aimOff=m=>{const a=BEASTS[m.b.k].aim,k=aimAmp(m.b.k);return[Math.sin(m.ph)*a[1]*k,Math.sin(m.ph*a[3])*a[2]*k]};
+const aimSpeed=m=>(BEASTS[m.b.k].aim[0]+Math.min(3,m.i)*.8)*aimCalm();
 let huntStreak=0; /* 놓치지 않고 이어서 잡은 수 (저장하지 않는다) */
 // 사냥하는 모습이 눈에 보이게: 겨누는 동안 손에 든 활(걸친 무기의 빛깔)과 메긴 화살을 그리고, 쏘면 화살이 과녁 자리로 날아간다.
 // 맞으면 그 자리에서 불꽃이 튀고, 빗나가면 화살이 땅에 꽂혀 잠깐 남는다. 맞고 안 맞고는 쏘는 순간 이미 정해졌고 이것은 보기용이다
@@ -6652,9 +6809,11 @@ function nextDay(forced){
   if(jailed)S.jailed=(S.jailed|0)+1;
   if(forced)msgs.push(jailed?(jailAt?'궁궐 옥사에서 하룻밤을 보내고 풀려났어요. 다시는 그러지 말라는 호통을 들었어요':'옥에서 하룻밤을 보내고 풀려났어요. 다시는 그러지 말라는 호통을 들었어요'):'깜빡 졸아서 집에 돌아와 잠들었어요');
   if(S.build){S.house=S.build;S.build=0;msgs.push('새 집 완성! '+HOUSES[S.house-1].n+' · 방이 넓어졌어요');sfx('level')}
+  /* v74 균형: 아늑함이 주는 아침 경험치는 50까지는 두 배, 그 위로는 절반씩만 는다. 가구를 겹쳐 놓고 가짓수도 늘어서 아늑함이 백을 쉽게 넘게 됐기 때문이다 */
+  const cozyXp=v=>v<=50?v*2:100+Math.round((v-50)*.5);
   if(stay==='villa'){S.stayDay=S.day;S.en=maxEn();addXp(60);msgs.push('연못가 별서에서 푹 쉬었어요 · 경험치 +60 · 오늘 하루 '+FX_TXT.en(STAY_FX.en)+', '+FX_TXT.xp(STAY_FX.xp))}
   else if(stay){addXp(15);msgs.push('주막 봉놋방에서 하룻밤 묵었어요. 순덕이 아침 국밥을 내줬어요 · 경험치 +15')}
-  const cf=stay?0:wakeQ?S.q.placed.reduce((a,f)=>a+FURN[f.id].c,0):comfort();if(cf>0){addXp(cf*2);msgs.push('아늑한 '+(wakeQ?'처소':'집')+'에서 푹 잤어요 · 경험치 +'+cf*2)}
+  const cf=stay?0:wakeQ?S.q.placed.reduce((a,f)=>a+FURN[f.id].c,0):comfort();if(cf>0){addXp(cozyXp(cf));msgs.push('아늑한 '+(wakeQ?'처소':'집')+'에서 푹 잤어요 · 경험치 +'+cozyXp(cf))}
   if(perk('sol')){gain('bread',1);msgs.push('문 앞에 솔이의 빵이 놓여 있어요')}
   const ripe=Object.values(S.farm).filter(p=>p.c&&p.g>=CROPS[p.c].days).length;if(ripe)msgs.push('밭에 다 자란 작물이 '+ripe+'개 있어요');
   setDeco(false);
@@ -8401,8 +8560,10 @@ function renderDeco(){
   const cyc=(label,key,n)=>{const b=el('button','btn',label);b.type='button';b.onclick=()=>{S[key]=((S[key]||0)+1)%n;touch();sfx('pick')};box.appendChild(b)};
   cyc('벽지 바꾸기','wallS',WALLS.length);cyc('바닥 무늬 바꾸기','floorS',FLOORS.length);
   if(!S.inQ){const b=el('button','btn','세트 '+setsDone().length+'/'+Object.keys(SETS).length);b.type='button';b.onclick=openSets;box.appendChild(b)}
-  $('decoHint').textContent=(ids.length?'가구를 고르고 바닥을 누르면 놓여요. 겹쳐 놓을 수도 있어요: [깔개]는 가구 밑에, [올림]은 [받침] 가구 위에, [매달기]는 가구 위 천장에. 놓인 것을 누르면 맨 위부터 다시 넣어요.':'보관 중인 가구가 없어요. 잡화점에서 사거나, 모루와 함께 짜거나, 이웃과 친해지면 받을 수 있어요.')+' · 아늑함 '+comfort();
-  for(const k of ids){const b=el('button','btn'+(k===decoSel?' on':''));b.type='button';b.appendChild(icon('furn',k));b.appendChild(el('span',null,FURN[k].n+(FURN[k].walk?' [깔개]':FURN[k].hang?' [매달기]':FURN[k].surf?' [받침]':FURN[k].top?' [올림]':'')+' ×'+S.furn[k]));b.onclick=()=>{decoSel=decoSel===k?null:k;renderDeco()};box.appendChild(b)}
+  /* 두 칸짜리를 골랐을 때만: 가로로 놓을지 세로로 놓을지 */
+  if(decoSel&&furnTurns(decoSel)){const b=el('button','btn'+(decoRot?' on':''),decoRot?'세로로 놓는 중 (누르면 가로)':'가로로 놓는 중 (누르면 세로)');b.type='button';b.onclick=()=>{decoRot=!decoRot;sfx('pick');renderDeco()};box.appendChild(b)}
+  $('decoHint').textContent=(ids.length?'가구를 고르고 바닥을 누르면 놓여요. 겹쳐 놓을 수도 있어요: [깔개]는 가구 밑에, [올림]은 [받침] 가구 위에, [매달기]는 가구 위 천장에, [벽걸이]는 벽 바로 아래 칸을 눌러 벽에. [2칸]·[4칸]은 누른 칸부터 오른쪽(과 아래)으로 그만큼 차지하고, [2칸]은 고르면 나오는 단추로 세로로 돌려 놓을 수 있어요. 놓인 것을 누르면 맨 위부터 다시 넣어요.':'보관 중인 가구가 없어요. 잡화점에서 사거나, 모루와 함께 짜거나, 이웃과 친해지면 받을 수 있어요.')+' · 아늑함 '+comfort();
+  for(const k of ids){const b=el('button','btn'+(k===decoSel?' on':''));b.type='button';b.appendChild(icon('furn',k));b.appendChild(el('span',null,FURN[k].n+(FURN[k].size?' ['+FURN[k].size[0]*FURN[k].size[1]+'칸]':'')+(FURN[k].wall?' [벽걸이]':FURN[k].walk?' [깔개]':FURN[k].hang?' [매달기]':FURN[k].surf?' [받침]':FURN[k].top?' [올림]':'')+' ×'+S.furn[k]));b.onclick=()=>{decoSel=decoSel===k?null:k;renderDeco()};box.appendChild(b)}
 }
 function setDeco(on){
   decoMode=!!on&&scene==='home';$('deco').hidden=!decoMode;$('bDeco').classList.toggle('on',decoMode);$('bDeco').textContent=decoMode?'꾸미기 끝':'꾸미기';
@@ -8417,6 +8578,7 @@ function decoClick(x,y){
     if(x<0||y<0||x>=GRID_W||y>=GRID_H||(x===e[0]&&y===e[1]+1)){toast('여기까지는 넓힐 수 없어요');return}
     if(set.size>=roomBudget()){toast('지금 집으로는 더 넓힐 수 없어요. 집을 키우면 칸이 늘어요');sfx('err');return}
     if(!DIRS.some(([dx,dy])=>set.has((x+dx)+','+(y+dy)))){toast('지금 방에 붙은 자리만 넓힐 수 있어요');return}
+    if(S.placed.some(f=>f.x===x&&f.y===y+1&&furnSlot(f)==='w')){toast('바로 아래 벽에 걸린 것이 있어요. 먼저 거둬요');sfx('err');return}
     freezeRoom();S.room=S.room.concat(k);sfx('chop');touch();renderDeco();return;
   }
   if(decoSel==='-floor'){
@@ -8432,18 +8594,32 @@ function decoClick(x,y){
   if(!inRoom)return;
   /* 한 칸에 겹쳐 놓기: 깔개는 가구 밑에, 작은 것(top)은 상·궤(surf) 위에, 매다는 것(hang)은 무엇 위에든. 고른 것을 이 칸에 더 놓을 수 있으면 놓고,
      놓을 수 없으면 그 칸의 맨 위 것부터(올린 것 → 매단 것 → 가구 → 깔개) 거둔다 */
-  const here=S.placed.filter(f=>f.x===x&&f.y===y),slot=s=>here.find(f=>furnSlot(f)===s),sel=decoSel&&FURN[decoSel]?decoSel:null;
-  let put=null;
-  if(sel&&!((x===0&&y<2)||(x===dxr&&y===rh-1))){
-    const F=FURN[sel],m=slot('m');
-    if(F.walk){if(!slot('f'))put={}}
+  const here=S.placed.filter(f=>furnOn(f,x,y)),slot=s=>here.find(f=>furnSlot(f)===s),sel=decoSel&&FURN[decoSel]?decoSel:null;
+  let put=null,why='';
+  if(sel&&FURN[sel].wall){
+    /* 벽에 거는 것: 위쪽이 벽인 칸(이부자리 머리맡 포함)에만, 창이 없는 벽에만 */
+    if(set.has(x+','+(y-1)))why='벽 바로 아래 칸을 눌러야 벽에 걸려요';else if(x%3===2)why='창이 난 자리예요. 옆 벽에 걸어요';else if(!slot('w'))put={z:'w'};
+  }else if(sel){
+    /* 큰 가구는 누른 칸을 왼쪽 위로 해서 size만큼의 칸이 모두 방 안이고 비어 있어야 한다 */
+    const F=FURN[sel],turn=decoRot&&furnTurns(sel),sz=F.size?(turn?[F.size[1],F.size[0]]:F.size):[1,1],cells=[],fixed=(a,b)=>(a===0&&b<2)||(a===dxr&&b===rh-1),at=(a,b,s)=>S.placed.find(f=>furnOn(f,a,b)&&furnSlot(f)===s);
+    for(let j=0;j<sz[1];j++)for(let i=0;i<sz[0];i++)cells.push([x+i,y+j]);
+    const need=(sz[0]>1?'가로 '+sz[0]+'칸':'')+(sz[0]>1&&sz[1]>1?', ':'')+(sz[1]>1?'세로 '+sz[1]+'칸':'');
+    if(cells.some(([a,b])=>!set.has(a+','+b)||fixed(a,b))){if(F.size)why='자리가 모자라요. 누른 칸부터 '+need+'이 방 안에 있어야 해요'}
+    else if(F.walk){if(!cells.some(([a,b])=>at(a,b,'f')))put={};else if(F.size)why='다른 깔개와 겹쳐요'}
     else if(F.hang){if(!slot('h'))put={}}
-    else if(!m){if(!(x===P.x&&y===P.y))put={}}
-    else if(F.top&&FURN[m.id].surf&&!slot('t'))put={z:'t'};
+    else if(!cells.some(([a,b])=>at(a,b,'m'))){if(!cells.some(([a,b])=>a===P.x&&b===P.y))put={}}
+    else if(F.top&&slot('m')&&FURN[slot('m').id].surf&&!slot('t'))put={z:'t'};
+    else if(F.size)why='옆 칸의 가구와 겹쳐요. '+need+'이 비어 있어야 해요';
+    if(put&&F.size){put.s=1;if(turn)put.r=1}
   }
   if(!put){
-    const f=slot('t')||slot('h')||slot('m')||slot('f');
-    if(f){S.placed.splice(S.placed.indexOf(f),1);S.furn[f.id]=(S.furn[f.id]||0)+1;sfx('pick');touch();renderDeco();return}
+    if(why&&(!here.length||FURN[sel].wall)){toast(why);sfx('err');return}
+    const f=slot('t')||slot('h')||slot('w')||slot('m')||slot('f');
+    if(f){
+      const out=[f];if(furnSlot(f)==='m')for(const q of S.placed)if(q.z==='t'&&furnOn(f,q.x,q.y))out.push(q); /* 받침을 거두면 그 위에 올린 것도 함께 거둔다 */
+      for(const q of out){S.placed.splice(S.placed.indexOf(q),1);S.furn[q.id]=(S.furn[q.id]||0)+1}
+      sfx('pick');touch();renderDeco();return;
+    }
     if(!sel){toast('먼저 아래에서 가구를 골라요');return}
     toast('여기에는 놓을 수 없어요');sfx('err');return;
   }
@@ -8452,7 +8628,7 @@ function decoClick(x,y){
     const okBed=findPath(dxr,rh-1,(a,b)=>(a===1&&b<2)||(a===0&&b===2)),okMe=findPath(dxr,rh-1,(a,b)=>a===P.x&&b===P.y);
     if(!okBed||!okMe){S.placed.pop();toast('길이 막혀서 놓을 수 없어요');sfx('err');return}
   }
-  if(put.z)toast(FURN[slot('m').id].n+' 위에 올렸어요');
+  if(put.z==='t')toast(FURN[slot('m').id].n+' 위에 올렸어요');else if(put.z==='w')toast('벽에 걸었어요');
   S.furn[decoSel]--;sfx('pick');touch();
   for(const k in SETS)if(SETS[k].ids.includes(decoSel)&&setHas(k)&&S.placed.filter(q=>q.id===decoSel).length===1){toast('"'+SETS[k].n+'" 세트를 갖췄어요! 아늑함 +'+SETS[k].c);sfx('level')}
   renderDeco();
