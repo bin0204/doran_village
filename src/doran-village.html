@@ -552,7 +552,7 @@ const WORKS={
    터는 정해져 있지 않고 목수 모루에게 청해 내가 고른다(S.works.gate.at). 재료 넣기·못질·쓰기는 다른 시설과 같은 코드를 탄다. 훑을 때는 workKeys()를 쓴다 */
 Object.defineProperty(WORKS,'gate',{value:{n:'축지 장승',x:0,y:0,w:1,need:{wood:40,stone:30,iron:10,feather:6},coins:1500,perk:'사냥터에서 "장승 길" 단추로 마을에 바로 돌아오고, 장승 앞에서 사냥터로 바로 가요',where:'내가 고른 자리',free:1}});
 const workKeys=()=>Object.keys(WORKS).concat(S&&S.works&&S.works.gate&&S.works.gate.at?['gate']:[]);
-const MOVE_FEE=k=>WORKS[k].w>1?800:500; /* 시설을 옮기는 삯 */
+const MOVE_FEE=k=>Math.round((WORKS[k].w>1?800:500)*(perk('bau')?.8:1)); /* 시설을 옮기는 삯. 조수 바우와 친하면(♥3) 20% 싸다 */
 let relo=null; /* 지금 옮길 자리를 고르고 있는 시설 */
 // 먼바다의 물고기 떼에서 낚이는 것: [이름, 낚일 비중, 경험치]
 const DEEPFISH=[['mackerel',28,9],['snapper',22,16],['bangeo',22,18],['muneo',15,18],['mineo',13,22],['samchi',14,16],['darangeo',5,26]];
@@ -720,6 +720,16 @@ const NPCS={
     rain:'빗소리에 글 읽는 맛이 깊어지는구먼.', night:'밤이 깊었느니라. 등잔 기름이 아깝다, 어서 들어가거라.',
     gift:{love:'허허, 이 귀한 것을! 고맙게 받으마.',like:'마음 씀씀이가 곱구먼. 잘 받겠네.',ok:'성의가 고맙구먼.',hate:'어험… 이건 서당에 둘 물건이 아니로다. 마음만 받으마.'},
     m2:'자네에게 주려고 아껴 둔 것이 있느니라.', m3:'글 외는 요령을 하나 일러 주마. 한결 수월할 게다.', m5:'자네는 내 자랑이로다. 이것을 받거라.'},
+  // 목수의 조수 바우(v96, 사용자 요청: 목수에게 말할 일이 너무 많다). 목수집 2층 다락에 살며 모루 곁에 선다(자리는 buildTown이 마을마다 잡는다).
+  // 다리·우리·장독대·허수아비·화약통·축지 장승·시설 옮기기를 맡는다. 훈장처럼 at:'town'이라 부탁은 하지 않고 인사와 선물로 가까워진다
+  bau:{at:'town',name:'바우',role:'목수의 조수',anchor:[30,10],roam:1,skin:'#e8c19a',hair:'#3a2a22',shirt:'#5a7a4a',bot:'#6b5a4c',rib:'#e9d8a8',sex:'m',hat:'band',
+    loves:['apple','chestnut'],likes:['wood','iron','egg','mushroom'],hates:['flower'],perk:'시설 옮기는 삯과 화약통 빚는 삯이 20% 싸져요',
+    lines:[['안녕하세요! 모루 어르신 밑에서 일 배우는 바우예요.','저는 어르신 댁 2층 다락에 살아요. 아침마다 망치 소리에 깨요.','다리나 우리 지을 일이 있으면 저한테 말씀하세요.'],
+      ['{name} 님, 오늘은 어디에 뭘 지어 볼까요?','어르신은 못 하나도 허투루 안 박으세요. 저는 아직 멀었어요.','화약통은 조심해서 다루세요. 저도 눈썹을 한 번 태웠거든요.'],
+      ['{name} 님 덕분에 일이 재미있어요.','언젠가 제 손으로 정자 하나를 통째로 지어 보는 게 꿈이에요.','다락 창으로 보면 {name} 님 댁 지붕이 제일 반듯해요.']],
+    rain:'비 오는 날은 다락에서 대패 날을 갈아요.', night:'밤공기가 차요. 저는 이만 2층으로 올라갈게요.',
+    gift:{love:'우와, 이거 제가 제일 좋아하는 거예요! 고맙습니다.',like:'요긴하게 쓸게요. 고맙습니다.',ok:'챙겨 주셔서 고맙습니다.',hate:'아… 이건 다락에 둘 데가 없네요. 마음만 받을게요.'},
+    m2:'늘 챙겨 주셔서, 저도 드릴 게 있어요.', m3:'앞으로 {name} 님 일은 삯을 좀 덜 받을게요. 어르신께는 비밀이에요.', m5:'{name} 님은 제 첫 단골이에요. 이건 제 마음이에요.'},
   // 궁궐 사람들 (at:'palace'). 지어낸 왕실이며, 부탁은 하지 않고 인사와 선물로 가까워진다
   king:{at:'palace',name:'임금',role:'이 나라의 왕',anchor:[17,10],roam:2,skin:'#f0cba8',hair:'#2e2a2a',shirt:'#c8392f',bot:'#c8392f',rib:'#f7d24a',sex:'m',hat:'ikseon',beard:1,
     loves:['ginseng','snapper','d_sam'],likes:['carp','antler','tigerskin','watermelon'],hates:['stone'],perk:'수라상 하사금을 30% 더 받아요',
@@ -1023,9 +1033,12 @@ function buildTown(seed,init){
   seed=seed>>>0;if(seed===townSeed)return;
   const m=(seed&&randomTown(seed))||legacyTown();
   Object.assign(TOWN,m);townSeed=seed;spotCache=new Map();
+  /* 조수 바우는 모루 곁에 선다: 모루 자리의 옆 칸 가운데 비어 있는 첫 칸(마을 만들기는 건드리지 않고, 다 만든 뒤에 고른다) */
+  {const a=NPCS.moru.anchor,ok=(x,y)=>x>0&&y>0&&x<W-1&&y<H-1&&m.tile[y][x]<=2&&!m.objAt[y][x];
+    NPCS.bau.anchor=([[2,0],[-2,0],[1,0],[-1,0],[2,1],[-2,1],[1,1],[-1,1],[0,1]].map(d=>[a[0]+d[0],a[1]+d[1]]).find(q=>ok(q[0],q[1]))||a).slice()}
   if(init)return;
   useMap(TOWN);groundSeason=-1;
-  for(const id of TOWN_IDS.concat('hun')){const a=NPCS[id].anchor,n=N[id];n.x=n.fx=a[0];n.y=n.fy=a[1];n.t=1;n.hold=0}
+  for(const id of TOWN_IDS.concat('hun','bau')){const a=NPCS[id].anchor,n=N[id];n.x=n.fx=a[0];n.y=n.fy=a[1];n.t=1;n.hold=0}
 }
 buildTown(0,true);tile=TOWN.tile;objAt=TOWN.objAt;TREES=TOWN.TREES;ROCKS=TOWN.ROCKS;GRASS=TOWN.GRASS;SAND=TOWN.SAND;
 const newSeed=()=>(Math.floor(Math.random()*4294967295)+1)>>>0;
@@ -1261,6 +1274,12 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:96,d:'11월 26일',t:'목수의 조수 바우',l:[
+    '목수 모루에게 조수가 생겼어요. 이름은 바우이고, 목수집 2층 다락에 살아요. 모루 곁에 서 있어요.',
+    '모루에게 몰려 있던 일을 나눴어요. 다리 놓기, 닭장·외양간·장독대·허수아비 짓기, 화약통 빚기, 축지 장승 터 잡기, 시설 옮기기는 이제 바우에게 말해요.',
+    '모루는 집 짓기·고치기, 지붕 칠하기, 상한 집 고치기, 아궁이, 나무 기러기, 연장 벼리기, 장비 짓기, 가구 짜기를 맡아요.',
+    '바우와 친해지면(♥3) 시설 옮기는 삯과 화약통 빚는 삯이 20% 싸져요.'
+  ]},
   {v:95,d:'11월 26일',t:'처음 하는 사람을 위한 길라잡이',l:[
     '새 마을을 시작하면 조작법을 다섯 걸음으로 알려 줘요. 걷기, 행동(나무 흔들기), 가방 열기, 이웃에게 말 걸기, 하루 보내기 차례예요.',
     '걸음마다 화면 왼쪽 아래에 짧은 글이 뜨고, 해 보면 바로 다음으로 넘어가요. 과일나무와 이웃 위에는 붉은 화살표가 떠요. 언제든 "건너뛰기"를 누를 수 있어요.',
@@ -2615,6 +2634,12 @@ function bldArt(c,b,night){
   rr(c,x+2,y-4,w-4,by-y+4,4,b.wall);
   c.fillStyle='#6b4a2a';c.fillRect(x+2,y-4,4,by-y+4);c.fillRect(x+w-6,y-4,4,by-y+4);c.fillStyle='#9a9a94';c.fillRect(x-2,by-4,w+4,4);
   roof(c,x,w,y-4,b.tile?'tile':'thatch',null);
+  if(b.id==='moru'){ /* 2층 다락: 조수 바우가 산다(v96). 지붕 위로 작은 방 하나와 제 지붕 */
+    const lw=46,lx=x+w/2-lw/2,ly=y-58;
+    rr(c,lx,ly,lw,32,3,b.wall);c.fillStyle='#6b4a2a';c.fillRect(lx,ly,3,32);c.fillRect(lx+lw-3,ly,3,32);
+    rr(c,lx+15,ly+9,16,13,2,night?'#ffe27a':'#bfe0ff');c.fillStyle='#6b4a2a';c.fillRect(lx+22,ly+9,2,13);c.fillRect(lx+15,ly+15,16,1.5);
+    roof(c,lx,lw,ly,b.tile?'tile':'thatch',null);
+  }
   rr(c,x+w-16,y+6,8,16,1,b.roof);
   drawDoor(c,dx,by);
   for(let i=0;i<b.w;i++){const cx=x+i*T+16;if(Math.abs(cx-dx)>4){drawWindow(c,cx,by-38,night);
@@ -5391,10 +5416,10 @@ function drawPk(c){
 const BOMB_NEED={iron:1,stone:3,wood:2},BOMB_FEE=30,BOMB_FUSE=2.6,BOMB_R=1.6,BOMB_HURT=12;
 let bombs=[],booms=[],boomT=0;
 function bombTalk(){
-  const can=n=>S.coins>=BOMB_FEE*n&&Object.keys(BOMB_NEED).every(k=>have(k)>=BOMB_NEED[k]*n);
-  const make=n=>{if(!can(n))return;for(const k in BOMB_NEED)gain(k,-BOMB_NEED[k]*n);addCoins(-BOMB_FEE*n);gain('bomb',n);sfx('chop');toast('화약통 '+n+'개를 받았어요. 동굴에서 아래 "화약통 놓기"로 써요');saveAll()};
+  const fee=Math.round(BOMB_FEE*(perk('bau')?.8:1)),can=n=>S.coins>=fee*n&&Object.keys(BOMB_NEED).every(k=>have(k)>=BOMB_NEED[k]*n);
+  const make=n=>{if(!can(n))return;for(const k in BOMB_NEED)gain(k,-BOMB_NEED[k]*n);addCoins(-fee*n);gain('bomb',n);addFriend('bau',2);sfx('chop');toast('화약통 '+n+'개를 받았어요. 동굴에서 아래 "화약통 놓기"로 써요');saveAll()};
   const need=Object.keys(BOMB_NEED).map(k=>ITEMS[k].n+' '+BOMB_NEED[k]+'개(가진 것 '+have(k)+')').join(', ');
-  dialog({npc:'moru',who:NPCS.moru.name,text:'동굴 바위를 한꺼번에 날리는 화약통 말인가? 하나에 '+need+', 그리고 '+BOMB_FEE+'냥이네. 불이 붙으면 얼른 두 칸 넘게 물러나게. 가까이 있으면 크게 다치네.\n(지금 가진 화약통 '+have('bomb')+'개)',
+  dialog({npc:'bau',who:NPCS.bau.name,text:'동굴 바위를 한꺼번에 날리는 화약통이요? 하나에 '+need+', 그리고 '+fee+'냥이에요. 불이 붙으면 얼른 두 칸 넘게 물러나세요. 가까이 있으면 크게 다쳐요.\n(지금 가진 화약통 '+have('bomb')+'개)',
     choices:[[can(1)?'1개 빚기':'재료나 돈이 모자라요',can(1)?()=>make(1):null]].concat(can(3)?[['3개 빚기',()=>make(3)]]:[],[['그만',null]])});
 }
 function bombPlace(){
@@ -6045,7 +6070,7 @@ function openStatus(){
     const note=t=>body.appendChild(el('p','note',t));
     if(S.lore.pal&&!S.seenPal)note('마을 북쪽 길 끝으로 올라가면 한양 궁궐이라고 들었어요.');
     if(S.camp)note('집: 아직 집이 없어 짚자리에서 자요.'+(S.diy?' 움막을 짓는 중이에요 ('+S.diy.step+'/3 단계). 짚자리 앞에서 이어서 지어요.':S.lore.hut?' 나무 '+HUT_WOOD+'개를 모아 모루에게 가면 움막을 지어 준다고 들었어요. (가진 나무 '+have('wood')+'개)':''));
-    if(S.lore.bridge||S.kit>0)note('다리: 나무 '+BRIDGE_WOOD+'개와 '+won(BRIDGE_COST)+'을 모아 모루에게 가면 다리 재목을 준다고 들었어요. 개울가에 서서 물을 바라보고 행동하면 놓을 수 있어요.'+(S.kit?' (가진 재목 '+S.kit+'벌)':'')+(S.bridges.length?' (놓은 다리 '+S.bridges.length+'칸)':''));
+    if(S.lore.bridge||S.kit>0)note('다리: 나무 '+BRIDGE_WOOD+'개와 '+won(BRIDGE_COST)+'을 모아 목수의 조수 바우에게 가면 다리 재목을 준다고 들었어요. 개울가에 서서 물을 바라보고 행동하면 놓을 수 있어요.'+(S.kit?' (가진 재목 '+S.kit+'벌)':'')+(S.bridges.length?' (놓은 다리 '+S.bridges.length+'칸)':''));
     if(S.lore.hunt)note('사냥 방: 사냥터 들머리의 방에 날마다 사냥감이 하나씩 붙고, 다 잡으면 삯을 준다고 들었어요. 지금 이름은 【'+HRANK[huntRank()][1]+'】 (잡은 짐승 '+(S.kills|0)+'마리)');
     if(S.lore.deep)note('깊은 산: 사냥터 숲의 동쪽 길 끝 너머에 여우와 늑대, 곰이 사는 깊은 산이 있다고 들었어요. 레벨 '+DEEP_LV+'부터 들어갈 수 있어요.'+(S.level>=DEEP_LV?'':' (지금 레벨 '+S.level+')'));
     if(S.lore.mall||S.seenRes)note('운종가: 궁궐 동쪽 문으로 나가면 한양의 저잣거리 운종가라고 들었어요. 비단전·화방·방물전·주막이 있고 투호 놀이판이 벌어져요. 주인과 ♥3이 되면 그 가게 값을 깎아 줘요.');
@@ -7031,15 +7056,20 @@ function buyStock(k){
 function buildTalk(){
   const ch=[[S.camp?'움막 짓기':'집 고치기',houseTalk]];
   if(S.house>=2)ch.push(['지붕 칠하기',roofTalk]);
-  ch.push(['다리 놓기',bridgeTalk]);
   if(Object.keys(S.ruin).length)ch.push(['상한 집 고쳐 주기',repairTalk]);
-  for(const k in PENS)if(!S.pens[k]&&S.place!==k)ch.push([PENS[k].n+' 짓기',()=>penTalk(k)]);
   if(!S.furn.agungi&&!S.placed.some(f=>f.id==='agungi'))ch.push(['아궁이 놓기',hearthTalk]);
   if(!S.spouse&&!have('goose'))ch.push(['나무 기러기 깎기',gooseTalk]);
-  if(!S.works.gate.at)ch.push(['축지 장승 터 잡기',()=>dialog({npc:'moru',who:NPCS.moru.name,text:'사냥터를 한달음에 오가는 축지 장승 말인가? 터는 자네가 고르게. 터를 잡은 뒤 나무 40, 돌 30, 쇳돌 10, 깃털 6에 1,500냥을 모아 넣고 못질하면 되네.',choices:[['터 고르기',()=>moveStart('gate')],['그만',null]]})]);
+  ch.push(['그만',null]);
+  dialog({npc:'moru',who:NPCS.moru.name,text:'무엇을 지어 줄까? 집과 지붕, 아궁이는 내가 맡네. 다리와 우리, 마을 시설은 우리 집 2층에 사는 조수 바우에게 말하게.',choices:ch});
+}
+/* 조수 바우가 맡는 일(v96): 다리, 닭장·외양간·장독대·허수아비, 축지 장승 터, 시설 옮기기. 전에는 모두 모루의 "짓기·고치기"에 있었다 */
+function bauTalk(){
+  const say=(text,choices)=>dialog({npc:'bau',who:NPCS.bau.name,text,choices}),ch=[['다리 놓기',bridgeTalk]];
+  for(const k in PENS)if(!S.pens[k]&&S.place!==k)ch.push([PENS[k].n+' 짓기',()=>penTalk(k)]);
+  if(!S.works.gate.at)ch.push(['축지 장승 터 잡기',()=>say('사냥터를 한달음에 오가는 축지 장승이요? 터는 직접 고르세요. 터를 잡은 뒤 나무 40, 돌 30, 쇳돌 10, 깃털 6에 1,500냥을 모아 넣고 못질하면 돼요.',[['터 고르기',()=>moveStart('gate')],['그만',null]])]);
   ch.push(['시설 옮기기',openRelo]);
   ch.push(['그만',null]);
-  dialog({npc:'moru',who:NPCS.moru.name,text:'무엇을 지어 줄까? 닭장이나 외양간은 자네 땅 어디든, 자네가 고른 자리에 세울 수 있네.',choices:ch});
+  say('무엇을 도와드릴까요? 닭장이나 외양간은 내 땅 어디든, 고르신 자리에 세워 드려요. 우물이나 정자 같은 마을 시설도 옮겨 드려요.',ch);
 }
 // ───────── 혼인 ─────────
 // 혼례 때 건네는 나무 기러기는 목수 모루가 깎아 준다
@@ -7284,12 +7314,12 @@ function hearthTalk(){
   }],['다음에요',null]]);
 }
 function penTalk(k){
-  const d=PENS[k],say=(text,choices)=>dialog({npc:'moru',who:NPCS.moru.name,text,choices});
+  const d=PENS[k],say=(text,choices)=>dialog({npc:'bau',who:NPCS.bau.name,text,choices});
   const need=d.n+' · '+won(d.cost)+', 나무 '+d.wood+'개'+(d.stone?', 돌 '+d.stone+'개':''),mine='(가진 것: '+won(S.coins)+', 나무 '+have('wood')+'개, 돌 '+have('stone')+'개)';
-  if(S.coins<d.cost||have('wood')<d.wood||have('stone')<d.stone){say(need+'\n다 모이면 다시 오게.\n'+mine);return}
-  say(need+'\n자리는 자네가 고르고, 마무리 못질도 자네 손으로 하게.\n'+mine,[['부탁할게요',()=>{
-    addCoins(-d.cost);gain('wood',-d.wood);if(d.stone)gain('stone',-d.stone);addFriend('moru',8);sfx('coin');S.place=k;syncPlace();saveAll();
-    say('재목은 내가 날라다 주겠네. 자네 땅에 가서 아래의 "'+d.n+' 놓기"를 누르고, 지을 자리를 누르게.');
+  if(S.coins<d.cost||have('wood')<d.wood||have('stone')<d.stone){say(need+'\n다 모이면 다시 오세요.\n'+mine);return}
+  say(need+'\n자리는 직접 고르시고, 마무리 못질도 직접 하시면 돼요.\n'+mine,[['부탁할게요',()=>{
+    addCoins(-d.cost);gain('wood',-d.wood);if(d.stone)gain('stone',-d.stone);addFriend('bau',8);sfx('coin');S.place=k;syncPlace();saveAll();
+    say('재목은 제가 날라다 드릴게요. 내 땅에 가서 아래의 "'+d.n+' 놓기"를 누르고, 지을 자리를 누르세요.');
   }],['좀 더 생각해 볼게요',null]]);
 }
 // ───────── 집 드나들기·하루 ─────────
@@ -7470,12 +7500,13 @@ const RUMORS=[
   ['antique','dami',()=>S.day>=6,'열흘마다 서는 큰 장에는 골동품 장수 할아버지가 온대! 좌판 둘 사이에 돗자리를 펴고 앉는다나 봐. 못 찾은 가구 도안이랑 옛 보물, 귀한 장비를 판다는데 값이 엄청 비싸대. 흥정을 잘하면 깎아 주지만, 너무 욕심내면 한 푼도 안 깎아 준대. 잔치랑 겹치는 날에는 안 온다더라.'],
   ['party','eunha',()=>!S.camp&&S.placed.length>=2,'집은 좀 꾸미셨어요? 세간이 갖춰지면 집들이를 한번 여세요. 집 안에 놓은 소반이나 탁자 앞에서 행동하면 상을 차릴 수 있어요. 친한 이웃들이 선물을 들고 갈 거예요. 참, 같은 데서 난 가구를 빠짐없이 놓으면 세트가 되어 집이 한결 아늑해진대요.'],
   ['plan','moru',()=>!S.camp&&(S.level>=2||S.day>=3),'집에 세간은 좀 들였나? 내 본업은 소목일세. 옛 소목장들이 남긴 가구 도안이 곳곳에 묻혀 있다더구먼. 반짝이는 곳을 파다 보면 나온다지. 마을 것과 숲의 것, 굴속의 것이 다 다르다네. 찾거든 가져오게. "가구 짜기"로 말하면 함께 짜 주겠네. 대패는 자네가 밀어야 하네만.'],
-  ['gate','parang',()=>S.level>=6&&(S.kills|0)>=8,'사냥터에서 돌아오는 길이 멀지? 옛날에는 마을에 축지 장승을 세워 두고 먼 길을 한달음에 오갔대. 모루 아저씨가 세울 줄 안다던데, "짓기·고치기"로 물어봐. 마을 시설을 다른 자리로 옮겨 주기도 한대.'],
+  ['gate','parang',()=>S.level>=6&&(S.kills|0)>=8,'사냥터에서 돌아오는 길이 멀지? 옛날에는 마을에 축지 장승을 세워 두고 먼 길을 한달음에 오갔대. 모루 아저씨네 2층에 사는 조수 바우 형이 세울 줄 안대. 마을 시설을 다른 자리로 옮겨 주기도 한대.'],
+  ['bau','moru',()=>S.day>=2||S.level>=2,'일이 밀려서 조수를 하나 들였네. 바우라고, 우리 집 2층 다락에 사는 녀석일세. 다리 놓기나 닭장·외양간 짓기, 화약통, 마을 시설 옮기는 일은 그 녀석에게 말하게. 집과 연장은 여전히 내가 보네.'],
   ['merch','moru',()=>S.level>=RANK_LV[0], /* v81: 길의 소문은 그 길에 들어설 수 있는 레벨(5)부터 들린다. 전에는 레벨 3~4나 스탯 1이면 들렸다 */'은하가 가게 일 거들 눈썰미 있는 사람을 찾는 눈치더구먼. 장사에 뜻이 있거든 한번 물어보게.'],
   ['rogue','dami',()=>S.level>=RANK_LV[0],'있잖아, 밤에 남의 집 문짝을 부수고 달아나는 못된 사람들이 있대! 이웃집 문 앞에서 행동하면… 아, 아니야! 포졸 아저씨한테 잡히면 옥에 갇힌댔어. 나는 그런 거 안 해!'],
   ['civ','dami',()=>S.level>=RANK_LV[0],'훈장 할아버지가 서당에서 글 배울 제자를 찾는대! 나는 도망쳤지만!'],
   ['cook','sol',()=>S.lore.pal&&S.level>=RANK_LV[0],'궁궐 수라간에서 손끝 야무진 사람을 찾는대요. 수라간 앞에 계신 연 상궁이라는 분이 사람을 보신대요.'],
-  ['bridge','parang',()=>S.level>=2||S.day>=3,'개울 건너편에 가려고 다리까지 빙 돌아가지? 모루 아저씨한테 다리 재목을 부탁해 봐. 네가 놓고 싶은 개울가에 다리를 놓을 수 있어.'],
+  ['bridge','parang',()=>S.level>=2||S.day>=3,'개울 건너편에 가려고 다리까지 빙 돌아가지? 모루 아저씨네 조수 바우 형한테 다리 재목을 부탁해 봐. 네가 놓고 싶은 개울가에 다리를 놓을 수 있어.'],
   ['hunt','parang',()=>(S.kills|0)>=1||S.level>=3,'사냥터 들머리에 사냥꾼들이 소식을 붙여 두는 방이 있어. 날마다 사냥감이 하나씩 붙는데, 다 잡아 오면 삯을 쳐 준대. 많이 잡으면 이름도 올려 준다더라.'],
   ['deep','parang',()=>S.level>=4,'사냥터 숲 동쪽 길 끝까지 가 봤어? 그 너머가 깊은 산이야. 여우랑 늑대가 살고, 더 깊은 데는 곰도 있대. 레벨이 여섯은 돼야 들여보내 준다더라.'],
   ['cup','parang',()=>S.lore.pal&&((S.kills|0)>=3||S.level>=4),'임금님이 열흘에 한 번 사냥 대회를 여신대. 궁궐 궐문의 무진 나리한테 이름을 올리면 그날 잡은 짐승으로 겨룬다더라. 으뜸을 하면 임금님 활을 받는대!'],
@@ -8369,14 +8400,14 @@ function bridgeSpan(){
   return cells;
 }
 function bridgeTalk(){
-  const say=(text,choices)=>dialog({npc:'moru',who:NPCS.moru.name,text,choices}),mine='(가진 것: '+won(S.coins)+', 나무 '+have('wood')+'개)';
+  const say=(text,choices)=>dialog({npc:'bau',who:NPCS.bau.name,text,choices}),mine='(가진 것: '+won(S.coins)+', 나무 '+have('wood')+'개)';
   hear('bridge',true);
-  if(S.kit>0){say('다리 재목은 이미 가져다 뒀네. 놓고 싶은 개울가에 서서 물을 바라보고 행동하게. (남은 재목 '+S.kit+'벌)');return}
-  if(S.bridges.length>=BRIDGE_MAX){say('이 마을 개울에는 다리를 놓을 만큼 놓았네. 더 놓으면 물길이 막히겠어.');return}
-  if(S.coins<BRIDGE_COST||have('wood')<BRIDGE_WOOD){say('개울에 다리를 놓고 싶은가? 재목 한 벌에 '+won(BRIDGE_COST)+', 나무 '+BRIDGE_WOOD+'개일세. 다 모이면 다시 오게.\n'+mine);return}
-  say('다리 재목 한 벌을 깎아 주겠네. '+won(BRIDGE_COST)+', 나무 '+BRIDGE_WOOD+'개일세. 놓을 자리는 자네가 고르게.\n'+mine,[['부탁할게요',()=>{
-    addCoins(-BRIDGE_COST);gain('wood',-BRIDGE_WOOD);S.kit++;addFriend('moru',5);sfx('coin');saveAll();
-    say('재목은 자네가 지고 다니게. 놓고 싶은 개울가에 서서 물을 바라보고 행동하면 되네. 동쪽이나 서쪽으로, 물 세 칸까지 건널 수 있네.');
+  if(S.kit>0){say('다리 재목은 이미 가져다 드렸어요. 놓고 싶은 개울가에 서서 물을 바라보고 행동하세요. (남은 재목 '+S.kit+'벌)');return}
+  if(S.bridges.length>=BRIDGE_MAX){say('이 마을 개울에는 다리를 놓을 만큼 놓았어요. 더 놓으면 물길이 막혀요.');return}
+  if(S.coins<BRIDGE_COST||have('wood')<BRIDGE_WOOD){say('개울에 다리를 놓고 싶으세요? 재목 한 벌에 '+won(BRIDGE_COST)+', 나무 '+BRIDGE_WOOD+'개예요. 다 모이면 다시 오세요.\n'+mine);return}
+  say('다리 재목 한 벌을 깎아 드릴게요. '+won(BRIDGE_COST)+', 나무 '+BRIDGE_WOOD+'개예요. 놓을 자리는 직접 고르세요.\n'+mine,[['부탁할게요',()=>{
+    addCoins(-BRIDGE_COST);gain('wood',-BRIDGE_WOOD);S.kit++;addFriend('bau',5);sfx('coin');saveAll();
+    say('재목은 지고 다니시면 돼요. 놓고 싶은 개울가에 서서 물을 바라보고 행동하세요. 동쪽이나 서쪽으로, 물 세 칸까지 건널 수 있어요.');
   }],['다음에요',null]]);
 }
 function startBridge(){
@@ -8439,7 +8470,8 @@ function talk(id){
   const ch=[],q=S.quests.find(q=>q.npc===id&&!q.done);
   if(q)ch.push(['부탁 듣기',()=>questTalk(id,q)]);
   ch.push(['선물하기',()=>openGift(id)]);
-  if(id==='moru'){ch.push(['짓기·고치기',buildTalk]);ch.push(['화약통 빚기',bombTalk]);ch.push(['연장 벼리기',openForge]);ch.push(['장비 짓기',openSmith]);ch.push(['가구 짜기',openJoin])}
+  if(id==='bau'){ch.push(['다리·우리·시설',bauTalk]);ch.push(['화약통 빚기',bombTalk])}
+  if(id==='moru'){ch.push(['짓기·고치기',buildTalk]);ch.push(['연장 벼리기',openForge]);ch.push(['장비 짓기',openSmith]);ch.push(['가구 짜기',openJoin])}
   if(id==='yeon')ch.push(['수라간 일',kitchenTalk]);
   if(id==='queen')ch.push(['궁중 일',courtTalk]);
   if(id==='eunha')ch.push(['장사 일',tradeTalk]);
@@ -8717,9 +8749,9 @@ function openQuests(){
     {const town=Object.keys(WORKS).filter(q=>!WORKS[q].solo);body.appendChild(el('p','sub','마을 복구 '+town.filter(workDone).length+'/'+town.length+' · 그리고 내 고깃배'))}
     for(const k of Object.keys(WORKS).concat('gate')){
       const d=WORKS[k],s=S.works[k];let all=d.coins,got=s.coins;for(const m in d.need){all+=d.need[m]*20;got+=(s.got[m]|0)*20}
-      row(body,el('span','badge',d.n[0]),d.n,workDone(k)?'완성 · '+d.perk:[d.free&&!s.at?'목수 모루에게 "짓기·고치기"로 터부터 잡아요':d.where+'의 터에서 재료를 넣어요 · '+Math.floor(got/all*100)+'% 모였어요','다 지으면: '+d.perk]);
+      row(body,el('span','badge',d.n[0]),d.n,workDone(k)?'완성 · '+d.perk:[d.free&&!s.at?'목수의 조수 바우에게 "다리·우리·시설"로 터부터 잡아요':d.where+'의 터에서 재료를 넣어요 · '+Math.floor(got/all*100)+'% 모였어요','다 지으면: '+d.perk]);
     }
-    body.appendChild(el('p','note','살림 늘리기: 목수 모루에게 "짓기·고치기"를 청하면 집, 아궁이(집에서 요리), 장독대, 닭장, 외양간을 놓을 수 있어요.'));
+    body.appendChild(el('p','note','살림 늘리기: 목수 모루에게 "짓기·고치기"를 청하면 집과 아궁이(집에서 요리)를, 그 조수 바우에게 "다리·우리·시설"을 청하면 장독대·닭장·외양간·다리를 놓을 수 있어요. 바우는 마을 시설도 옮겨 줘요.'));
     if(S.diy)body.appendChild(el('p','note','직접 짓는 중: '+HOUSES[S.diy.L-1].n+' '+S.diy.step+'/3 단계 · 집 문 앞에서 이어서 지어요'));
     else if(S.build)body.appendChild(el('p','note','집 공사 중이에요. 자고 일어나면 '+HOUSES[S.build-1].n+' 완성!'));
     else if(S.house<HOUSES.length){const h=HOUSES[S.house];body.appendChild(el('p','note','다음 집 '+h.n+': '+won(houseCost(S.house+1))+', 나무 '+h.wood+'개'+(h.stone?', 돌 '+h.stone+'개':'')+' · 목수 모루에게 말을 걸어요'))}
@@ -9154,7 +9186,7 @@ function openHelp(){
     const ul=el('ul','help');
     for(const t of ['걷기: 방향키나 WASD, 또는 가고 싶은 곳을 눌러요.','행동: Space나 E, 또는 화면의 행동 버튼. 나무·바위·이웃·물·밭·문을 직접 눌러도 돼요.',
       '마을 모양: 새로 시작한 마을은 집·길·개울·연못·내 땅의 자리가 마을마다 달라요. 시작할 때 "다른 마을 보기"로 고를 수 있어요. 어디에 무엇이 있는지는 아래 "기록"의 "지도"에서 봐요. 내 땅은 말뚝으로 둘러 있고, 같이 하는 친구는 내 마을의 가까운 빈자리에 보여요.',
-      (S.lore.bridge||S.kit>0||S.bridges.length>0)&&'다리: 나무 '+BRIDGE_WOOD+'개와 '+won(BRIDGE_COST)+'을 모아 모루에게 "짓기·고치기"에서 다리 놓기를 부탁하면 다리 재목을 줘요. 놓고 싶은 개울가에 서서 물을 바라보고 행동하면 못질로 놓아요. 동쪽이나 서쪽으로 물 세 칸까지 건널 수 있어요.',
+      (S.lore.bridge||S.kit>0||S.bridges.length>0)&&'다리: 나무 '+BRIDGE_WOOD+'개와 '+won(BRIDGE_COST)+'을 모아 목수의 조수 바우에게 "다리·우리·시설"에서 다리 놓기를 부탁하면 다리 재목을 줘요. 놓고 싶은 개울가에 서서 물을 바라보고 행동하면 못질로 놓아요. 동쪽이나 서쪽으로 물 세 칸까지 건널 수 있어요.',
       '휴대폰: 가고 싶은 곳을 누르면 걸어가요. 오른쪽 아래 행동 버튼은 바라보는 것에 행동해요. 물은 한 번 누르면 물가로 가서 바라보기만 하고, 한 번 더 눌러야 낚싯대를 던져요.',
       '과일나무: 행동을 연타해 흔들면 열매가 떨어져요. 빨리 흔들면 하나 더! 떨어진 열매는 지나가면서 주워요.',
       '소나무: 움직이는 눈금이 초록 칸에 올 때 행동. 노란 칸이면 완벽! 바위: 줄어드는 고리가 흰 원에 겹칠 때 행동.',
@@ -9191,7 +9223,7 @@ function openHelp(){
       '신분과 스탯: 레벨이 오르면 점수를 받아 손맛·기품·학식·무예·수완을 올려요. 요리·인사와 선물·도감·사냥·장사를 해도 조금씩 저절로 올라요.',
       '5일장: 닷새마다(5·10·15…일) 만물상 동쪽 마당에 장이 서요. 보부상은 쇳돌·엿·산삼과 장날에만 나오는 가구·옷을 팔아요. 객주에게는 흥정해서 팔아요. 값이 오르는 동안 기다리다 행동으로 값을 부르는데, 눈금이 떨릴 때가 마지막 기회예요. 인기 품목은 30% 더 받아요.',
       '날씨: 여름은 장마철이라 비가 잦아요. 비 갠 다음 날은 무지개가 떠서 경험치를 25% 더 얻어요. 맑은 날이 나흘 이어지면 가뭄이 들어 물 주기가 두 배로 힘들고(우물이 있으면 괜찮아요) 물을 못 준 작물이 시들어요. 바람 부는 날은 과일나무 밑에 열매가 떨어져 있어요.',
-      '까마귀와 허수아비: 맑은 날 아침이면 까마귀가 밭에 내려앉기도 해요. 바로 옆까지 다가가면 날아가요. 쫓지 않으면 그날 밤 작물을 쪼아 먹어요. 모루에게 "짓기·고치기"에서 허수아비를 부탁해 밭 가운데 세우면 둘레 네 칸에는 까마귀가 못 와요.',
+      '까마귀와 허수아비: 맑은 날 아침이면 까마귀가 밭에 내려앉기도 해요. 바로 옆까지 다가가면 날아가요. 쫓지 않으면 그날 밤 작물을 쪼아 먹어요. 목수의 조수 바우에게 "다리·우리·시설"에서 허수아비를 부탁해 밭 가운데 세우면 둘레 네 칸에는 까마귀가 못 와요.',
       '혼인: 솔이·파랑·은하·무진과는 혼인할 수 있어요. ♥4가 되면 말을 걸었을 때 "청혼하기"가 나와요. 먼저 목수 모루에게 "짓기·고치기"에서 나무 기러기 한 쌍을 깎아 달라고 해요. 혼례는 세 가지 예식의 차례를 따라 하면 돼요. 혼인하면 배필이 아침마다 먹거리나 돈을 챙겨 주고 밭에 물도 줘요. 밤과 아침에는 집 안에 함께 있어요.',
       '포구와 배: 마을 남쪽 길 끝 바닷가에 나무 잔교(포구)가 있어요. 잔교 끝에서 재료와 돈을 넣어 고깃배를 지으면, 배 앞에서 행동해 먼바다로 나가요. 먼바다에서는 보글거리는 물고기 떼 옆에 배를 대고 그쪽을 본 채 행동하면 방어·문어·민어 같은 큰 고기가 물어요. 섬에 내리면 전복을 주워요. 위쪽 뱃길 표시로 가면 포구로 돌아와요.',
       '마을 복구: 마을 네 곳에 말뚝을 두른 터가 있어요(알림판에서 위치와 진행을 볼 수 있어요). 터 앞에서 행동해 재료와 돈을 넣고, 다 모이면 못질로 마무리해요. 우물은 물 주기 기력을 없애고, 정자는 하루 한 번 기력을 채워 주고, 물레방아는 작물 값을 올리고, 솟대는 내일 날씨를 알려 줘요.',
