@@ -1274,6 +1274,10 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:99,d:'11월 26일',t:'촘촘해진 사람들',l:[
+    '사람들을 두 배 촘촘한 도트로 다시 그렸어요. 계단지던 모서리가 둥글어지고 테두리가 가늘어졌어요.',
+    '오른쪽 가장자리에는 그늘, 왼쪽에는 빛을 넣어 얼굴과 몸이 둥글게 보이고, 눈에 빛점이 생겼어요.'
+  ]},
   {v:98,d:'11월 26일',t:'팔다리가 보이는 모습',l:[
     '사람들의 모습을 다시 다듬었어요. 머리를 키우던 것은 되돌리고, 몸을 길게 늘려 몸통과 팔, 다리가 또렷이 보여요.',
     '소매에 그늘 줄을 넣어 팔이 몸통과 갈라져 보이고, 손이 소매 끝에 나와요.'
@@ -2222,11 +2226,43 @@ function drawChar(c,cx,fy,o,dir,walk,t){
   const img=charSprite(o,view,fr|blink),q=v=>Math.round(v*KPX)/KPX,sp=o.small?16:14,bh=(24-sp)*3,yb=q(fy+2-bh-(fr?2:0)+bob),sm=c.imageSmoothingEnabled;
   /* v98(사용자 의견: 팔·다리·몸통이 알아보여야 한다): 머리를 키우던 것(v97)을 되돌리고, 몸을 세로로 1.5배 늘려 몸통과 팔다리가 길게 보이게 했다. 머리는 한 칸 2픽셀, 몸은 가로 2·세로 3픽셀 */
   c.imageSmoothingEnabled=false;
+  const hd=charHD(img,sp);
   c.save();c.translate(q(cx),0);if(flip)c.scale(-1,1);
-  c.drawImage(img,0,sp,16,24-sp,-16,yb,32,bh);
-  c.drawImage(img,0,0,16,sp,-16,yb-sp*2,32,sp*2);
+  c.drawImage(hd,-16,yb+bh-hd.height);
   c.restore();
   c.imageSmoothingEnabled=sm;
+}
+/* 촘촘한 캐릭터(v99, 사용자 요청): 16칸짜리 도트 그림을 두 배 촘촘한 그림(가로 32칸)으로 다시 빚는다. 그림마다 한 번만 만들어 img.hd에 둔다.
+   ① 몸 줄(sp 아래)을 1.5배로 늘리고 ② 계단진 모서리를 둥글게 두 배로 키우고(EPX) ③ 두 줄이 된 테두리의 안쪽 줄은 옆 빛깔의 그늘로 바꿔 테두리를 한 줄로 줄이고
+   ④ 오른쪽 가장자리는 어둡게·왼쪽 가장자리는 밝게 해 둥근 느낌을 내고 ⑤ 눈에 흰 빛점을 찍는다. 도안(PXF 등)과 쓰개는 그대로 쓰므로 새 쓰개도 저절로 따라온다 */
+function charHD(img,sp){
+  if(img.hd)return img.hd;
+  const sd=img.getContext('2d').getImageData(0,0,16,24).data,rows=[];
+  for(let y=0;y<24;y++){rows.push(y);if(y>=sp&&(y-sp)%2===1)rows.push(y)}
+  const lw=16,lh=rows.length,L=new Uint32Array(lw*lh);
+  rows.forEach((sy,y)=>{for(let x=0;x<16;x++){const i=(sy*16+x)*4;L[y*lw+x]=sd[i+3]<128?0:(255<<24|sd[i+2]<<16|sd[i+1]<<8|sd[i])>>>0}});
+  const g=(x,y)=>x<0||y<0||x>=lw||y>=lh?0:L[y*lw+x],W=32,Hh=lh*2,D=new Uint32Array(W*Hh);
+  for(let y=0;y<lh;y++)for(let x=0;x<lw;x++){
+    const p=g(x,y),a=g(x,y-1),b=g(x+1,y),cc=g(x-1,y),d=g(x,y+1),o=(y*2)*W+x*2;
+    D[o]=cc===a&&cc!==d&&a!==b?a:p;D[o+1]=a===b&&a!==cc&&b!==d?b:p;D[o+W]=d===cc&&d!==b&&cc!==a?cc:p;D[o+W+1]=b===d&&b!==a&&d!==cc?d:p;
+  }
+  const OUT=(255<<24|0x22<<16|0x2a<<8|0x3a)>>>0,EYE=(255<<24|0x20<<16|0x22<<8|0x2a)>>>0,at=(x,y)=>x<0||y<0||x>=W||y>=Hh?0:D[y*W+x];
+  const mul=(v,f)=>(255<<24|Math.min(255,Math.round((v>>>16&255)*f))<<16|Math.min(255,Math.round((v>>>8&255)*f))<<8|Math.min(255,Math.round((v&255)*f)))>>>0;
+  const E=new Uint32Array(D);
+  for(let y=0;y<Hh;y++)for(let x=0;x<W;x++){
+    if(D[y*W+x]!==OUT)continue;
+    const n=[at(x-1,y),at(x+1,y),at(x,y-1),at(x,y+1)];if(n.includes(0))continue; /* 바깥과 닿은 줄은 테두리로 남긴다 */
+    const k=n.find(v=>v!==OUT&&v!==EYE);if(k)E[y*W+x]=mul(k,.74);
+  }
+  const F=new Uint32Array(E),et=(x,y)=>x<0||y<0||x>=W||y>=Hh?0:E[y*W+x];
+  for(let y=0;y<Hh;y++)for(let x=0;x<W;x++){
+    const v=E[y*W+x];if(!v||v===OUT)continue;
+    if(v===EYE){if(et(x-1,y)!==EYE&&et(x,y-1)!==EYE)F[y*W+x]=0xffffffff;continue}
+    if(et(x+1,y)===OUT||et(x,y+1)===OUT)F[y*W+x]=mul(v,.86);else if(et(x-1,y)===OUT||et(x,y-1)===OUT)F[y*W+x]=mul(v,1.1);
+  }
+  const cv2=document.createElement('canvas');cv2.width=W;cv2.height=Hh;const c2=cv2.getContext('2d'),im=c2.createImageData(W,Hh);
+  new Uint32Array(im.data.buffer).set(F);c2.putImageData(im,0,0);
+  return img.hd=cv2;
 }
 // ───────── 도트로 굽기 ─────────
 // 부드럽게 그린 그림을 절반 크기로 찍은 뒤, 가장자리를 딱 끊고 어두운 테두리를 둘러 도트 그림으로 만든다.
