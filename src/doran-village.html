@@ -1274,6 +1274,10 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:102,d:'11월 26일',t:'차분해진 땅',l:[
+    '풀밭과 흙길, 모래밭의 색을 가라앉히고 잔 점으로 결을 넣었어요. 쨍하던 연두가 차분한 풀빛이 되고, 흙길에는 잔돌이 박혔어요.',
+    '나무·건물·물의 색은 아직 예전 그대로예요. 차례로 맞춰 갈게요.'
+  ]},
   {v:101,d:'11월 26일',t:'일할 때마다 움직이는 팔',l:[
     '행동할 때마다 그 일에 맞는 연장을 든 팔이 움직여요. 밭을 갈 때는 괭이, 물을 줄 때는 물뿌리개(물방울도 떨어져요), 나무를 벨 때는 도끼, 낚시할 때는 낚싯대, 못질과 대장간에서는 망치예요.',
     '거두기, 나무 흔들기, 가축 돌보기, 가구 쓰기처럼 맨손으로 하는 일에는 손을 뻗어요.',
@@ -2367,7 +2371,8 @@ function buildGround(){
   const dot=(x,y,w,h,f)=>{c.fillStyle=f;c.fillRect(Math.floor(x/2)*2,Math.floor(y/2)*2,w,h)};
   // 계절별 풀 색 [밝은 칸, 어두운 칸, 풀잎]과 숲 가장자리 색
   const deepG=scene==='wild'&&(wz===1||wz===3); /* 깊은 산과 눈고개는 풀빛이 짙고 자갈이 깔려 있다 */
-  const G=(deepG?[['#74b866','#6eb160','#55994a'],['#5fa955','#59a24f','#42873b'],['#c2ad5e','#baa556','#9c8436'],['#e2e9ee','#d8e1e7','#b6c5cf']]:[['#8ccf6b','#86c965','#6db454'],['#72c25c','#6bbb56','#4f9f42'],['#d6c468','#cfbc60','#b39a40'],['#eef3f6','#e5ecf1','#c7d4dc']])[sea];
+  /* v102(사용자 요청: 옛 도트 그림 같은 차분한 색과 결): 쨍한 연두를 가라앉힌 풀빛으로 바꾸고, 바둑판 무늬 차이를 줄이고 칸마다 잔 점으로 결을 넣는다 */
+  const G=(deepG?[['#6f9a58','#6b9554','#517a3f'],['#5d8a4a','#598546','#3f6c33'],['#ab9a55','#a6954f','#877232'],['#dfe6ea','#d8e0e5','#b3c1ca']]:[['#8aaf5e','#86aa5a','#6a9046'],['#789f50','#749a4c','#557c39'],['#beae62','#b8a85c','#96803a'],['#e9eef1','#e3e9ed','#c3cfd6']])[sea];
   const F=[['#357a42','#2f6e3b','#3a8348','#4a9a58'],['#2f7340','#296837','#347c44','#439252'],['#c2742e','#a9552a','#d18f38','#e3a94a'],['#3d6f55','#35634c','#dfe9ee','#f4f8fb']][sea];
   const land=(x,y)=>{if(x<0||y<0||x>=W||y>=H)return false;const t=tile[y][x];return t!==3&&t!==4&&t!==5};
   const isPath=(x,y)=>{const q=tile[y]&&tile[y][x];return q===1||q===5};
@@ -2375,6 +2380,7 @@ function buildGround(){
     const t=tile[y][x],px=x*T,py=y*T,h=hash(x,y),h2=hash(y+7,x+3);
     if(t===0||t===1||t===6){
       c.fillStyle=(x+y)%2?G[0]:G[1];c.fillRect(px,py,T,T);
+      for(let i=0;i<7;i++){const a=hash(x*5+i*13+1,y*7+i*3),b=hash(y*11+i*7+2,x*3+i);dot(px+a*30,py+b*30,2,2,i%3===0?'rgba(255,255,220,.16)':i%3===1?G[2]:'rgba(40,60,30,.13)')} /* 풀의 결 */
       if(t===0&&h<.5){const gx=px+4+h*36,gy=py+8+h2*14;dot(gx,gy,2,4,G[2]);dot(gx+4,gy+2,2,2,G[2])}
       if(deepG&&t===0&&h>.72){const sx=px+6+h2*18,sy=py+10+(h-.72)*60;dot(sx,sy,4,2,'#9aa3a8');dot(sx+2,sy-2,2,2,'#c3cbcf');if(h>.9)dot(sx+8,sy+4,2,2,'#8a9399')}
       // 풀밭의 작은 들꽃(네 잎 꽃 모양 도트)과 클로버. 주울 수 있는 들꽃보다 훨씬 작다. 겨울에는 없고 가을에는 드물다
@@ -2388,10 +2394,11 @@ function buildGround(){
     }
     if(t===1){
       const l=isPath(x-1,y),r=isPath(x+1,y),u=isPath(x,y-1),d=isPath(x,y+1);
-      rr(c,px,py,T,T,[(!l&&!u)?11:0,(!r&&!u)?11:0,(!r&&!d)?11:0,(!l&&!d)?11:0],'#e3c592');
-      if(h>.4)dot(px+6+h*18,py+8+h2*16,2,2,'#cfae79');
+      rr(c,px,py,T,T,[(!l&&!u)?11:0,(!r&&!u)?11:0,(!r&&!d)?11:0,(!l&&!d)?11:0],'#c9a873');
+      for(let i=0;i<6;i++){const a=hash(x*3+i*17+5,y*13+i),b=hash(y*5+i*11+3,x*7+i*2);if(a>.06&&a<.94&&b>.06&&b<.94)dot(px+a*30,py+b*30,2,2,i%3===0?'#dcc08e':i%3===1?'#b08e5a':'#a4824f')} /* 흙길의 결과 잔돌 */
+      if(h>.6)dot(px+6+h*18,py+8+h2*16,4,2,'#9c9488');
     }
-    if(t===2){c.fillStyle='#f2e3b3';c.fillRect(px,py,T,T);if(h>.55)dot(px+4+h*24,py+4+h2*24,2,2,'#dfcb92');
+    if(t===2){c.fillStyle='#e4d4a4';c.fillRect(px,py,T,T);for(let i=0;i<5;i++){const a=hash(x*9+i*5+1,y*3+i*7),b=hash(y*7+i*3+4,x*5+i);dot(px+a*30,py+b*30,2,2,i%2?'#d0bd86':'#f1e6c2')}
       /* 모래밭의 작은 조가비와 불가사리 */
       const h3=hash(x*7+3,y*3+13);
       if(h3>.9){const sx=px+6+h2*18,sy=py+8+h*14;dot(sx,sy,4,2,'#f6dbe4');dot(sx,sy+2,4,2,'#f1c9d6');dot(sx+2,sy-2,2,2,'#ffffff')}
