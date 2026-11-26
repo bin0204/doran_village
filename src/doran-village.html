@@ -232,6 +232,7 @@ ul.help{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
     <button class="btn" id="bYard" type="button" hidden>가꾸기</button>
     <button class="btn" id="bPlace" type="button" hidden>우리 놓기</button>
     <button class="btn" id="bGate" type="button" hidden>장승 길</button>
+    <button class="btn" id="bBomb" type="button" hidden>화약통 놓기</button>
     <button class="btn sp" id="bAsk" type="button">문의</button>
     <button class="btn" id="bSet" type="button">설정</button>
   </nav>
@@ -252,7 +253,7 @@ const el=(tag,cls,txt)=>{const e=document.createElement(tag);if(cls)e.className=
 
 // ───────── 데이터 ─────────
 const ITEMS={
-  apple:{n:'사과',p:12}, persimmon:{n:'감',p:15}, wood:{n:'나무',p:8}, stone:{n:'돌',p:10},
+  apple:{n:'사과',p:12}, persimmon:{n:'감',p:15}, wood:{n:'나무',p:8}, stone:{n:'돌',p:10}, bomb:{n:'화약통',p:40},
   flower:{n:'들꽃',p:6}, mushroom:{n:'버섯',p:18}, shell:{n:'조개껍데기',p:14},
   minnow:{n:'송사리',p:12}, crucian:{n:'붕어',p:25}, carp:{n:'잉어',p:70},
   scad:{n:'전갱이',p:20}, mackerel:{n:'고등어',p:38}, snapper:{n:'도미',p:95},
@@ -1259,6 +1260,12 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:94,d:'11월 26일',t:'동굴: 곡괭이질과 화약통',l:[
+    '바위를 캘 때 곡괭이를 휘두르는 모습이 보여요. 뒤로 젖혔다가 내리찍는 순간 바위가 깨지고 돌 부스러기와 불똥이 튀어요. 광맥과 마을 바위를 캘 때도 같아요.',
+    '화약통이 생겼어요. 목수 모루에게 "화약통 빚기"를 청하면 쇳돌 1·돌 3·나무 2와 30냥에 하나를 빚어 줘요.',
+    '동굴에서 아래 "화약통 놓기" 단추를 누르면 보는 쪽 앞에 놓여요. 잠깐 뒤에 터져서 둘레 한 칸씩(가로세로 세 칸)의 바위를 한꺼번에 부숴요. 숨은 사다리도 드러나요.',
+    '터질 때 붉은 점선 안에 있으면 크게 다쳐요. 광맥은 화약으로 부수면 하나만 건져서, 값진 광맥은 손으로 캐는 편이 나아요.'
+  ]},
   {v:93,d:'11월 26일',t:'시설 옮기기 고침',l:[
     '모루의 "짓기·고치기 → 시설 옮기기"를 누르면 엉뚱하게 "마을 옮기기"(다른 기기로 저장 옮기기) 창이 열리던 것을 고쳤어요.',
     '이제 우물·정자·물레방아·솟대·축지 장승의 목록이 나오고, "옮길 자리 고르기"를 누른 뒤 마을의 빈 풀밭을 누르면 옮겨져요.'
@@ -1881,6 +1888,7 @@ function drawCore(c,id){
   case 'wood':rr(c,-10,-5,20,10,4,'#9a6a3e');ell(c,8,0,3,5,'#d9b98a');ell(c,8,0,1.5,2.5,'#9a6a3e');line(c,-7,-1,2,-1,'#7a5230',1.5);break;
   case 'branch':line(c,-8,5,8,-4,'#8a5a34',3);line(c,0,0,5,5,'#8a5a34',2.5);ell(c,-7,2,3,1.6,'#5cab4a');break;
   case 'stone':poly(c,[-9,4,-6,-5,1,-8,8,-3,9,5,2,8,-5,8],'#9aa3a8');poly(c,[-5,-3,1,-6,5,-2,-1,0],'#c3cbcf');break;
+  case 'bomb':rr(c,-7,-4,14,13,3,'#5a3a24');rr(c,-7,-1,14,2,1,'#2e2a2a');rr(c,-7,5,14,2,1,'#2e2a2a');line(c,0,-4,4,-9,'#e9d8a8',1.5);circ(c,4,-9,2,'#f7a531');break;
   case 'flower':for(let i=0;i<5;i++){const a=i*1.2566-1.57;circ(c,Math.cos(a)*5.5,Math.sin(a)*5.5,4.2,'#f6a3c4')}circ(c,0,0,3.2,'#f7d24a');break;
   case 'mushroom':rr(c,-3,-1,6,10,3,'#f3ead6');c.fillStyle='#d9503f';c.beginPath();c.arc(0,0,9,Math.PI,0);c.closePath();c.fill();circ(c,-4,-4,1.6,'#fff');circ(c,3,-5,1.8,'#fff');break;
   case 'miyeok':c.strokeStyle='#2f6b3a';c.lineWidth=3.4;c.lineCap='round';for(const dx of [-5,0,5]){c.beginPath();c.moveTo(dx,9);c.quadraticCurveTo(dx-6,3,dx,-2);c.quadraticCurveTo(dx+6,-6,dx+1,-10);c.stroke()}c.lineCap='butt';break;
@@ -2968,7 +2976,7 @@ function renderTown(c){
     c.strokeStyle='#f7c531';c.lineWidth=2;c.beginPath();c.arc(bx,by,13+Math.sin(now*5)*1.5,0,7);c.stroke();
     labels.push(()=>label(c,bx,by-32,'쏠 수 있어요'));
   }}
-  drawMg(c,labels);drawShots(c);
+  drawBombs(c);drawMg(c,labels);drawShots(c);drawPk(c);
   if(fishing){
     const f=fishing,rl=f.phase==='reel',thr=rl&&f.thr===2;
     let bx=f.bx*T+16,by=f.by*T+16;
@@ -3136,6 +3144,7 @@ function render(){
   cam.y=wh<=view.h?oy+(wh-view.h)/2:clamp(pcy-view.h/2,oy,oy+wh-view.h);
   cam.x=Math.round(cam.x*k)/k;cam.y=Math.round(cam.y*k)/k;
   if(hurtT>0){cam.x+=Math.round(Math.sin(hurtT*75)*hurtT*7);cam.y+=Math.round(Math.cos(hurtT*61)*hurtT*4)} /* 맞은 순간 화면이 잠깐 흔들린다 */
+  if(boomT>0){cam.x+=Math.round(Math.sin(boomT*90)*boomT*12);cam.y+=Math.round(Math.cos(boomT*70)*boomT*8)} /* 화약통이 터지면 더 크게 */
   c.translate(-cam.x,-cam.y);
   if(town)renderTown(c);else renderHome(c);
   if(hurtT>0){
@@ -3776,7 +3785,7 @@ function mgPress(){
   // 도끼·곡괭이를 벼릴수록 맞는 폭이 넓어진다. 바위를 잘 맞히면 쇳돌이 섞여 나온다
   if(m.kind==='chop'){const d=Math.abs(m.pos-m.zc),z=1+tl('axe')*.17;mgHit(d<=.055*z?2:d<=.17*z?1:0)}
   else if(m.kind==='mine'){
-    const d=Math.abs(m.r-15),lv=tl('pick'),z=1+lv*.17,g=d<=2.5*z?2:d<=7*z?1:0;
+    const d=Math.abs(m.r-15),lv=tl('pick'),z=1+lv*.17,g=d<=2.5*z?2:d<=7*z?1:0;pkStart(m.o,false); /* 곡괭이를 휘두르는 모습(v94) */
     if(g&&Math.random()<(g===2?[.4,.55,.7,.85]:[.1,.15,.2,.3])[lv])m.ore=(m.ore||0)+1;
     mgHit(g);
   }
@@ -3912,7 +3921,7 @@ function mgEnd(){
   touch();
 }
 function updMg(dt){
-  updShots(dt);
+  updShots(dt);updPk(dt);updBombs(dt);
   if(drops.length){
     for(const d of drops)d.t+=dt*1.7;
     for(const d of drops)if(d.t>=1){S.pickups.push({x:d.x,y:d.y,id:d.id});if(P.x===d.x&&P.y===d.y&&P.t>=1)grab(S.pickups.length-1)}
@@ -5219,7 +5228,12 @@ function gateHome(){
   const d=WORKS.gate,to=[[0,1],[-1,0],[1,0],[0,-1]].map(q=>[d.x+q[0],d.y+q[1]]).find(q=>walkable(q[0],q[1]))||SPAWN;
   warp(to[0],to[1],[0,1]);sfx('level');toast('축지 장승의 길로 마을에 돌아왔어요');saveAll();
 }
-function syncGate(){const g=$('bGate'),on=!!S&&started&&scene==='wild'&&S.away!=='royal'&&workDone('gate')&&!mg&&!fishing;if(g.hidden===on)g.hidden=!on}
+function syncGate(){
+  const g=$('bGate'),on=!!S&&started&&scene==='wild'&&S.away!=='royal'&&workDone('gate')&&!mg&&!fishing;if(g.hidden===on)g.hidden=!on;
+  /* 화약통 놓기 단추: 동굴에서 화약통이 있을 때만 */
+  const b=$('bBomb'),n=S&&started&&scene==='cave'?have('bomb'):0,on2=n>0&&!mg;if(b.hidden===on2)b.hidden=!on2;
+  if(on2){const t='화약통 놓기 ('+n+')';if(b.textContent!==t)b.textContent=t}
+}
 const workLeft=k=>{const d=WORKS[k],s=S.works[k];let n=d.coins-s.coins;for(const m in d.need)n+=d.need[m]-(s.got[m]|0);return n};
 function openWork(k){
   const d=WORKS[k],s=S.works[k];
@@ -5327,10 +5341,99 @@ function clearRock(o){
 function hitRock(o){
   if(mg)return;
   if(o.ore){if(!useEn(3))return;mg={kind:'mine',o,i:0,n:3,r:36,got:0,cool:0,idle:0,note:'',vein:true};P.path=[];P.after=null;return}
+  if(pkS)return; /* 곡괭이를 휘두르는 중 */
   if(!useEn(tl('pick')>=2?1:2))return;
-  o.sh=.25;sfx('chop');clearRock(o);
-  if(Math.random()<.6){gain('stone',1);float('+1 돌',o.x*T+16,o.y*T-6)}
-  addXp(1);
+  pkStart(o,true); /* 바위는 곡괭이가 닿는 순간(updPk) 깨진다 */
+}
+// 곡괭이질(v94, 사용자 요청): 동굴의 맨바위와 광맥·마을 바위 캐기에서 곡괭이를 휘두르는 모습을 보여 준다.
+// pkS={t 남은 시간,x,y 바위 칸,o 닿을 때 깨질 맨바위(없으면 보기만),done 닿았는가}. 뒤로 젖혔다가 PK_HIT초를 남기고 내리꽂는다
+let pkS=null;
+const PK_T=.32,PK_HIT=.12;
+function pkStart(o,brk){pkS={t:PK_T,x:o.x,y:o.y,o:brk?o:null,done:false}}
+function updPk(dt){
+  if(!pkS)return;pkS.t-=dt;
+  if(!pkS.done&&pkS.t<=PK_HIT){
+    pkS.done=true;const o=pkS.o;
+    if(o&&cave&&scene==='cave'&&cave.map.objAt[o.y][o.x]===o){ /* 그새 화약통에 날아갔으면 헛손질 */
+      o.sh=.25;sfx('chop');clearRock(o);
+      if(Math.random()<.6){gain('stone',1);float('+1 돌',o.x*T+16,o.y*T-6)}
+      addXp(1);
+    }
+  }
+  if(pkS.t<=0)pkS=null;
+}
+function drawPk(c){
+  if(!pkS)return;
+  const h=handAt(),tx=(pkS.x+.5)*T,ty=(pkS.y+.5)*T-4,a0=Math.atan2(ty-h[1],tx-h[0]),u=Math.min(1,(PK_T-pkS.t)/(PK_T-PK_HIT)),a=a0-2+u*u*2;
+  c.save();c.translate(h[0],h[1]);c.rotate(a);
+  line(c,-3,0,17,0,'#8a5a34',2.8);
+  c.strokeStyle='#59626a';c.lineWidth=4.2;c.lineCap='round';c.beginPath();c.moveTo(12,-9);c.quadraticCurveTo(21,0,12,9);c.stroke();
+  c.strokeStyle='#aeb7bd';c.lineWidth=2;c.beginPath();c.moveTo(12,-9);c.quadraticCurveTo(21,0,12,9);c.stroke();c.lineCap='butt';
+  c.restore();
+  if(pkS.done){ /* 닿는 순간 돌 부스러기와 불똥이 튄다 */
+    const k=1-pkS.t/PK_HIT;c.globalAlpha=Math.max(0,1-k);
+    for(let i=0;i<5;i++){const q=i*1.26+.5;c.fillStyle='#b9c1c6';c.fillRect(tx+Math.cos(q)*(6+k*14)-1.5,ty+Math.sin(q)*(6+k*12)-k*6,3,3)}
+    for(let i=0;i<4;i++){const q=i*1.57+.8;line(c,tx+Math.cos(q)*5,ty+Math.sin(q)*5,tx+Math.cos(q)*(10+k*7),ty+Math.sin(q)*(10+k*7),'#fff3c4',1.6)}
+    c.globalAlpha=1;
+  }
+}
+// ───────── 화약통 (v94, 사용자 요청) ─────────
+// 목수 모루가 빚어 준다(BOMB_NEED + BOMB_FEE냥). 동굴에서 "화약통 놓기" 단추를 누르면 보는 쪽 앞 칸(막혀 있으면 발밑)에 놓이고, BOMB_FUSE초 뒤에 터져 둘레 한 칸씩(3×3)의 바위를 부순다.
+// 맨바위는 손으로 깬 것과 같고(돌 60%), 광맥은 거칠게 부서져 하나만 건진다(손으로 캐면 더 나온다). 터질 때 그 안에 있으면 크게 다친다.
+// 놓은 화약통은 저장하지 않는다(그 층을 떠나면 사라진다). bombs={x,y,t 남은 시간,tile 놓은 층}, booms=터지는 모습, boomT=화면이 흔들리는 시간
+const BOMB_NEED={iron:1,stone:3,wood:2},BOMB_FEE=30,BOMB_FUSE=2.6,BOMB_R=1.6,BOMB_HURT=12;
+let bombs=[],booms=[],boomT=0;
+function bombTalk(){
+  const can=n=>S.coins>=BOMB_FEE*n&&Object.keys(BOMB_NEED).every(k=>have(k)>=BOMB_NEED[k]*n);
+  const make=n=>{if(!can(n))return;for(const k in BOMB_NEED)gain(k,-BOMB_NEED[k]*n);addCoins(-BOMB_FEE*n);gain('bomb',n);sfx('chop');toast('화약통 '+n+'개를 받았어요. 동굴에서 아래 "화약통 놓기"로 써요');saveAll()};
+  const need=Object.keys(BOMB_NEED).map(k=>ITEMS[k].n+' '+BOMB_NEED[k]+'개(가진 것 '+have(k)+')').join(', ');
+  dialog({npc:'moru',who:NPCS.moru.name,text:'동굴 바위를 한꺼번에 날리는 화약통 말인가? 하나에 '+need+', 그리고 '+BOMB_FEE+'냥이네. 불이 붙으면 얼른 두 칸 넘게 물러나게. 가까이 있으면 크게 다치네.\n(지금 가진 화약통 '+have('bomb')+'개)',
+    choices:[[can(1)?'1개 빚기':'재료나 돈이 모자라요',can(1)?()=>make(1):null]].concat(can(3)?[['3개 빚기',()=>make(3)]]:[],[['그만',null]])});
+}
+function bombPlace(){
+  if(scene!=='cave'||!cave||mg||busy()||have('bomb')<1)return;
+  const f=[P.x+P.dir[0],P.y+P.dir[1]],at=walkable(f[0],f[1])?f:[P.x,P.y];
+  if(bombs.some(b=>b.x===at[0]&&b.y===at[1])){toast('거기에는 이미 놓았어요');return}
+  gain('bomb',-1);bombs.push({x:at[0],y:at[1],t:BOMB_FUSE,tile});sfx('pick');
+  tip('bomb','화약통에 불이 붙었어요! 붉은 점선 밖으로 얼른 물러나요');
+}
+function updBombs(dt){
+  if(boomT>0)boomT=Math.max(0,boomT-dt);
+  if(booms.length){for(const b of booms)b.t+=dt;booms=booms.filter(b=>b.t<.5)}
+  if(!bombs.length)return;
+  if(scene!=='cave'||!cave){bombs=[];return}
+  for(const b of bombs.slice()){
+    if(b.tile!==tile){bombs.splice(bombs.indexOf(b),1);continue} /* 다른 층으로 갔다 */
+    b.t-=dt;if(b.t>0)continue;
+    bombs.splice(bombs.indexOf(b),1);bombBlast(b);
+  }
+}
+function bombBlast(b){
+  const hit=cave.map.ROCKS.filter(o=>Math.hypot(o.x-b.x,o.y-b.y)<=BOMB_R);let st=0,ore=0;
+  for(const o of hit){clearRock(o);if(o.ore){gain(o.ore,1);ore++}else if(Math.random()<.6){gain('stone',1);st++}}
+  booms.push({x:b.x,y:b.y,t:0});boomT=.35;sfx('chop');sfx('err');
+  if(hit.length){addXp(hit.length);float('바위 '+hit.length+'개'+(st?' · 돌 +'+st:'')+(ore?' · 광석 +'+ore:''),b.x*T+16,b.y*T-18)}
+  if(mg&&mg.kind==='mine'&&hit.includes(mg.o))mg=null; /* 캐던 광맥이 날아갔다 */
+  if(Math.hypot(P.x-b.x,P.y-b.y)<=BOMB_R){
+    const h=Math.max(3,Math.round(BOMB_HURT*(1-Math.min(GUARD_MAX,gearFx('guard')))));
+    S.en=Math.max(0,S.en-h);hud();hurtMe(h);toast('화약통이 터질 때 너무 가까이 있었어요!');
+  }
+  touch();
+}
+function drawBombs(c){
+  for(const b of bombs){
+    if(b.tile!==tile)continue;
+    const x=b.x*T+16,y=b.y*T+20,u=b.t/BOMB_FUSE,bl=Math.floor(b.t*(u<.35?12:5))%2===0;
+    c.strokeStyle='rgba(255,90,60,'+(.3+.4*(1-u)).toFixed(2)+')';c.lineWidth=1.6;c.setLineDash([5,4]);c.strokeRect((b.x-1)*T+2,(b.y-1)*T+2,T*3-4,T*3-4);c.setLineDash([]); /* 터질 자리 */
+    ell(c,x,y+8,9,3,'rgba(0,0,0,.25)');rr(c,x-7,y-6,14,14,3,bl&&u<.5?'#a8402e':'#5a3a24');rr(c,x-7,y-3,14,2,1,'#2e2a2a');rr(c,x-7,y+4,14,2,1,'#2e2a2a');
+    line(c,x,y-6,x+4,y-11,'#e9d8a8',1.5);circ(c,x+4+Math.sin(b.t*30)*1.2,y-11,2+(bl?1.2:0),'#f7a531');circ(c,x+4,y-11,1,'#fffbe8');
+  }
+  for(const b of booms){
+    const u=b.t/.5,x=b.x*T+16,y=b.y*T+16;
+    c.globalAlpha=1-u;circ(c,x,y,10+u*46,'#f7c531');circ(c,x,y,6+u*30,'#fff3c4');
+    for(let i=0;i<8;i++){const a=i*.785+.3;c.fillStyle='#5a504b';c.fillRect(x+Math.cos(a)*(14+u*50)-2,y+Math.sin(a)*(14+u*50)-2,4,4)}
+    c.globalAlpha=1;
+  }
 }
 function veinEnd(m){
   const o=m.o;if(m.i<1||!cave)return; // 한 번도 내리치지 않고 그만뒀으면 그대로 둔다
@@ -8329,7 +8432,7 @@ function talk(id){
   const ch=[],q=S.quests.find(q=>q.npc===id&&!q.done);
   if(q)ch.push(['부탁 듣기',()=>questTalk(id,q)]);
   ch.push(['선물하기',()=>openGift(id)]);
-  if(id==='moru'){ch.push(['짓기·고치기',buildTalk]);ch.push(['연장 벼리기',openForge]);ch.push(['장비 짓기',openSmith]);ch.push(['가구 짜기',openJoin])}
+  if(id==='moru'){ch.push(['짓기·고치기',buildTalk]);ch.push(['화약통 빚기',bombTalk]);ch.push(['연장 벼리기',openForge]);ch.push(['장비 짓기',openSmith]);ch.push(['가구 짜기',openJoin])}
   if(id==='yeon')ch.push(['수라간 일',kitchenTalk]);
   if(id==='queen')ch.push(['궁중 일',courtTalk]);
   if(id==='eunha')ch.push(['장사 일',tradeTalk]);
@@ -9904,6 +10007,7 @@ tool('bBag',openBag);tool('bSay',openSay);tool('bMe',()=>openGroup('me'));tool('
 tool('bDeco',()=>{setDeco(!decoMode);cv.focus({preventScroll:true})});
 tool('bYard',()=>{if(garden){garden=null;syncPlace()}else if(!busy()&&scene==='town')openYard();cv.focus({preventScroll:true})});
 tool('bGate',()=>{gateHome();cv.focus({preventScroll:true})});
+tool('bBomb',()=>{bombPlace();cv.focus({preventScroll:true})});
 tool('bPlace',()=>{if(relo){relo=null;syncPlace();toast('옮기기를 그만뒀어요');cv.focus({preventScroll:true});return}if(placing)stopPlacing();else{placing=true;syncPlace();toast('집 둘레 내 땅(밝게 표시된 풀밭)에서 지을 자리를 눌러요')}cv.focus({preventScroll:true})});
 $('mClose').onclick=closeModal;
 $('modal').addEventListener('pointerdown',e=>{if(e.target===$('modal'))closeModal()});
