@@ -1324,6 +1324,10 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:115,d:'11월 26일',t:'모두 함께 건너는 다리',l:[
+    '다리를 건너는 모습이 나뿐 아니라 놀러 온 친구와 이웃에게도 적용돼요. 다리 위에서는 누구나 무지개 모양을 따라 솟았다 내려오고, 앞쪽 난간에 몸이 가려져요.',
+    '이웃도 다리 위에서는 걸음이 조금 느려져요. 친구는 자기 화면에서 느려진 걸음이 그대로 보여요.'
+  ]},
   {v:114,d:'11월 26일',t:'나무 옮겨 심기와 베어 내기',l:[
     '마을의 나무를 손볼 수 있어요. 목수의 조수 바우에게 "다리·우리·시설 → 나무 옮겨 심기·베어 내기"를 청해요.',
     '옮겨 심기: 나무를 누르고, 이어서 심을 빈 풀밭을 눌러요. 한 그루에 100냥이에요. 과일나무는 옮겨도 그대로 열매가 열려요.',
@@ -3351,7 +3355,7 @@ function renderTown(c){
   if((inTown||scene==='palace'||scene==='resort')&&npcOut())for(const id of NPC_IDS){
     if(!npcHere(id))continue;
     const n=N[id],x=(rx(n)+.5)*T,y=(ry(n)+.9)*T;
-    list.push([ry(n)+.1,()=>drawChar(c,x,y,NPCS[id],n.dir,n.t<1,now+n.x)]);
+    list.push([ry(n)+.1,()=>drawChar(c,x,y-bridgeRise(rx(n),ry(n)),NPCS[id],n.dir,n.t<1,now+n.x)]); /* v115: 이웃도 다리 위에서는 솟는다 */
     if(n.emo)labels.push(()=>bubble(c,x,y-56,n.emo.k,n.emo.k==='♥'?'#d94a74':'#e0453a'));
     else if(S.quests.some(q=>q.npc===id&&!q.done))labels.push(()=>bubble(c,x,y-56,'?','#2b7fb5'));
     else if(id==='eunha'&&S.merch&&S.merch.order&&!S.merch.order.done&&have(S.merch.order.item)>=S.merch.order.n)labels.push(()=>bubble(c,x,y-56,'!','#dd6a1c')); // 납품할 물건이 다 모였다
@@ -3379,7 +3383,7 @@ function renderTown(c){
   for(const p of peers){
     const q=p.presence,v=PV[p.peer];if(!v||!peerHere(p))continue;
     const vy=lerp(v.fy,v.y,v.t),x=(lerp(v.fx,v.x,v.t)+.5)*T,y=(vy+.9)*T;
-    list.push([vy+.15,()=>emoDraw(c,x,y,v.e,now-v.eAt,fy=>drawChar(c,x,fy,peerLook(q),DIRS[q.d]||[0,1],v.t<1,now+x))]);
+    list.push([vy+.15,()=>emoDraw(c,x,y-bridgeRise(lerp(v.fx,v.x,v.t),vy),v.e,now-v.eAt,fy=>drawChar( /* v115: 친구도 다리 위에서는 무지개 모양을 따라 솟는다 */c,x,fy,peerLook(q),DIRS[q.d]||[0,1],v.t<1,now+x))]);
     labels.push(()=>label(c,x,y+9,peerName(p)));
     headStack(c,labels,x,y,tagOn()&&tag.it===p.peer,rps&&rps.done&&rps.w===p.peer?RPS[rps.you]:'',v.say&&now-v.sayAt<5?v.say:'',v.e&&now-v.eAt<EMO_T?EMO[v.e][1]:'');
   }
@@ -3932,7 +3936,7 @@ function updNpcs(dt){
     if(!npcHere(id))continue;
     const n=N[id];
     if(n.emo){n.emo.t-=dt;if(n.emo.t<=0)n.emo=null}
-    if(n.t<1){n.t=Math.min(1,n.t+dt*(comer&&comer.id===id?4.7:2.4));if(n.t>=1){n.fx=n.x;n.fy=n.y}continue} /* 나에게 다가오는 이웃은 종종걸음 */
+    if(n.t<1){n.t=Math.min(1,n.t+dt*(comer&&comer.id===id?4.7:2.4)*(bridgeAt(rx(n),ry(n))?BRIDGE_SLOW:1));if(n.t>=1){n.fx=n.x;n.fy=n.y}continue} /* 나에게 다가오는 이웃은 종종걸음 */
     if(n.hold>0){n.hold-=dt;continue}
     if(n.path&&n.path.length){
       /* 나들이 가는 길: 쉬지 않고 한 칸씩 걷는다. 누가 막고 있으면 잠깐 기다리고, 오래 막히면 그 자리에 머문다 */
