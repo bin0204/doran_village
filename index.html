@@ -1284,6 +1284,7 @@ const SEA=(function(){
   for(let y=0;y<H;y++){tile.push(new Array(W).fill(4));objAt.push(new Array(W).fill(null))}
   const isl=(cx,cy,r)=>{for(let y=cy-r;y<=cy+r;y++)for(let x=cx-r;x<=cx+r;x++)if(Math.abs(x-cx)+Math.abs(y-cy)<=r+(r>1?1:0)){tile[y][x]=2;SAND.push([x,y])}};
   isl(8,15,2);isl(27,9,1);isl(24,21,1);tile[15][8]=0;
+  isl(17,18,2);tile[18][17]=0;tile[18][16]=0;isl(3,21,1);isl(31,13,1); /* v113: 섬을 셋 더(가운데 큰 섬에는 풀밭이 있다) */
   for(const [x,y] of [[14,8],[20,13],[5,7],[30,16],[13,21],[32,5]]){const o={t:'deco',k:'rock',x,y,sh:0,i:-1};ROCKS.push(o);objAt[y][x]=o}
   return{tile,objAt,TREES:[],ROCKS,GRASS:[],SAND,shoals:[]};
 })();
@@ -1323,6 +1324,13 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:113,d:'11월 26일',t:'살아 있는 먼바다',l:[
+    '먼바다에 볼거리가 생겼어요. 갈매기가 날개를 퍼덕이며 지나가고, 여기저기서 물고기가 뛰어오르고, 가끔 멀리서 고래가 등을 내밀고 물을 뿜어요.',
+    '섬이 셋에서 여섯으로 늘었어요. 가운데 큰 섬에는 풀밭이 있어요. 섬에서는 전복·조개에 더해 소라와 게도 주워요.',
+    '물 위에 미역과 떠내려온 나무가 떠다녀요. 배로 그 위를 지나가면 건져요.',
+    '마을의 다리를 조선 시대 나무다리로 다시 그렸어요. 통나무 교각 위에 널을 깔고, 가운데가 살짝 솟은 무지개 모양에 낮은 난간과 굵은 엄지기둥이 서 있어요.',
+    '바다 빛깔도 바뀌었어요. 섬 둘레는 옅은 물빛이 고리처럼 번지고 흰 물거품이 일며, 먼 곳은 짙고 옅은 물이 얼룩져 있어요.'
+  ]},
   {v:112,d:'11월 26일',t:'오래된 둔덕',l:[
     '둔덕과 계단을 줄만 그은 듯한 모습에서 오래된 조선 시대의 것으로 다시 그렸어요. 남쪽 벼랑은 비바람에 바랜 통나무를 세워 박은 흙막이, 옆과 뒤의 비탈은 이끼 낀 막돌 축대예요.',
     '계단은 네모지게 다듬은 통나무 디딤판이에요. 가운데가 닳아 밝고 양 끝에 나이테가 보이며, 양옆에 이끼 낀 기둥이 서 있어요.',
@@ -2609,11 +2617,20 @@ function buildGround(){
       if(t===4){
         /* 바다(v104, 사용자 요청: 단조롭다): 뭍에서 멀어질수록 짙어지는 띠, 가로로 반짝이는 물비늘, 뭍과 닿는 곳의 흰 물거품 */
         let dp=0;while(dp<4&&y-dp-1>=0&&!land(x,y-dp-1))dp++;if(y-dp-1<0)dp=4;
+        let near=9; /* v113 먼바다: 섬 둘레로 얕은 물이 고리처럼 번지고(가까울수록 옅다), 먼 곳은 짙고 옅은 물이 얼룩져 있다 */
+        if(scene==='sea'){for(let dy=-3;dy<=3;dy++)for(let dx=-3;dx<=3;dx++)if(tile[y+dy]&&tile[y+dy][x+dx]!==undefined&&land(x+dx,y+dy))near=Math.min(near,Math.max(Math.abs(dx),Math.abs(dy)));
+          dp=near<=3?near-1:(Math.sin(x*.55+1)+Math.cos(y*.6+x*.25)>.5?4:3)}
         const SEA=['#7fd3ea','#4fb6e2','#2f9ad8','#2384cc','#1c74bd'];
         c.fillStyle=SEA[dp];c.fillRect(px,py,T,T);
         if(dp<4){c.fillStyle=SEA[dp+1];for(let i=0;i<T;i+=4)if(hash(x*4+i,y*3+dp)>.45)c.fillRect(px+i,py+T-4-(hash(x+i,y)>.5?2:0),4,6)} /* 띠의 경계를 들쭉날쭉하게 */
         for(let i=0;i<6;i++){const a=hash(x*7+i*11+3,y*5+i*2),b=hash(y*9+i*5+1,x*3+i*7);dot(px+a*22,py+2+b*26,i%3===0?10:i%3===1?6:4,2,i%2?'rgba(255,255,255,.5)':dp<2?'rgba(255,255,255,.28)':'rgba(120,200,255,.35)')}
-        if(dp===0){c.fillStyle='#ffffff';for(let i=0;i<T;i+=4){const k=2+Math.round(hash(x*8+i,y*2+1)*4);c.fillRect(px+i,py,4,k)}c.fillStyle='rgba(255,255,255,.6)';for(let i=0;i<T;i+=8)if(hash(x*5+i,y*7)>.4)c.fillRect(px+i,py+8+Math.round(hash(x+i,y*3)*4),6,2)}
+        if(scene==='sea'){ /* 섬과 닿은 쪽마다 흰 물거품 */
+          if(near===1){c.fillStyle='#ffffff';
+            if(land(x,y-1))for(let i=0;i<T;i+=4)c.fillRect(px+i,py,4,2+Math.round(hash(x*8+i,y*2+1)*4));
+            if(land(x,y+1))for(let i=0;i<T;i+=4){const k=2+Math.round(hash(x*8+i,y*2+5)*4);c.fillRect(px+i,py+T-k,4,k)}
+            if(land(x-1,y))for(let i=0;i<T;i+=4)c.fillRect(px,py+i,2+Math.round(hash(x*2+3,y*8+i)*4),4);
+            if(land(x+1,y))for(let i=0;i<T;i+=4){const k=2+Math.round(hash(x*2+7,y*8+i)*4);c.fillRect(px+T-k,py+i,k,4)}}
+        }else if(dp===0){c.fillStyle='#ffffff';for(let i=0;i<T;i+=4){const k=2+Math.round(hash(x*8+i,y*2+1)*4);c.fillRect(px+i,py,4,k)}c.fillStyle='rgba(255,255,255,.6)';for(let i=0;i<T;i+=8)if(hash(x*5+i,y*7)>.4)c.fillRect(px+i,py+8+Math.round(hash(x+i,y*3)*4),6,2)}
       }else for(let i=0;i<4;i++){const a=hash(x*7+i*11+3,y*5+i*2),b=hash(y*9+i*5+1,x*3+i*7);dot(px+6+a*16,py+8+b*16,i%2?6:4,2,i%2?'rgba(255,255,255,.2)':'rgba(20,50,80,.16)')}
       /* v108(사용자 요청: 진짜 연못처럼 둥글게): 민물은 뭍으로 튀어나온 모서리를 둥글게 깎는다. 깎인 자리에는 풀을 덧칠하고 물가의 밝은 테를 호로 두른다 */
       const wl=land(x-1,y),wr=land(x+1,y),wu=land(x,y-1),wd=land(x,y+1),R=t===3?13:0,cTL=R&&wl&&wu,cTR=R&&wr&&wu,cBR=R&&wr&&wd,cBL=R&&wl&&wd;
@@ -2632,7 +2649,28 @@ function buildGround(){
       // 민물에 뜬 연잎(겨울에는 없다). 가끔 분홍 연꽃이 핀다
       if(t===3&&sea<3){const h3=hash(x*5+1,y*7+9);if(h3>.8){const lx=px+10+h2*10,ly=py+12+h*10;dot(lx-4,ly-2,8,6,'#4f9d52');dot(lx-2,ly-4,6,2,'#4f9d52');dot(lx-2,ly+4,6,2,'#4f9d52');dot(lx+2,ly,4,2,'#5b9bb8');dot(lx-2,ly-2,2,2,'#72c480');if(h3>.93&&sea<2){dot(lx-2,ly-2,4,4,'#f6a3c4');dot(lx,ly,2,2,'#ffe27a')}}}
     }
-    if(t===5){c.fillStyle='#c79a66';c.fillRect(px,py+2,T,T-4);c.fillStyle='#a87a48';for(let i=0;i<4;i++)c.fillRect(px+i*8,py+4,2,T-8);c.fillStyle='#8a5a34';c.fillRect(px,py,T,4);c.fillRect(px,py+T-4,T,4)}
+    if(t===5){
+      /* v113(사용자 의견: 다리가 띡 만든 느낌이다 → 조선 시대에 맞게): 통나무 교각 위에 널을 깐 나무다리. 가로로 놓인 다리는 가운데가 살짝 솟은 무지개 모양이고(널과 난간이 함께 휜다),
+         양 끝에 굵은 엄지기둥, 낮은 난간과 동자기둥, 물에는 다리 그늘이 진다. 세로 다리는 휘지 않고 가운데만 밝다 */
+      const b5=(a,b)=>tile[b]&&tile[b][a]===5,horiz=!(b5(x,y-1)||b5(x,y+1))||b5(x-1,y)||b5(x+1,y);
+      if(horiz){
+        let x0=x,x1=x;while(b5(x0-1,y))x0--;while(b5(x1+1,y))x1++;const n=x1-x0+1;
+        for(let i=0;i<T;i+=4){
+          const u=((x-x0)*T+i+2)/(n*T),lift=Math.round(Math.sin(u*Math.PI)*(n>1?5:3)),pl=((x-x0)*8+i/4)%2,ty=py+6-lift;
+          c.fillStyle='rgba(20,45,70,.22)';c.fillRect(px+i,py+T-5,4,5);
+          if(i%16===4){c.fillStyle='#4a3a2c';c.fillRect(px+i,py+T-7,4,7);c.fillStyle='#6e5a46';c.fillRect(px+i,py+T-7,1.5,7)}
+          c.fillStyle=pl?'#a48362':'#96765a';c.fillRect(px+i,ty,4,T-13);c.fillStyle='#bfa07c';c.fillRect(px+i,ty,1.2,T-13);c.fillStyle='#6f5740';c.fillRect(px+i+3,ty,1,T-13);
+          if((x*8+i/4)%5===0){c.fillStyle='#5e4a36';c.fillRect(px+i+1.5,ty+4+(i%3)*3,1,3)}
+          for(const ry of [ty-3,ty+T-15]){c.fillStyle='#4a3a2c';c.fillRect(px+i,ry,4,4);c.fillStyle='#7a6048';c.fillRect(px+i,ry,4,2.6);c.fillStyle='#a48362';c.fillRect(px+i,ry,4,1)}
+          if(i%8===0)for(const ry of [ty-6,ty+T-18]){c.fillStyle='#4a3a2c';c.fillRect(px+i,ry,3,7);c.fillStyle='#8a6e52';c.fillRect(px+i,ry,1.6,6)}
+        }
+        for(const [on,ex] of [[x===x0,px],[x===x1,px+T-5]])if(on)for(const ry of [py-3,py+T-18]){rr(c,ex,ry-3,5,13,1.5,'#3f3024');rr(c,ex+.8,ry-2,3.4,11,1,'#7a6048');c.fillStyle='#a48362';c.fillRect(ex+.8,ry-2,1.2,10);rr(c,ex-.5,ry-5,6,3,1,'#5e4a36')}
+      }else{
+        c.fillStyle='rgba(20,45,70,.2)';c.fillRect(px+T-5,py,5,T);
+        for(let j=0;j<T;j+=4){c.fillStyle=(j/4+y)%2?'#a48362':'#96765a';c.fillRect(px+6,py+j,T-12,4);c.fillStyle='#bfa07c';c.fillRect(px+10,py+j,T-20,1.2);c.fillStyle='#6f5740';c.fillRect(px+6,py+j+3,T-12,1)}
+        for(const rx2 of [px+3,px+T-7]){c.fillStyle='#4a3a2c';c.fillRect(rx2,py,4,T);c.fillStyle='#7a6048';c.fillRect(rx2,py,2.6,T);c.fillStyle='#a48362';c.fillRect(rx2,py,1,T);for(let j=2;j<T;j+=10){rr(c,rx2-1,py+j,6,5,1,'#3f3024');rr(c,rx2-.2,py+j+.6,4.4,3.4,1,'#8a6e52')}}
+      }
+    }
   }
   if(scene==='wild'&&wz===4){
     /* 들판의 밭터: 갈 수 있는 땅을 옅은 흙빛으로 물들이고 네 귀에 말뚝. 목장: 나무 울타리를 두르고 어귀에 푯말 */
@@ -3330,7 +3368,7 @@ function renderTown(c){
     c.strokeStyle='#f7c531';c.lineWidth=2;c.beginPath();c.arc(bx,by,13+Math.sin(now*5)*1.5,0,7);c.stroke();
     labels.push(()=>label(c,bx,by-32,'쏠 수 있어요'));
   }}
-  drawBombs(c);drawMg(c,labels);drawShots(c);drawPk(c);drawUse(c);drawTut(c);
+  drawSeaLife(c);drawBombs(c);drawMg(c,labels);drawShots(c);drawPk(c);drawUse(c);drawTut(c);
   if(fishing){
     const f=fishing,rl=f.phase==='reel',thr=rl&&f.thr===2;
     let bx=f.bx*T+16,by=f.by*T+16;
@@ -5593,9 +5631,36 @@ function seaShoals(){
   }
   seaDay=S.day;
 }
+/* 먼바다의 볼거리(v113, 사용자 의견: 배를 타고 나가면 너무 무료하다): 날아가는 갈매기, 여기저기서 뛰어오르는 물고기, 가끔 멀리서 물을 뿜는 고래, 반짝이는 물비늘.
+   시간(now)만으로 그려서 저장하는 것이 없다. 고래는 40초에 한 번 8초 동안, 내 배에서 여덟 칸 넘게 떨어진 곳에 나타난다 */
+function drawSeaLife(c){
+  if(scene!=='sea')return;
+  for(let i=0;i<14;i++){const k=Math.floor(now/1.3+i*.37),u=(now/1.3+i*.37)%1,x=hash(k*3+i,i*7+1)*W*T,y=(4+hash(i*5+2,k*5+i)*(H-5))*T;if(SEA.tile[Math.floor(y/T)]&&SEA.tile[Math.floor(y/T)][Math.floor(x/T)]===4){c.globalAlpha=Math.sin(u*Math.PI)*.8;c.fillStyle='#ffffff';c.fillRect(x,y,6,2);c.fillRect(x+2,y-2,2,6)}}
+  c.globalAlpha=1;
+  for(let i=0;i<3;i++){ /* 뛰어오르는 물고기: 물 위로 반원을 그리며 솟았다 떨어지고, 물보라가 퍼진다 */
+    const per=3.1+i*.9,k=Math.floor(now/per+i*.5),u=(now/per+i*.5)%1,tx=2+Math.floor(hash(k*7+i,i*3+2)*(W-4)),ty=5+Math.floor(hash(i*11+3,k*3+i)*(H-7));
+    if(SEA.tile[ty][tx]!==4||SEA.objAt[ty][tx]||(Math.abs(tx-P.x)<2&&Math.abs(ty-P.y)<2))continue;
+    const x=tx*T+16,y=ty*T+18;
+    if(u<.3){const v=u/.3,fx=x-8+v*16,fy=y-Math.sin(v*Math.PI)*16,a=Math.atan2(-Math.cos(v*Math.PI)*16,16);c.save();c.translate(fx,fy);c.rotate(a);ell(c,0,0,6,2.6,'#9fb6c8');ell(c,-1,-.8,4,1.2,'#dfe9ee');poly(c,[-5,0,-9,-3,-9,3],'#7d98ac');c.restore()}
+    if(u>.22&&u<.6){const v=(u-.22)/.38;c.globalAlpha=1-v;c.strokeStyle='#ffffff';c.lineWidth=1.6;c.beginPath();c.ellipse(x+8,y,4+v*12,1.5+v*4,0,0,7);c.stroke();c.globalAlpha=1}
+  }
+  {const k=Math.floor(now/40),u=(now%40)/8; /* 고래 */
+    if(u<1){const tx=3+Math.floor(hash(k*5+1,k*3+7)*(W-6)),ty=6+Math.floor(hash(k*9+2,k+5)*(H-9));
+      if(Math.abs(tx-P.x)+Math.abs(ty-P.y)>8&&SEA.tile[ty][tx]===4){const x=tx*T+16,y=ty*T+18,up=Math.sin(u*Math.PI);
+        c.globalAlpha=Math.min(1,up*2);c.fillStyle='#2f4a66';c.beginPath();c.ellipse(x,y+4-up*4,22,8*up+1,0,Math.PI,0);c.closePath();c.fill();c.fillStyle='#46647f';c.beginPath();c.ellipse(x-4,y+3-up*4,12,4*up+.5,0,Math.PI,0);c.closePath();c.fill();
+        if(u>.25&&u<.7){const v=(u-.25)/.45;c.fillStyle='rgba(255,255,255,'+(1-v).toFixed(2)+')';for(let i=-2;i<=2;i++)c.fillRect(x-10+i*2.5*(1+v),y-8-v*18-Math.abs(i)*(-3),2,5)}
+        c.strokeStyle='rgba(255,255,255,.7)';c.lineWidth=1.5;c.beginPath();c.ellipse(x,y+5,26,5,0,0,7);c.stroke();c.globalAlpha=1}}}
+  for(let i=0;i<3;i++){ /* 갈매기: 날개를 퍼덕이며 가로질러 난다 */
+    const sp=26+i*9,x=((now*sp+i*310)%(W*T+160))-80,y=(3+i*6)*T+Math.sin(now*.9+i*2)*18,fl=Math.sin(now*9+i)*5,dir=i%2?-1:1,gx=dir>0?x:W*T-x;
+    c.strokeStyle='#ffffff';c.lineWidth=2.2;c.lineCap='round';c.beginPath();c.moveTo(gx-9,y-fl);c.lineTo(gx,y);c.lineTo(gx+9,y-fl);c.stroke();c.lineCap='butt';circ(c,gx,y+.5,2,'#f6f1e6');c.fillStyle='#f2a531';c.fillRect(gx+dir*2,y,2,1.2);
+    ell(c,gx+6,y+26,7,2,'rgba(20,50,80,.12)');
+  }
+}
 function seaPickups(){
   const rng=mulberry(S.day*91+3),sand=SEA.SAND.slice(),a=[];
-  for(const id of ['abalone','abalone','abalone','shell','shell','shell']){if(!sand.length)break;const [x,y]=sand.splice(Math.floor(rng()*sand.length),1)[0];a.push({x,y,id})}
+  for(const id of ['abalone','abalone','abalone','shell','shell','shell','sora','sora','ge']){if(!sand.length||!ITEMS[id])break;const [x,y]=sand.splice(Math.floor(rng()*sand.length),1)[0];a.push({x,y,id})}
+  /* v113: 물 위를 떠다니는 것(미역과 떠내려온 나무). 배로 그 위를 지나가면 건진다 */
+  for(const id of ['miyeok','miyeok','miyeok','wood','wood']){if(!ITEMS[id])continue;for(let g=0;g<60;g++){const x=2+Math.floor(rng()*(W-4)),y=5+Math.floor(rng()*(H-7));if(SEA.tile[y][x]!==4||SEA.objAt[y][x]||a.some(p=>p.x===x&&p.y===y))continue;a.push({x,y,id});break}}
   return a;
 }
 function sailTalk(){
@@ -5607,6 +5672,7 @@ function enterSea(){
   if(seaDay!==S.day)seaShoals();
   buildGround();mg=null;fishing=null;drops=[];warp(17,2,[0,1]);syncPlace();S.min=Math.min(1380,S.min+20);hud();touch();
   toast('먼바다예요. 위쪽 뱃길 표시로 가면 포구로 돌아가요');
+  tip('sea2','섬이 여섯으로 늘었어요. 섬마다 전복·소라·게가 나고, 물 위에 떠다니는 미역과 나무는 배로 지나가면 건져요');
   tip('sea','보글거리는 물고기 떼 옆에 배를 대고 그쪽을 본 채 행동하면 큰 고기가 물어요. 섬에 내리면 전복을 주울 수 있어요');
 }
 function leaveSea(quiet){
