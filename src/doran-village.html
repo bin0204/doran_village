@@ -1060,6 +1060,7 @@ function townSpot(x,y){
 }
 const plotIndex=(x,y)=>PLOTS.findIndex(p=>p[0]===x&&p[1]===y);
 // 사냥터: 서쪽 길(0,11)로 드나드는 깊은 숲. 나무와 바위는 풍경이고, 개울 가운데 얕은 여울로 건넌다
+const HILL=[3,2,12,7],HILL_ST=[7,7];
 const WILD=(function(){
   const tile=[],objAt=[],TREES=[],ROCKS=[],GRASS=[];
   for(let y=0;y<H;y++){tile.push(new Array(W).fill(0));objAt.push(new Array(W).fill(null))}
@@ -1088,7 +1089,12 @@ const WILD=(function(){
   const clear=(x,y)=>{const o=objAt[y][x];if(!o)return;const a=o.k==='rock'?ROCKS:TREES;a.splice(a.indexOf(o),1);objAt[y][x]=null};
   for(let x=W-6;x<W;x++){clear(x,DEEP_Y);tile[DEEP_Y][x]=1}
   clear(HUNT_AT[0],HUNT_AT[1]);clear(HUNT_AT[0],HUNT_AT[1]+1);objAt[HUNT_AT[1]][HUNT_AT[0]]={t:'hboard',x:HUNT_AT[0],y:HUNT_AT[1]};
-  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++)if(tile[y][x]===0&&!objAt[y][x])GRASS.push([x,y]);
+  /* 언덕(v107, 사용자 요청: 올라갈 수 있는 높은 땅): 북서쪽의 너른 둔덕. 둘레는 벼랑(13, 못 지나감)이고 남쪽 가운데의 돌계단(14)으로만 오르내린다. 위(12)는 풀밭.
+     위에 서서 활을 쏘면 과녁이 넓어진다(aimR). 타일 번호: 12 언덕 위 · 13 벼랑 · 14 돌계단. HILL=[x0,y0,x1,y1] 둘레까지의 네모, 계단은 [HILL_ST] */
+  for(let y=HILL[1];y<=HILL[3];y++)for(let x=HILL[0];x<=HILL[2];x++){clear(x,y);tile[y][x]=x===HILL[0]||x===HILL[2]||y===HILL[1]||y===HILL[3]?13:12}
+  tile[HILL_ST[1]][HILL_ST[0]]=14;clear(HILL_ST[0],HILL_ST[1]+1);
+  for(const [x,y] of [[HILL[0]+2,HILL[1]+1],[HILL[2]-1,HILL[1]+2],[HILL[0]+1,HILL[3]-1]]){const o={t:'deco',k:'pine',x,y,sh:0,i:-1};TREES.push(o);objAt[y][x]=o}
+  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++)if((tile[y][x]===0||tile[y][x]===12)&&!objAt[y][x])GRASS.push([x,y]);
   return{tile,objAt,TREES,ROCKS,GRASS,SAND:[]};
 })();
 // 깊은 산: 사냥터 숲의 동쪽 길 끝에서 이어지는 더 깊은 산. 바위가 많고 골짜기 물이 남북으로 흐른다(두 군데 여울로 건넌다). 서쪽 길(0,DEEP_Y)로 숲에 돌아간다.
@@ -1275,6 +1281,10 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:107,d:'11월 26일',t:'사냥터의 언덕',l:[
+    '사냥터 숲 북서쪽에 올라갈 수 있는 언덕이 생겼어요. 둘레는 돌 벼랑이라 못 지나가고, 남쪽 가운데의 돌계단으로만 오르내려요.',
+    '언덕 위에서 활을 겨누면 내려다보며 쏘는 셈이라 과녁이 15% 넓어져요. 위에도 짐승이 다니고 주울 것이 떨어져 있어요.'
+  ]},
   {v:106,d:'11월 26일',t:'이층 누각집',l:[
     '내 집에 여섯째 단계가 생겼어요. 솟을대문 기와집 다음에 "이층 누각집"으로 올릴 수 있어요. 지붕 위로 붉은 기둥과 난간을 두른 2층 누각이 올라가요.',
     '60,000냥과 나무 90개, 돌 80개가 들고, 방이 13×9칸으로 넓어져요. 목수 모루에게 "짓기·고치기"로 청해요.'
@@ -2431,6 +2441,16 @@ function buildGround(){
       c.fillStyle='#231d1a';c.fillRect(px,py,T,T);if(h>.5)dot(px+4+h*20,py+6+h2*18,4,2,'#2e2623');
       if(tile[y+1]&&tile[y+1][x]===10){c.fillStyle='#4a3f38';c.fillRect(px,py+12,T,T-12);c.fillStyle='#5a4d44';c.fillRect(px,py+12,T,3);c.fillStyle='#3a312c';c.fillRect(px+(x%2?8:20),py+18,2,10)}
     }
+    /* 언덕(v107): 12 위의 풀밭(조금 밝다) · 13 벼랑(돌 벽. 남쪽 줄은 앞면이 보이고, 나머지는 바위 둘레) · 14 돌계단 */
+    if(t===12){c.fillStyle=(x+y)%2?'#9bbf6c':'#96ba68';c.fillRect(px,py,T,T);for(let i=0;i<7;i++){const a=hash(x*5+i*13+1,y*7+i*3),b=hash(y*11+i*7+2,x*3+i);dot(px+a*30,py+b*30,2,2,i%3===0?'rgba(255,255,220,.2)':i%3===1?'#7ea455':'rgba(40,60,30,.12)')}
+      if(h<.4){const gx=px+4+h*40,gy=py+8+h2*14;dot(gx,gy,2,4,'#7ea455');dot(gx+4,gy+2,2,2,'#7ea455')}}
+    if(t===13){
+      const front=tile[y-1]&&tile[y-1][x]===12;
+      c.fillStyle=front?'#8d8478':'#a39a8c';c.fillRect(px,py,T,T);
+      for(let j=0;j<4;j++)for(let i=-1;i<5;i++){const bx=px+i*8+(j%2?4:0),by=py+j*8;c.fillStyle=hash(x*4+i,y*4+j)>.5?(front?'#7b7368':'#948b7e'):(front?'#9a9185':'#b0a799');c.fillRect(Math.max(px,bx),by,Math.min(7,px+T-Math.max(px,bx)),7)}
+      if(front){c.fillStyle='#9bbf6c';c.fillRect(px,py,T,5);c.fillStyle='#7ea455';for(let i=0;i<T;i+=4)c.fillRect(px+i,py+4,2,2+((i>>2)%2)*2);c.fillStyle='rgba(0,0,0,.22)';c.fillRect(px,py+T-5,T,5)}
+    }
+    if(t===14){c.fillStyle='#8d8478';c.fillRect(px,py,T,T);for(let j=0;j<4;j++){c.fillStyle=j%2?'#b9b0a2':'#a89f91';c.fillRect(px+3,py+j*8,T-6,6);c.fillStyle='#6f685e';c.fillRect(px+3,py+j*8+6,T-6,2)}c.fillStyle='#75756e';c.fillRect(px,py,3,T);c.fillRect(px+T-3,py,3,T)}
     if(t===10){c.fillStyle=(x+y)%2?'#6b5d52':'#64574d';c.fillRect(px,py,T,T);if(h>.45)dot(px+4+h*22,py+6+h2*20,2,2,'#7d6e62');if(h2>.8)dot(px+6+h2*14,py+18,4,2,'#55493f')}
     // 궁궐: 박석 마당과 기와를 얹은 담
     if(t===7){c.fillStyle=(x+y)%2?'#dad4c6':'#d1cbbc';c.fillRect(px,py,T,T);c.fillStyle='rgba(120,110,90,.28)';c.fillRect(px,py,T,2);c.fillRect(px+(y%2?10:22),py,2,T);if(sea===3&&h>.6)dot(px+4+h*20,py+8+h2*16,4,2,'#f4f8fb')}
@@ -3514,7 +3534,7 @@ const isDoor=(x,y)=>(scene==='palace'?PBLD:scene==='resort'?RBLD:BLD).some(b=>b.
 const npcHere=id=>(NPCS[id].at||'town')===scene;
 const civ=()=>scene==='town'||scene==='palace'||scene==='resort'; /* 이웃이 서 있는 장면들 */
 function walkable(x,y){
-  if(scene!=='home'){if(x<0||y<0||x>=W||y>=H)return false;const t=tile[y][x];return(t<=2||t===5||t===7||t===10||t===11||(t===4&&scene==='sea'))&&!objAt[y][x]}
+  if(scene!=='home'){if(x<0||y<0||x>=W||y>=H)return false;const t=tile[y][x];return(t<=2||t===5||t===7||t===10||t===11||t===12||t===14||(t===4&&scene==='sea'))&&!objAt[y][x]}
   const e=roomEntry();
   if(x===e[0]&&y===e[1]+1)return true;
   if(!roomSet().has(x+','+y))return false;
@@ -4673,7 +4693,7 @@ function spawnWild(){
 }
 function enterWild(){
   if(scene!=='town')return;
-  scene='wild';useMap(WILD);townBeasts=beasts;S.pickTown=S.pickups;S.pickups=S.wpick||wildPickups();S.away='wild';
+  scene='wild';useMap(WILD);townBeasts=beasts;S.pickTown=S.pickups;S.pickups=(S.wpick||wildPickups()).filter(p=>WILD.tile[p.y]&&WILD.tile[p.y][p.x]!==13);S.away='wild'; /* 벼랑이 된 자리에 남아 있던 것은 치운다 */
   spawnWild();buildGround();mg=null;fishing=null;drops=[];warp(1,11,[1,0]);syncPlace();
   toast('사냥터에 들어왔어요. 서쪽 길로 나가면 마을이에요');
   tip('tiger','범을 조심해요. 가까이 붙으면 기력을 잃어요. 멀리서 여러 번 맞혀야 잡혀요');
@@ -6370,7 +6390,8 @@ function beastInLine(){
 const aimRaw=()=>tl('bow')*1.2+sv('arms')*.15+(perk('mujin')?1.5:0)+(relic('c_feather')?1.5:0)+gearFx('aim')+Math.min(huntRank(),S.hrank|0)*.3; /* 사냥꾼의 이름(방에서 축하를 받은 데까지)마다 조금씩 */
 /* v75 균형: 예전에는 덤이 그대로 과녁에 더해져(최대 25쯤) 중반부터는 아무 때나 눌러도 절반 넘게 맞았다. 이제 덤 5까지는 그대로, 그 위로는 0.4배만 과녁에 붙고 과녁은 17을 넘지 않는다.
    과녁에 못 붙은 덤은 흔들림을 늦추는 데 쓰인다(aimCalm, 15%까지). 그리고 센 짐승일수록 과녁이 크게 흔들린다(aimAmp: 레벨마다 5%, 백호는 1.8배) */
-const aimR=()=>{const b=aimRaw();return Math.min(17,8.5+(b<=5?b:5+(b-5)*.4))};
+const onHill=()=>scene==='wild'&&tile[P.y]&&tile[P.y][P.x]===12;
+const aimR=()=>{const b=aimRaw();return Math.min(17,8.5+(b<=5?b:5+(b-5)*.4))*(onHill()?1.15:1)}; /* 언덕 위에서 내려다보며 쏘면 과녁이 15% 넓다(v107) */
 const aimCalm=()=>1-Math.min(.15,Math.max(0,aimRaw()-5)*.015);
 const aimAmp=k=>1+Math.min(16,BEASTS[k].lv|0)*.05;
 /* v86(사용자 의견: 화살이 거의 한 방이라 너무 쉽다): 짐승의 기운을 올리고, 이어서 맞힐수록 과녁이 조금씩 작아진다(한 번에 10%, 세 번까지). 작은 짐승(토끼·꿩·사슴·너구리·고라니)은 그대로 한 방 */
@@ -9510,7 +9531,7 @@ const COLORS=['#dd6a1c','#3f8fc4','#3a8749','#d94a74','#8a63c9'];
 // 시작 화면 뒤에 비치는 마을: 이어서 할 마을이나, 새로 시작하면 살게 될 마을을 미리 보여 준다
 function preview(seed){S=newState('',COLORS[0],seed);S.min=600;warp(SPAWN[0],SPAWN[1],[0,1]);buildGround()}
 // 마을 지도 한 장: 칸마다 px 크기의 네모로 그린다. 시작 화면의 마을 고르기와 지도 창에서 쓴다. marks=[[x,y],…]에는 번호표를 붙인다
-const MINI_COL={0:'#8ccf6b',1:'#e3c592',2:'#f2e3b3',3:'#62bfe8',4:'#4aa8dd',5:'#b98a5a',6:'#357a42',7:'#d6d0c2',8:'#9c9586',9:'#231d1a',10:'#6b5d52',11:'#b98a5a'};
+const MINI_COL={12:'#a9cf7c',13:'#8d8478',14:'#c9c0b2',0:'#8ccf6b',1:'#e3c592',2:'#f2e3b3',3:'#62bfe8',4:'#4aa8dd',5:'#b98a5a',6:'#357a42',7:'#d6d0c2',8:'#9c9586',9:'#231d1a',10:'#6b5d52',11:'#b98a5a'};
 // map을 주면 그 지도를(사냥터·궁궐·먼바다·동굴), 안 주면 마을을 그린다. 내 땅 테두리는 마을에만 있다
 // 지도의 안개(v81): 걸어서 가 본 곳만 지도에 밝혀진다. 곳마다 W×H 칸의 0/1을 여섯 칸씩 한 글자로 묶어 S.fog[곳]에 적는다.
 // 동굴은 들어갈 때마다 모양이 달라 적어 두지 않는다. fogArr=지금 있는 곳의 안개, fogStep()은 작은 지도가 그려질 때마다 내 둘레(FOG_R칸)를 밝힌다
