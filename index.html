@@ -239,6 +239,7 @@ ul.help{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
     <button class="btn" id="bDeco" type="button" hidden>꾸미기</button>
     <button class="btn" id="bYard" type="button" hidden>가꾸기</button>
     <button class="btn" id="bPlace" type="button" hidden>우리 놓기</button>
+    <button class="btn" id="bGate" type="button" hidden>장승 길</button>
     <button class="btn sp" id="bAsk" type="button">문의</button>
     <button class="btn" id="bSet" type="button">설정</button>
   </nav>
@@ -551,6 +552,12 @@ const WORKS={
   // 고깃배는 마을 것이 아니라 내 것(solo): 포구 끝 바다 위에 짓고, 다 지으면 타고 먼바다로 나간다
   boat:{n:'고깃배',x:21,y:24,w:1,need:{wood:60,iron:10,hide:2},coins:1500,perk:'포구에서 배를 타고 먼바다로 나가 큰 고기를 낚아요',where:'남쪽 바닷가 포구 끝',solo:1}
 };
+/* 축지 장승(v83): 사냥터와 마을을 잇는 길. 마을 만들기(layTown 등)가 WORKS를 for…in으로 훑으므로 거기에 걸리지 않게 숨은 항목(enumerable 아님)으로 둔다.
+   터는 정해져 있지 않고 목수 모루에게 청해 내가 고른다(S.works.gate.at). 재료 넣기·못질·쓰기는 다른 시설과 같은 코드를 탄다. 훑을 때는 workKeys()를 쓴다 */
+Object.defineProperty(WORKS,'gate',{value:{n:'축지 장승',x:0,y:0,w:1,need:{wood:40,stone:30,iron:10,feather:6},coins:1500,perk:'사냥터에서 "장승 길" 단추로 마을에 바로 돌아오고, 장승 앞에서 사냥터로 바로 가요',where:'내가 고른 자리',free:1}});
+const workKeys=()=>Object.keys(WORKS).concat(S&&S.works&&S.works.gate&&S.works.gate.at?['gate']:[]);
+const MOVE_FEE=k=>WORKS[k].w>1?800:500; /* 시설을 옮기는 삯 */
+let relo=null; /* 지금 옮길 자리를 고르고 있는 시설 */
 // 먼바다의 물고기 떼에서 낚이는 것: [이름, 낚일 비중, 경험치]
 const DEEPFISH=[['mackerel',28,9],['snapper',22,16],['bangeo',22,18],['muneo',15,18],['mineo',13,22],['samchi',14,16],['darangeo',5,26]];
 // 동굴: 사냥터 북동쪽 입구(CAVE_AT)로 들어간다. 층마다 바위가 깔려 있고, 내려가는 사다리는 어느 바위 밑에 숨어 있다.
@@ -1258,6 +1265,11 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:83,d:'11월 26일',t:'축지 장승 · 시설 옮기기',l:[
+    '사냥터와 마을을 잇는 축지 장승을 세울 수 있어요. 목수 모루에게 "짓기·고치기"로 터를 잡고, 나무 40·돌 30·쇳돌 10·깃털 6과 1,500냥을 모아 넣은 뒤 못질로 마무리해요.',
+    '장승을 세우면 사냥터(숲·깊은 산·눈고개)에서 아래 "장승 길" 단추로 마을에 바로 돌아와요. 마을의 장승 앞에서 행동하면 사냥터로 바로 가요.',
+    '마을 시설을 옮길 수 있어요. 모루의 "짓기·고치기 → 시설 옮기기"에서 우물·정자·물레방아·솟대·축지 장승을 고르고 마을의 빈 풀밭을 누르면 옮겨져요. 삯은 500냥(두 칸짜리는 800냥)이에요.'
+  ]},
   {v:82,d:'11월 26일',t:'큼직한 놀이판 · 귀해진 장비',l:[
     '이웃·스승과 하는 놀이의 판이 커졌어요. 예법 수련, 안목 겨루기, 활쏘기, 수련장, 씨름, 투호, 줄타기, 탈춤, 뱃놀이, 제기, 떡메, 대패질, 수라간 요리, 흥정 같은 놀이를 화면에 맞춰 최대 1.7배로 그리고 글씨도 키웠어요.',
     '장비가 귀해졌어요. 일하다 찾거나 짐승이 떨어뜨릴 확률이 절반으로 줄었어요. 잔치와 부탁의 상은 그대로예요.',
@@ -1512,7 +1524,7 @@ function fixState(s){
   // 마을 복구(works[k]={got 넣은 재료,coins 넣은 돈,done})와 내일 날씨(wNext: 솟대가 알려 준다)
   // 혼인: spouse=배필이 된 이웃(혼인할 수 있는 이웃은 NPCS에 wed가 있는 어른들뿐), wedDay=혼례 올린 날
   if(!s.spouse||!NPCS[s.spouse]||!NPCS[s.spouse].wed)s.spouse=null;
-  s.works=s.works||{};for(const k in WORKS){const w=s.works[k]=s.works[k]||{};w.got=w.got||{};w.coins=w.coins|0;w.done=w.done?1:0}
+  s.works=s.works||{};for(const k of Object.keys(WORKS).concat('gate')){const w=s.works[k]=s.works[k]||{};w.got=w.got||{};w.coins=w.coins|0;w.done=w.done?1:0;if(w.at&&!(Array.isArray(w.at)&&w.at.length===2&&w.at[0]>0&&w.at[1]>0&&w.at[0]<W-1&&w.at[1]<H-1))delete w.at} /* at=옮긴 자리(v83) */
   if(s.wNext!=='rain'&&s.wNext!=='sun')s.wNext=Math.random()<.25?'rain':'sun';
   // 날씨 사건(wx: 'rainbow' 무지개·'drought' 가뭄·'wind' 바람), 맑은 날이 이어진 날수(dry), 오늘 밭에 내려앉은 까마귀(crows: [x,y] 목록)
   if(!['rainbow','drought','wind'].includes(s.wx))s.wx=null;s.dry=s.dry|0;if(!Array.isArray(s.crows))s.crows=[];
@@ -2619,6 +2631,11 @@ function workArt(c,k,done){
     for(let i=0;i<4;i++){const a=i*Math.PI/4;c.beginPath();c.moveTo(cx+Math.cos(a)*13,cy+Math.sin(a)*13);c.lineTo(cx-Math.cos(a)*13,cy-Math.sin(a)*13);c.stroke()}circ(c,cx,cy,3,'#5a3a24');
     rr(c,2,0,38,28,3,'#d9c39a');c.fillStyle='#6b4a2a';c.fillRect(2,0,3,28);c.fillRect(37,0,3,28);rr(c,14,10,12,18,[5,5,0,0],'#6b4a2a');
     roof(c,0,42,0,'thatch',null);
+  }else if(k==='gate'){
+    /* 장승 둘과 그 사이의 금줄, 가운데 아른거리는 길 */
+    ell(c,16,6,7,17,'rgba(120,200,255,.28)');ell(c,16,6,4,12,'rgba(210,240,255,.4)');
+    for(const x of [2,24]){rr(c,x,-24,6,52,2,'#8a5a34');rr(c,x-1,-30,8,13,3,'#a8703f');c.fillStyle='#2e2a2a';c.fillRect(x+1,-26,1.5,1.5);c.fillRect(x+3.5,-26,1.5,1.5);c.fillStyle='#c8392f';c.fillRect(x+1,-21.5,4,1.5)}
+    line(c,7,-14,25,-14,'#e9d8a8',1.4);c.fillStyle='#f6f1e6';for(const x of [10,15,20])c.fillRect(x,-14,1.5,5);
   }else{
     c.fillStyle='#8a5a34';c.fillRect(9,-34,3,62);c.fillRect(20,-22,3,50);
     poly(c,[3,-36,15,-38,11,-33],'#5a3a24');poly(c,[15,-38,19,-41,17,-36],'#5a3a24');poly(c,[15,-24,27,-26,23,-21],'#5a3a24');poly(c,[27,-26,31,-29,29,-24],'#5a3a24');
@@ -2747,7 +2764,7 @@ function renderTown(c){
     for(const q of S.crows){const x=q[0]*T+16,y=q[1]*T+24;list.push([q[1]+.3,()=>{blit(c,shadowSpr(6),x,y);blit(c,crowS(),x,y+(Math.sin(now*7+q[0])>.4?2:0),q[0]%2===0)}])}
     flown=flown.filter(f=>now-f.at<.8);
     for(const f of flown){const u=(now-f.at)/.8;list.push([f.y+.3,()=>{c.globalAlpha=1-u;blit(c,crowS(),f.x*T+16+u*46,f.y*T+24-u*60);c.globalAlpha=1}])}
-    for(const k in WORKS){
+    for(const k of workKeys()){
       const d=WORKS[k],done=workDone(k),X=d.x*T,Y=d.y*T;
       list.push([d.y+.5,()=>blit(c,spr('work'+k+(done?1:0),()=>bake(d.w*T+44,T+94,18,86,0,0,c2=>workArt(c2,k,done))),X,Y)]);
       if(!mg&&Math.abs(d.x+(d.w-1)/2-rx(P))+Math.abs(d.y-ry(P))<3)labels.push(()=>label(c,X+d.w*T/2,Y-(done?48:12),d.n+(done?'':' 터')));
@@ -5073,8 +5090,51 @@ const workDone=k=>!!(S&&S.works&&S.works[k]&&S.works[k].done);
 function applyWorks(){
   const oa=TOWN.objAt;
   for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(oa[y][x]&&oa[y][x].t==='work')oa[y][x]=null;
-  for(const k in WORKS){const d=WORKS[k],o={t:'work',k,x:d.x,y:d.y};for(let i=0;i<d.w;i++)oa[d.y][d.x+i]=o}
+  /* 옮긴 시설(S.works[k].at)은 그 자리로. WORKS[k].x·y는 마을을 지을 때마다 처음 자리로 돌아오므로 여기서 다시 얹는다 */
+  for(const k of workKeys()){const d=WORKS[k],at=S&&S.works&&S.works[k]&&S.works[k].at;if(at){d.x=at[0];d.y=at[1]}const o={t:'work',k,x:d.x,y:d.y};for(let i=0;i<d.w;i++)oa[d.y][d.x+i]=o}
 }
+// 시설 옮기기(v83): 모루에게 삯을 내고 우물·정자·물레방아·솟대·축지 장승을 다른 풀밭으로 옮긴다. 고깃배는 못 옮긴다. 축지 장승의 첫 터 잡기는 삯이 없다
+function openMove(){
+  openModal('시설 옮기기',body=>{
+    body.appendChild(el('p','note','마을의 시설을 다른 빈 풀밭으로 옮겨요. 고른 뒤 마을에서 옮길 자리를 누르면 그때 삯을 내요. 닭장·외양간은 그 앞에서 삯 없이 옮길 수 있어요.'));
+    for(const k of workKeys()){const d=WORKS[k];if(d.solo)continue;const fee=MOVE_FEE(k);
+      row(body,el('span','badge',d.n[0]),d.n+(workDone(k)?'':' 터'),'옮기는 삯 '+won(fee)+' · 가진 돈 '+won(S.coins),[[S.coins>=fee?'옮길 자리 고르기':'돈이 모자라요',()=>{closeModal();moveStart(k)},S.coins<fee]])}
+  });
+}
+function moveStart(k){
+  if(scene!=='town'){toast('마을에서만 할 수 있어요');return}
+  relo=k;placing=false;syncPlace();
+  toast(jo(WORKS[k].n,'을','를')+' 놓을 자리를 눌러요. 문과 길목에서 떨어진 빈 풀밭'+(WORKS[k].w>1?' '+WORKS[k].w+'칸':'')+'이면 돼요');
+}
+function moveClick(x,y){
+  const k=relo;if(!k||scene!=='town')return;
+  const d=WORKS[k],s=S.works[k],first=!!d.free&&!s.at,fee=first?0:MOVE_FEE(k),x0=x-(d.w>>1),cells=[],oa=TOWN.objAt,old=[];
+  if(S.coins<fee){toast('돈이 모자라요');sfx('err');return}
+  for(let i=0;i<d.w;i++)cells.push([x0+i,y]);
+  /* 옮기는 시설의 지금 자리는 빈 것으로 치고 살핀다 */
+  for(let b=0;b<H;b++)for(let a=0;a<W;a++)if(oa[b][a]&&oa[b][a].t==='work'&&oa[b][a].k===k){old.push([a,b,oa[b][a]]);oa[b][a]=null}
+  const back=msg=>{for(const q of old)oa[q[1]][q[0]]=q[2];toast(msg);sfx('err')};
+  const near=(p,a,b,r)=>Math.abs(p[0]-a)<=r&&Math.abs(p[1]-b)<=r;
+  const bad=([a,b])=>a<1||b<2||a>=W-1||b>=H-2||TOWN.tile[b][a]!==0||oa[b][a]||S.farm[a+','+b]||yardAt(a,b)||(a===P.x&&b===P.y)||npcOn(a,b)||herdOn(a,b)||beastOn(a,b)
+    ||BLD.some(q=>near(q.door,a,b,1))||STALLS.some(q=>near([q.x,q.y],a,b,1))||near(FEST_AT,a,b,2)||near(BOARD,a,b,1)||near(FORGE_AT,a,b,1)||near(SPAWN,a,b,1);
+  if(cells.some(bad)){back('여기에는 놓을 수 없어요. 문·좌판·알림판에서 떨어진 빈 풀밭이어야 해요');return}
+  if(!cells.some(([a,b])=>walkable(a,b+1))){back('앞쪽(아래 칸)이 비어 있어야 해요');return}
+  const base=reach(null),block=new Set(cells.map(q=>q.join())),after=reach(block);
+  if(!cells.every(q=>base.has(q.join()))||after.size!==base.size-d.w){back('길이 막혀서 여기에는 놓을 수 없어요');return}
+  if(fee)addCoins(-fee);
+  s.at=[x0,y];relo=null;applyWorks();
+  for(const [a,b] of cells){let i;while((i=S.pickups.findIndex(p=>p.x===a&&p.y===b))>=0)grab(i)}
+  sfx('chop');syncPlace();
+  toast(first?d.n+' 터를 잡았어요. 그 앞에서 행동해 재료와 돈을 넣어요':jo(d.n,'을','를')+' 옮겼어요'+(fee?' · 삯 '+won(fee):''));saveAll();
+}
+// 축지 장승의 길: 사냥터(숲·깊은 산·눈고개)에서 "장승 길" 단추를 누르면 마을의 장승 앞으로 돌아온다. 놀이나 낚시 중에는 안 된다
+function gateHome(){
+  if(scene!=='wild'||S.away==='royal'||!workDone('gate')||mg||fishing||busy())return;
+  leaveWild(true);
+  const d=WORKS.gate,to=[[0,1],[-1,0],[1,0],[0,-1]].map(q=>[d.x+q[0],d.y+q[1]]).find(q=>walkable(q[0],q[1]))||SPAWN;
+  warp(to[0],to[1],[0,1]);sfx('level');toast('축지 장승의 길로 마을에 돌아왔어요');saveAll();
+}
+function syncGate(){const g=$('bGate'),on=!!S&&started&&scene==='wild'&&S.away!=='royal'&&workDone('gate')&&!mg&&!fishing;if(g.hidden===on)g.hidden=!on}
 const workLeft=k=>{const d=WORKS[k],s=S.works[k];let n=d.coins-s.coins;for(const m in d.need)n+=d.need[m]-(s.got[m]|0);return n};
 function openWork(k){
   const d=WORKS[k],s=S.works[k];
@@ -5105,6 +5165,7 @@ function finishWork(k){
 function workUse(k){
   const d=WORKS[k];
   if(k==='boat'){sailTalk();return}
+  if(k==='gate'){dialog({who:d.n,text:'두 장승 사이로 길이 아른거려요. 사냥터로 갈까요?\n(사냥터에서는 아래 "장승 길" 단추로 돌아와요.)',choices:[['사냥터로 가기',()=>{enterWild();sfx('level')}],['그만',null]]});return}
   if(k==='pav'){
     if(S.restDay===S.day){toast('마을 정자예요. 오늘은 이미 쉬었어요');return}
     S.restDay=S.day;S.en=Math.min(maxEn(),S.en+25);S.min=Math.min(1380,S.min+20);hud();touch();sfx('heart');toast('정자에 앉아 바람을 쐬었어요 · 기력 +25');return;
@@ -6634,12 +6695,14 @@ function reach(block){
   return seen;
 }
 function syncPlace(){
-  const b=$('bPlace'),k=S&&S.place,show=!!k&&scene==='town'&&started;
+  if(relo&&(scene!=='town'||!started))relo=null;
+  syncGate();
+  const b=$('bPlace'),k=S&&S.place,show=(!!k||!!relo)&&scene==='town'&&started;
   if(!show)placing=false;
   // 가꾸기 단추는 마을에서만 보인다. 마을을 떠나면 가꾸기도 끝난다
   {const y=$('bYard'),on=!!S&&started&&scene==='town';if(!on)garden=null;y.hidden=!on;y.classList.toggle('on',!!garden);y.textContent=garden?'가꾸기 끝':'가꾸기'}
-  b.hidden=!show;b.classList.toggle('on',placing);
-  if(show)b.textContent=placing?'자리 고르기 그만':PENS[k].n+(S.pens[k]?' 옮기기':' 놓기');
+  b.hidden=!show;b.classList.toggle('on',placing||!!relo);
+  if(show)b.textContent=relo?'옮기기 그만':placing?'자리 고르기 그만':PENS[k].n+(S.pens[k]?' 옮기기':' 놓기');
 }
 function stopPlacing(){
   // 옮기려다 그만두면 그대로 둔다. 새로 짓는 우리는 자리를 잡을 때까지 버튼이 남는다
@@ -6761,6 +6824,8 @@ function buildTalk(){
   for(const k in PENS)if(!S.pens[k]&&S.place!==k)ch.push([PENS[k].n+' 짓기',()=>penTalk(k)]);
   if(!S.furn.agungi&&!S.placed.some(f=>f.id==='agungi'))ch.push(['아궁이 놓기',hearthTalk]);
   if(!S.spouse&&!have('goose'))ch.push(['나무 기러기 깎기',gooseTalk]);
+  if(!S.works.gate.at)ch.push(['축지 장승 터 잡기',()=>dialog({npc:'moru',who:NPCS.moru.name,text:'사냥터를 한달음에 오가는 축지 장승 말인가? 터는 자네가 고르게. 터를 잡은 뒤 나무 40, 돌 30, 쇳돌 10, 깃털 6에 1,500냥을 모아 넣고 못질하면 되네.',choices:[['터 고르기',()=>moveStart('gate')],['그만',null]]})]);
+  ch.push(['시설 옮기기',openMove]);
   ch.push(['그만',null]);
   dialog({npc:'moru',who:NPCS.moru.name,text:'무엇을 지어 줄까? 닭장이나 외양간은 자네 땅 어디든, 자네가 고른 자리에 세울 수 있네.',choices:ch});
 }
@@ -7193,6 +7258,7 @@ const RUMORS=[
   ['antique','dami',()=>S.day>=6,'열흘마다 서는 큰 장에는 골동품 장수 할아버지가 온대! 좌판 둘 사이에 돗자리를 펴고 앉는다나 봐. 못 찾은 가구 도안이랑 옛 보물, 귀한 장비를 판다는데 값이 엄청 비싸대. 흥정을 잘하면 깎아 주지만, 너무 욕심내면 한 푼도 안 깎아 준대. 잔치랑 겹치는 날에는 안 온다더라.'],
   ['party','eunha',()=>!S.camp&&S.placed.length>=2,'집은 좀 꾸미셨어요? 세간이 갖춰지면 집들이를 한번 여세요. 집 안에 놓은 소반이나 탁자 앞에서 행동하면 상을 차릴 수 있어요. 친한 이웃들이 선물을 들고 갈 거예요. 참, 같은 데서 난 가구를 빠짐없이 놓으면 세트가 되어 집이 한결 아늑해진대요.'],
   ['plan','moru',()=>!S.camp&&(S.level>=2||S.day>=3),'집에 세간은 좀 들였나? 내 본업은 소목일세. 옛 소목장들이 남긴 가구 도안이 곳곳에 묻혀 있다더구먼. 반짝이는 곳을 파다 보면 나온다지. 마을 것과 숲의 것, 굴속의 것이 다 다르다네. 찾거든 가져오게. "가구 짜기"로 말하면 함께 짜 주겠네. 대패는 자네가 밀어야 하네만.'],
+  ['gate','parang',()=>S.level>=6&&(S.kills|0)>=8,'사냥터에서 돌아오는 길이 멀지? 옛날에는 마을에 축지 장승을 세워 두고 먼 길을 한달음에 오갔대. 모루 아저씨가 세울 줄 안다던데, "짓기·고치기"로 물어봐. 마을 시설을 다른 자리로 옮겨 주기도 한대.'],
   ['merch','moru',()=>S.level>=RANK_LV[0], /* v81: 길의 소문은 그 길에 들어설 수 있는 레벨(5)부터 들린다. 전에는 레벨 3~4나 스탯 1이면 들렸다 */'은하가 가게 일 거들 눈썰미 있는 사람을 찾는 눈치더구먼. 장사에 뜻이 있거든 한번 물어보게.'],
   ['rogue','dami',()=>S.level>=RANK_LV[0],'있잖아, 밤에 남의 집 문짝을 부수고 달아나는 못된 사람들이 있대! 이웃집 문 앞에서 행동하면… 아, 아니야! 포졸 아저씨한테 잡히면 옥에 갇힌댔어. 나는 그런 거 안 해!'],
   ['civ','dami',()=>S.level>=RANK_LV[0],'훈장 할아버지가 서당에서 글 배울 제자를 찾는대! 나는 도망쳤지만!'],
@@ -8381,9 +8447,9 @@ function openQuests(){
     for(const q of S.quests){const it=ITEMS[q.item];row(body,icon('npc',q.npc,true),NPCS[q.npc].name+' · '+it.n+' '+q.n+'개',q.done?'들어줬어요':'가진 것 '+have(q.item)+'/'+q.n+' · 사례 '+q.coin+'냥 · 친밀도 +25')}
     // 마을 복구: 시설마다 얼마나 모였는지와 터가 어디 있는지
     {const town=Object.keys(WORKS).filter(q=>!WORKS[q].solo);body.appendChild(el('p','sub','마을 복구 '+town.filter(workDone).length+'/'+town.length+' · 그리고 내 고깃배'))}
-    for(const k in WORKS){
+    for(const k of Object.keys(WORKS).concat('gate')){
       const d=WORKS[k],s=S.works[k];let all=d.coins,got=s.coins;for(const m in d.need){all+=d.need[m]*20;got+=(s.got[m]|0)*20}
-      row(body,el('span','badge',d.n[0]),d.n,workDone(k)?'완성 · '+d.perk:[d.where+'의 터에서 재료를 넣어요 · '+Math.floor(got/all*100)+'% 모였어요','다 지으면: '+d.perk]);
+      row(body,el('span','badge',d.n[0]),d.n,workDone(k)?'완성 · '+d.perk:[d.free&&!s.at?'목수 모루에게 "짓기·고치기"로 터부터 잡아요':d.where+'의 터에서 재료를 넣어요 · '+Math.floor(got/all*100)+'% 모였어요','다 지으면: '+d.perk]);
     }
     body.appendChild(el('p','note','살림 늘리기: 목수 모루에게 "짓기·고치기"를 청하면 집, 아궁이(집에서 요리), 장독대, 닭장, 외양간을 놓을 수 있어요.'));
     if(S.diy)body.appendChild(el('p','note','직접 짓는 중: '+HOUSES[S.diy.L-1].n+' '+S.diy.step+'/3 단계 · 집 문 앞에서 이어서 지어요'));
@@ -9615,6 +9681,7 @@ syncKeys();
 // 작은 지도: 마을 화면 오른쪽 위에 늘 떠 있다. 지금 있는 곳(마을·사냥터·궁궐·먼바다·동굴)의 모양과 내 자리(분홍), 같이 하는 친구의 자리(파랑)를 보여 준다. 누르면 큰 지도가 열린다
 const miniEl=$('mini'),miniBase=document.createElement('canvas');let miniRef=null,miniT=0;
 function updMini(dt){
+  syncGate();
   const show=started&&scene!=='home';
   if(miniEl.hidden===show){miniEl.hidden=!show;$('stage').classList.toggle('hasmini',show)}
   if(!show)return;
@@ -9681,6 +9748,7 @@ cv.addEventListener('pointerdown',e=>{
   if(!mg&&!fishing){if(t-lastTap.t<200&&Math.hypot(e.clientX-lastTap.x,e.clientY-lastTap.y)<24)return;lastTap={t,x:e.clientX,y:e.clientY}}
   const r=cv.getBoundingClientRect(),wx=(e.clientX-r.left)/zoom+cam.x,wy=(e.clientY-r.top)/zoom+cam.y;
   if(decoMode){decoClick(Math.floor(wx/T),Math.floor(wy/T));return}
+  if(relo&&scene==='town'){moveClick(Math.floor(wx/T),Math.floor(wy/T));return}
   if(placing&&scene==='town'){placeClick(Math.floor(wx/T),Math.floor(wy/T));return}
   if(garden&&scene==='town'&&!mg&&!fishing){gardenClick(Math.floor(wx/T),Math.floor(wy/T));return}
   if(mg&&mg.kind==='rite'){riteClick(wx,wy);return}
@@ -9709,7 +9777,8 @@ const tool=(id,fn)=>{$(id).onclick=()=>{if(!started||sleeping)return;if(!$('dlg'
 tool('bBag',openBag);tool('bSay',openSay);tool('bMe',()=>openGroup('me'));tool('bLog',()=>openGroup('log'));tool('bSet',()=>openGroup('set'));tool('bAsk',()=>openAsk());
 tool('bDeco',()=>{setDeco(!decoMode);cv.focus({preventScroll:true})});
 tool('bYard',()=>{if(garden){garden=null;syncPlace()}else if(!busy()&&scene==='town')openYard();cv.focus({preventScroll:true})});
-tool('bPlace',()=>{if(placing)stopPlacing();else{placing=true;syncPlace();toast('집 둘레 내 땅(밝게 표시된 풀밭)에서 지을 자리를 눌러요')}cv.focus({preventScroll:true})});
+tool('bGate',()=>{gateHome();cv.focus({preventScroll:true})});
+tool('bPlace',()=>{if(relo){relo=null;syncPlace();toast('옮기기를 그만뒀어요');cv.focus({preventScroll:true});return}if(placing)stopPlacing();else{placing=true;syncPlace();toast('집 둘레 내 땅(밝게 표시된 풀밭)에서 지을 자리를 눌러요')}cv.focus({preventScroll:true})});
 $('mClose').onclick=closeModal;
 $('modal').addEventListener('pointerdown',e=>{if(e.target===$('modal'))closeModal()});
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&S&&started){keys.length=0;saveLocal();if(cloudDirty)pushCloud()}});
