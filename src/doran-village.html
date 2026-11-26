@@ -1315,6 +1315,12 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:112,d:'11월 26일',t:'오래된 둔덕',l:[
+    '둔덕과 계단을 줄만 그은 듯한 모습에서 오래된 조선 시대의 것으로 다시 그렸어요. 남쪽 벼랑은 비바람에 바랜 통나무를 세워 박은 흙막이, 옆과 뒤의 비탈은 이끼 낀 막돌 축대예요.',
+    '계단은 네모지게 다듬은 통나무 디딤판이에요. 가운데가 닳아 밝고 양 끝에 나이테가 보이며, 양옆에 이끼 낀 기둥이 서 있어요.',
+    '가장자리에 긋던 검은 띠를 없애, 둔덕이 둘레 풀밭과 자연스럽게 어울려요.',
+    '일자로 쭉 뻗어 있던 개울과 연못의 물가를 살짝 구불거리게 했어요. 풀밭이 물 쪽으로 들쭉날쭉 밀려 들어와요.'
+  ]},
   {v:111,d:'11월 26일',t:'돌담과 풀숲',l:[
     '마을과 사냥터, 들판 둘레의 숲 가장자리를 바꿨어요. 나무 대신 키 큰 풀과 억새가 우거진 풀숲이 둘러싸고, 뭍과 닿는 쪽에는 막돌로 쌓은 낮은 돌담이 이어져요.',
     '가을에는 풀숲이 누렇게 물들고, 겨울에는 마른 억새에 눈이 앉아요.',
@@ -2510,6 +2516,22 @@ function buildGround(){
     const hillG=()=>{c.fillStyle=(x+y)%2?G[0]:G[1];c.fillRect(px,py,T,T)},hillTex=()=>{c.fillStyle='rgba(255,255,230,.2)';c.fillRect(px,py,T,T);for(let i=0;i<7;i++){const a=hash(x*5+i*13+1,y*7+i*3),b=hash(y*11+i*7+2,x*3+i);dot(px+a*30,py+b*30,2,2,i%3===0?'rgba(255,255,220,.18)':i%3===1?G[2]:'rgba(40,60,30,.12)')}};
     const isHill=(a,b)=>{const q=tile[b]&&tile[b][a];return q===12||q===13||q===14};
     if(t===12){hillG();hillTex();if(h<.4){const gx=px+4+h*40,gy=py+8+h2*14;dot(gx,gy,2,4,G[2]);dot(gx+4,gy+2,2,2,G[2])}}
+    /* v112(사용자 의견: 둔덕과 계단이 줄만 그어 둔 것 같다 → 나무 느낌 나는 오래된 조선 시대의 것으로): 남쪽 벼랑은 통나무를 세워 박은 흙막이(logWall, 띠장 한 줄과 나무못, 밑동의 이끼),
+       옆·뒤 비탈은 이끼 낀 막돌 축대(stoneWall). 빛깔은 비바람에 바랜 잿빛 갈색 */
+    const logWall=(x0,y0,w,hh)=>{c.fillStyle='#5e5142';c.fillRect(x0,y0,w,hh); /* 통나무 사이 틈은 검정이 아니라 짙은 흙빛 */
+      for(let i=0,n=0;i<w;i+=6,n++){const q=hash(x*9+n,y*7+3),off=Math.round(q*3),lw=Math.min(5,w-i);if(lw<2)continue;
+        c.fillStyle=['#7a6a55','#8a7862','#6e5f4c','#93826b'][Math.floor(q*4)%4];c.fillRect(x0+i,y0+off,lw,hh-off);
+        c.fillStyle='#a8977e';c.fillRect(x0+i,y0+off,1,hh-off);c.fillStyle='#4a3f33';c.fillRect(x0+i+lw-1,y0+off,1,hh-off);
+        c.fillStyle='#b8a88e';c.fillRect(x0+i,y0+off,lw,1.6);
+        c.fillStyle='#5e4f3e';c.fillRect(x0+i+2,y0+off+5+Math.round(q*5),1,4);c.fillRect(x0+i+3,y0+off+14+Math.round(q*4),1,3);
+        if(q>.55){c.fillStyle='#6f8a4a';c.fillRect(x0+i,y0+hh-3-Math.round(q*3),lw,2)}}
+      c.fillStyle='#55483a';c.fillRect(x0,y0+11,w,5.5);c.fillStyle='#6e5f4c';c.fillRect(x0,y0+11,w,4);c.fillStyle='#93826b';c.fillRect(x0,y0+11,w,1.2);
+      c.fillStyle='#3a3026';for(let i=3;i<w-2;i+=12)c.fillRect(x0+i,y0+12.4,2,2);
+      c.fillStyle='rgba(60,50,35,.14)';c.fillRect(x0,y0+hh-4,w,4)};
+    const stoneWall=(x0,y0,w,hh)=>{if(w<=0||hh<=0)return;c.fillStyle='#6b6152';c.fillRect(x0,y0,w,hh);
+      for(let j=0,yy=y0;yy<y0+hh-1;j++,yy+=7){let xx=x0-(j%2?4:0);for(let n=0;xx<x0+w;n++){const q=hash(x*5+n+j*3,y*11+j),sw2=7+Math.round(q*5),a=Math.max(x0,xx),b=Math.min(x0+w,xx+sw2-1),sh2=Math.min(6,y0+hh-yy);
+          if(b-a>=2&&sh2>=2){rr(c,a,yy,b-a,sh2,2,['#9c9482','#8a8372','#aaa391','#7d7767'][Math.floor(q*4)%4]);c.fillStyle='rgba(255,255,255,.22)';c.fillRect(a+1,yy,b-a-2,1.2);if(q>.7){c.fillStyle='#6f8a4a';c.fillRect(a+1,yy+sh2-2,Math.min(4,b-a-2),1.6)}}
+          xx+=sw2}}};
     if(t===13){
       const front=tile[y-1]&&tile[y-1][x]===12,oL=!isHill(x-1,y),oR=!isHill(x+1,y),oU=!isHill(x,y-1),oD=!isHill(x,y+1);
       hillG();for(let i=0;i<5;i++){const a=hash(x*5+i*13+1,y*7+i*3),b=hash(y*11+i*7+2,x*3+i);dot(px+a*30,py+b*30,2,2,i%2?G[2]:'rgba(40,60,30,.13)')}
@@ -2517,8 +2539,7 @@ function buildGround(){
         /* 흙 벼랑: 위에는 풀이 넘어오고, 흙 켜가 가로로 지고, 아래는 풀밭으로 스민다 */
         const x0=px+(oL?6:0),w0=T-(oL?6:0)-(oR?6:0);
         rr(c,x0,py,w0,T-2,[0,0,oR?10:0,oL?10:0],'#8a7658');
-        for(let j=0;j<4;j++){c.fillStyle=j%2?'#9a8566':'#7a684c';for(let i=0;i<w0;i+=6)if(hash(x*6+i,y*5+j)>.3)c.fillRect(x0+i,py+7+j*6+Math.round(hash(x+i,j)*2),Math.min(5,w0-i),2)}
-        c.fillStyle='rgba(50,35,20,.18)';c.fillRect(x0,py+14,w0,T-16);c.fillStyle='rgba(50,35,20,.3)';c.fillRect(x0,py+T-8,w0,6); /* 아래로 갈수록 어두워 높이가 읽힌다 */
+        logWall(x0,py+4,w0,T-6);
         c.fillStyle=(x+y)%2?G[0]:G[1];c.fillRect(x0,py,w0,5);c.fillStyle='rgba(255,255,230,.2)';c.fillRect(x0,py,w0,5);
         c.fillStyle=G[2];for(let i=0;i<w0;i+=4)c.fillRect(x0+i,py+4,2,2+Math.round(hash(x*9+i,y)*3));
       }else{
@@ -2529,20 +2550,24 @@ function buildGround(){
            풀밭은 바깥쪽으로 옆 13 · 뒤 7만큼 들어가고 남쪽 줄은 위 5픽셀만(남쪽 벼랑 칸과 같은 높이) → 옆 칸과 끊김 없이 이어진다 */
         const r=[oL&&oU?14:0,oR&&oU?14:0,oR&&oD?12:0,oL&&oD?12:0];
         rr(c,px+(oL?2:0),py+(oU?3:0),T-(oL?2:0)-(oR?2:0),T-(oU?3:0)-(oD?2:0),r,'#8a7658');
-        for(let j=0;j<5;j++){c.fillStyle=j%2?'#9a8566':'#7a684c';const yy=py+(oU?10:4)+j*6;if(yy<py+T-4)for(let i=oL?5:0;i<T-(oR?5:0);i+=6)if(hash(x*6+i,y*5+j)>.3)c.fillRect(px+i,yy+Math.round(hash(x+i,j)*2),5,2)}
-        if(oD){c.fillStyle='rgba(50,35,20,.18)';c.fillRect(px+(oL?4:0),py+14,T-(oL?4:0)-(oR?4:0),T-16);c.fillStyle='rgba(50,35,20,.3)';c.fillRect(px+(oL?6:0),py+T-8,T-(oL?6:0)-(oR?6:0),6)}
-        if(oL){c.fillStyle='rgba(50,35,20,.22)';c.fillRect(px+2,py+(oU?12:0),4,T-(oU?12:0)-(oD?10:0))}
-        if(oR){c.fillStyle='rgba(50,35,20,.3)';c.fillRect(px+T-6,py+(oU?12:0),4,T-(oU?12:0)-(oD?10:0))}
+        stoneWall(px+(oL?3:0),py+(oU?4:0),T-(oL?3:0)-(oR?3:0),T-(oU?4:0)-(oD?3:0));
+        /* v112(사용자 의견: 검은 줄이 언덕과 어울리지 않는다): 가장자리에 긋던 어두운 띠를 없앴다. 높이는 돌과 통나무의 빛깔 차이로만 읽히게 한다 */
+        if(oD){c.fillStyle='rgba(60,50,35,.12)';c.fillRect(px+(oL?3:0),py+T-7,T-(oL?3:0)-(oR?3:0),4)}
         const ix=px+(oL?13:0),iy=py+(oU?7:0),iw=T-(oL?13:0)-(oR?13:0),ih=oD?5-(oU?7:0):T-(oU?7:0),gr=[oL&&oU?9:0,oR&&oU?9:0,0,0];
         if(ih>0){rr(c,ix,iy,iw,ih,gr,(x+y)%2?G[0]:G[1]);rr(c,ix,iy,iw,ih,gr,'rgba(255,255,230,.2)');
           c.fillStyle='rgba(255,255,235,.5)';if(oU)c.fillRect(ix+(gr[0]?7:0),iy,iw-(gr[0]?7:0)-(gr[1]?7:0),2);if(oL)c.fillRect(ix,iy+(gr[0]?7:0),2,ih-(gr[0]?7:0));
-          c.fillStyle='rgba(40,60,30,.25)';if(oR)c.fillRect(ix+iw-2,iy+(gr[1]?7:0),2,ih-(gr[1]?7:0));
           if(oD){c.fillStyle=G[2];for(let i=0;i<iw;i+=4)c.fillRect(ix+i,iy+ih-1,2,2+Math.round(hash(x*9+i,y)*3))}}
       }
     }
     if(t===14){
-      c.fillStyle='#8a7658';c.fillRect(px+2,py,T-4,T-4);c.fillStyle=(x+y)%2?G[0]:G[1];c.fillRect(px,py+T-4,T,4);
-      for(let j=0;j<4;j++){rr(c,px+4,py+1+j*7,T-8,4,2,'#7a5230');c.fillStyle='#9a6a3e';c.fillRect(px+6,py+1+j*7,T-12,1.5);c.fillStyle='#6b5a40';c.fillRect(px+4,py+5+j*7,T-8,2)}
+      /* v112: 오래된 나무 계단. 양옆에 이끼 낀 통나무 기둥, 디딤판은 네모지게 다듬은 통나무(가운데가 닳아 밝고, 양 끝에 나이테, 아래에 그늘) */
+      c.fillStyle='#6b6152';c.fillRect(px+2,py,T-4,T-3);c.fillStyle=(x+y)%2?G[0]:G[1];c.fillRect(px,py+T-3,T,3);
+      for(let j=0;j<4;j++){const sy2=py+1+j*7;
+        rr(c,px+5,sy2,T-10,6,1.5,'#55483a');rr(c,px+5,sy2,T-10,4.5,1.5,j%2?'#8a7862':'#7d6c58');
+        c.fillStyle='#a8977e';c.fillRect(px+10,sy2+.8,T-20,1.6);c.fillStyle='#b8a88e';c.fillRect(px+13,sy2+.8,6,1.2);
+        c.fillStyle='#5e4f3e';for(let i=0;i<3;i++)c.fillRect(px+8+i*6+(j%2?2:0),sy2+2.8,3,.9);
+        for(const ex of [px+6.5,px+T-9.5]){circ(c,ex+1.5,sy2+2.2,2,'#a08e74');circ(c,ex+1.5,sy2+2.2,1,'#6e5f4c')}}
+      for(const ex of [px+1,px+T-6]){rr(c,ex,py-3,5,T+1,2,'#55483a');rr(c,ex+.8,py-2,3.4,T-1,1.5,'#7a6a55');c.fillStyle='#93826b';c.fillRect(ex+1.2,py-1,1,T-4);c.fillStyle='#6f8a4a';c.fillRect(ex+.8,py+T-9,3.4,2);c.fillRect(ex+1.8,py+T-12,1.6,2)}
     }
     if(t===10){c.fillStyle=(x+y)%2?'#6b5d52':'#64574d';c.fillRect(px,py,T,T);if(h>.45)dot(px+4+h*22,py+6+h2*20,2,2,'#7d6e62');if(h2>.8)dot(px+6+h2*14,py+18,4,2,'#55493f')}
     // 궁궐: 박석 마당과 기와를 얹은 담
@@ -2584,9 +2609,12 @@ function buildGround(){
       }else for(let i=0;i<4;i++){const a=hash(x*7+i*11+3,y*5+i*2),b=hash(y*9+i*5+1,x*3+i*7);dot(px+6+a*16,py+8+b*16,i%2?6:4,2,i%2?'rgba(255,255,255,.2)':'rgba(20,50,80,.16)')}
       /* v108(사용자 요청: 진짜 연못처럼 둥글게): 민물은 뭍으로 튀어나온 모서리를 둥글게 깎는다. 깎인 자리에는 풀을 덧칠하고 물가의 밝은 테를 호로 두른다 */
       const wl=land(x-1,y),wr=land(x+1,y),wu=land(x,y-1),wd=land(x,y+1),R=t===3?13:0,cTL=R&&wl&&wu,cTR=R&&wr&&wu,cBR=R&&wr&&wd,cBL=R&&wl&&wd;
-      if(wu){c.fillStyle='rgba(30,80,110,.28)';c.fillRect(px+(cTL?R:0),py,T-(cTL?R:0)-(cTR?R:0),6);c.fillStyle='rgba(255,255,255,.55)';c.fillRect(px+(cTL?R:0),py,T-(cTL?R:0)-(cTR?R:0),2)}
-      c.fillStyle='rgba(255,255,255,.4)';
-      if(wl)c.fillRect(px,py+(cTL?R:0),2,T-(cTL?R:0)-(cBL?R:0));if(wr)c.fillRect(px+T-2,py+(cTR?R:0),2,T-(cTR?R:0)-(cBR?R:0));if(wd)c.fillRect(px+(cBL?R:0),py+T-2,T-(cBL?R:0)-(cBR?R:0),2);
+      /* v112(사용자 요청: 일자로 쭉 뻗은 물가를 살짝 구불거리게): 민물의 곧은 물가는 풀밭이 들쭉날쭉 물 쪽으로 밀려 들어오게 그린다. 들어오는 깊이는 물가를 따라 잰 자리로 정해서 칸이 바뀌어도 이어진다. 걷는 칸은 그대로다 */
+      const wav=q=>t===3?Math.max(0,Math.round((Math.sin(q*.19)+Math.sin(q*.071+1.3))*1.7+2.4)):0,gcol=(a,b)=>(a+b)%2?G[0]:G[1];
+      if(wu)for(let i=cTL?R:0;i<T-(cTR?R:0);i+=2){const w=wav(px+i+y*17);if(w){c.fillStyle=gcol(x,y-1);c.fillRect(px+i,py,2,w)}c.fillStyle='rgba(30,80,110,.28)';c.fillRect(px+i,py+w,2,5);c.fillStyle='rgba(255,255,255,.55)';c.fillRect(px+i,py+w,2,2)}
+      if(wl)for(let i=cTL?R:0;i<T-(cBL?R:0);i+=2){const w=wav(py+i+x*23);if(w){c.fillStyle=gcol(x-1,y);c.fillRect(px,py+i,w,2)}c.fillStyle='rgba(255,255,255,.4)';c.fillRect(px+w,py+i,2,2)}
+      if(wr)for(let i=cTR?R:0;i<T-(cBR?R:0);i+=2){const w=wav(py+i+x*31+9);if(w){c.fillStyle=gcol(x+1,y);c.fillRect(px+T-w,py+i,w,2)}c.fillStyle='rgba(255,255,255,.4)';c.fillRect(px+T-w-2,py+i,2,2)}
+      if(wd)for(let i=cBL?R:0;i<T-(cBR?R:0);i+=2){const w=wav(px+i+y*13+5);if(w){c.fillStyle=gcol(x,y+1);c.fillRect(px+i,py+T-w,2,w)}c.fillStyle='rgba(255,255,255,.4)';c.fillRect(px+i,py+T-w-2,2,2)}
       for(const [on,cx2,cy2,a0] of [[cTL,px+R,py+R,Math.PI],[cTR,px+T-R,py+R,-Math.PI/2],[cBR,px+T-R,py+T-R,0],[cBL,px+R,py+T-R,Math.PI/2]]){
         if(!on)continue;
         const ex=cx2+(a0===Math.PI||a0===Math.PI/2?-R:R),ey=cy2+(a0===Math.PI||a0===-Math.PI/2?-R:R);
