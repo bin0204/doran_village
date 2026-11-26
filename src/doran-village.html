@@ -275,6 +275,10 @@ const ITEMS={
   j_kimchi:{n:'묵은 김치',p:130,jar:'#e0604a'}, j_jeot:{n:'젓갈',p:110,jar:'#e8a08a'}, j_cho:{n:'감식초',p:90,jar:'#f0a84a'}, j_cheong:{n:'딸기청',p:330,jar:'#e0354a'}, j_jang:{n:'된장',p:260,jar:'#b8782e'},
   d_egg:{n:'달걀찜',p:110,dish:'#f2d86a'}, d_fish:{n:'생선구이',p:90,dish:'#c98f58'}, d_kimchi:{n:'순무김치',p:95,dish:'#e0604a'}, d_jeon:{n:'버섯전',p:120,dish:'#d9a05e'},
   d_juk:{n:'호박죽',p:260,dish:'#ef9a2f'}, d_meat:{n:'너비아니',p:150,dish:'#8a4a2e'}, d_hwachae:{n:'수박화채',p:190,dish:'#e86a7a'}, d_tarak:{n:'밤타락죽',p:210,dish:'#f6efdc'}, d_sam:{n:'산삼탕',p:600,dish:'#d9c39a'},
+  /* 수라간 전문 갈래의 음식(v78): 고른 갈래의 것만, 입문·숙련·달인에 하나씩 배운다. 도감에는 넣지 않는다(한 사람이 다 모을 수 없으므로) */
+  d_galbi:{n:'갈비찜',p:320,dish:'#7a3f24'}, d_jeonbok:{n:'전복찜',p:520,dish:'#c9d2c0'}, d_sinseollo:{n:'신선로',p:900,dish:'#c8392f'},
+  d_sanjeok:{n:'산적',p:280,dish:'#9a5a34'}, d_mineo:{n:'민어전',p:480,dish:'#f2d9a0'}, d_hwayang:{n:'화양적',p:850,dish:'#e9b930'},
+  d_yaksik:{n:'약식',p:260,dish:'#6b3a22'}, d_sujeong:{n:'수정과',p:420,dish:'#a8502e'}, d_dasik:{n:'오색 다식',p:820,dish:'#f6a3c4'},
   s_watermelon:{n:'수박 씨앗',p:20,buy:40,seed:'watermelon',lv:3},
   s_turnip:{n:'순무 씨앗',p:5,buy:10,seed:'turnip',lv:1}, s_carrot:{n:'당근 씨앗',p:9,buy:18,seed:'carrot',lv:2},
   s_strawberry:{n:'딸기 씨앗',p:15,buy:30,seed:'strawberry',lv:3}, s_pumpkin:{n:'호박 씨앗',p:25,buy:50,seed:'pumpkin',lv:4},
@@ -600,7 +604,11 @@ const JARS={j_kimchi:{need:{turnip:3},days:3},j_jeot:{need:{fish:3},days:3},j_ch
 // home이 붙은 음식은 수라간에서 일하지 않아도 집 아궁이에서 지을 수 있다
 const RECIPES={h_bam:{need:{chestnut:2},rank:0,home:1},h_egg:{need:{egg:1},rank:0,home:1},d_jjigae:{need:{j_jang:1,mushroom:1},rank:0,home:1},
   d_egg:{need:{egg:2},rank:0,home:1},d_fish:{need:{fish:1,wood:1},rank:0,home:1},d_kimchi:{need:{turnip:2},rank:0},d_jeon:{need:{mushroom:2,egg:1},rank:0},
-  d_juk:{need:{pumpkin:1},rank:1},d_meat:{need:{meat:2},rank:1},d_hwachae:{need:{watermelon:1},rank:1},d_tarak:{need:{milk:1,chestnut:1},rank:2},d_sam:{need:{ginseng:1,meat:1},rank:2}};
+  d_juk:{need:{pumpkin:1},rank:1},d_meat:{need:{meat:2},rank:1},d_hwachae:{need:{watermelon:1},rank:1},d_tarak:{need:{milk:1,chestnut:1},rank:2},d_sam:{need:{ginseng:1,meat:1},rank:2},
+  /* 전문 갈래의 음식: spec=수라간의 어느 갈래, st=그 갈래의 몇 단계부터(1 입문·2 숙련·3 달인). 집 아궁이에서도 지을 수 있다 */
+  d_galbi:{need:{meat:2,chestnut:1},rank:0,spec:'tang',st:1},d_jeonbok:{need:{abalone:1,egg:1},rank:0,spec:'tang',st:2},d_sinseollo:{need:{meat:1,mushroom:2,egg:1,fish:1},rank:0,spec:'tang',st:3},
+  d_sanjeok:{need:{meat:1,mushroom:1},rank:0,spec:'gui',st:1},d_mineo:{need:{mineo:1,egg:1},rank:0,spec:'gui',st:2},d_hwayang:{need:{meat:1,mushroom:1,carrot:1,egg:1},rank:0,spec:'gui',st:3},
+  d_yaksik:{need:{chestnut:2,persimmon:1},rank:0,spec:'byeong',st:1},d_sujeong:{need:{persimmon:2,j_cho:1},rank:0,spec:'byeong',st:2},d_dasik:{need:{chestnut:1,bean:1,flower:2,j_cheong:1},rank:0,spec:'byeong',st:3}};
 // 궁궐: 마을 북쪽 길 끝(PAL_X,0)으로 나가면 궁궐 남쪽 궐문에 선다. 타일 7=박석 마당, 8=궁궐 담
 let PAL_X=18;
 const PBLD=[
@@ -1239,6 +1247,9 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:78,d:'11월 26일',t:'수라간 갈래의 음식',l:[
+    '수라간의 전문 갈래마다 그 갈래에서만 짓는 음식이 생겼어요. 입문·숙련·달인에 하나씩 배워요.',
+    '탕과 찜은 갈비찜·전복찜·신선로, 구이와 전은 산적·민어전·화양적, 병과와 음청은 약식·수정과·오색 다식이에요. 수라간이나 집 아궁이의 음식 목록에 나와요.']},
   {v:77,d:'11월 26일',t:'길마다 전문 갈래',l:[
     '걷는 길마다 전문 갈래를 하나씩 골라 깊이 팔 수 있어요. 수라간은 탕과 찜·구이와 전·병과와 음청, 무관은 궁술·검술·창술처럼 길마다 세 갈래가 있어요.',
     '레벨 8부터, 그 길에서 다음 자리에 오른 뒤에 "나"의 "신분" 창에서 골라요. 레벨과 일 횟수가 차면 입문에서 숙련, 달인으로 저절로 올라요.',
@@ -1608,9 +1619,10 @@ const mainMul=k=>(S&&S.main&&S.main.k===k?1.25+.25*(S.main.tier|0):1)*(1+specPay
 // mw=맞붙을 때 그 무기로 받아칠 틈이 단계마다 느는 초 · m=달인만의 재주를 적은 말(셈은 specMaster를 부르는 자리에 있다)
 const SPEC_LV=8,SPEC_ST=[null,{n:'입문'},{n:'숙련',lv:12,done:15,inf:30},{n:'달인',lv:18,done:35,inf:70}];
 const SPEC={
-  cook:[{id:'tang',n:'탕과 찜',d:'국물과 찜에 밝아져요. 불 조절이 쉬워지고, 든든한 음식 덕에 기력이 늘어요.',fx:{cook:.03,en:5},fx3:{en:10},pay:.08},
-    {id:'gui',n:'구이와 전',d:'굽고 지지는 솜씨가 늘어요. 불 조절이 쉬워지고 물건을 더 비싸게 팔아요.',fx:{cook:.03,sell:.03},fx3:{sell:.05},pay:.08},
-    {id:'byeong',n:'병과와 음청',d:'떡과 한과, 화채에 밝아져요. 달콤한 솜씨로 사람들과 빨리 가까워져요.',fx:{cook:.02,friend:.06},fx3:{friend:.1},pay:.08}],
+  /* dish=단계마다 하나씩 배우는 그 갈래의 음식(RECIPES의 spec·st와 짝) */
+  cook:[{id:'tang',n:'탕과 찜',d:'국물과 찜에 밝아져요. 불 조절이 쉬워지고, 든든한 음식 덕에 기력이 늘어요.',fx:{cook:.015,en:5},fx3:{en:10},pay:.08,dish:['d_galbi','d_jeonbok','d_sinseollo']},
+    {id:'gui',n:'구이와 전',d:'굽고 지지는 솜씨가 늘어요. 불 조절이 쉬워지고 물건을 더 비싸게 팔아요.',fx:{cook:.015,sell:.03},fx3:{sell:.05},pay:.08,dish:['d_sanjeok','d_mineo','d_hwayang']},
+    {id:'byeong',n:'병과와 음청',d:'떡과 한과, 화채에 밝아져요. 달콤한 솜씨로 사람들과 빨리 가까워져요.',fx:{cook:.01,friend:.06},fx3:{friend:.1},pay:.08,dish:['d_yaksik','d_sujeong','d_dasik']}],
   mil:[{id:'bow',n:'궁술',d:'활을 깊이 익혀요. 사냥 과녁이 커져요.',fx:{aim:.8},fx3:{dmg:1},m:'화살이 한 번에 더 깊이 박혀요',pay:.06},
     {id:'sword',n:'검술',d:'칼을 깊이 익혀요. 칼로 맞붙을 때 받아칠 틈이 길어지고 덜 다쳐요.',fx:{guard:.06},mw:{sword:.01},m:'칼로 한 번에 더 깊이 베요',pay:.06},
     {id:'spear',n:'창술',d:'창을 깊이 익혀요. 창으로 맞붙을 때 받아칠 틈이 길어지고 덜 다쳐요.',fx:{guard:.04},mw:{spear:.012},m:'창이 세 칸 앞까지 닿아요',pay:.06}],
@@ -1640,6 +1652,7 @@ function specTxt(B,st){
   if(st>=3&&B.fx3)for(const key in B.fx3)if(!(key in B.fx)&&FX_TXT[key])a.push(FX_TXT[key](B.fx3[key]));
   if(B.mw)for(const w in B.mw)a.push('받아칠 틈 +'+(B.mw[w]*st).toFixed(3)+'초');
   if(B.pay)a.push('이 길의 수고비·녹봉 +'+Math.round(B.pay*st*100)+'%');
+  if(B.dish)a.push('짓는 음식: '+B.dish.slice(0,st).map(id=>ITEMS[id].n).join(', '));
   if(st>=3&&B.m)a.push(B.m);
   return a.join(' · ');
 }
@@ -1682,7 +1695,7 @@ function useEn(n){
   S.en-=n;touch();hud();return true;
 }
 const EAT={pirami:8,loach:10,ssogari:26,gamulchi:28,jogi:12,galchi:16,neopchi:28,dodari:14,nongeo:20,jeoneo:12,daegu:24,samchi:26,darangeo:40,ssuk:4,naengi:5,sanddalgi:8,deodeok:20,daechu:8,sora:14,ge:18,sangchu:8,gochu:6,gaji:14,baechu:16,goguma:28,
-  bangeo:30,mineo:35,muneo:28,abalone:30,f_guk:60,f_tteok:60,f_song:60,f_pat:60,h_bam:22,h_egg:20,d_jjigae:80,j_kimchi:30,j_cheong:40,yeot:25,d_egg:30,d_fish:30,d_kimchi:28,d_jeon:32,d_juk:60,d_meat:45,d_hwachae:50,d_tarak:55,d_sam:120,ginseng:70,egg:12,milk:25,apple:10,persimmon:10,mushroom:6,chestnut:6,turnip:10,carrot:14,strawberry:16,watermelon:30,pumpkin:30,bread:35,meat:20,
+  bangeo:30,mineo:35,muneo:28,abalone:30,f_guk:60,f_tteok:60,f_song:60,f_pat:60,h_bam:22,h_egg:20,d_jjigae:80,j_kimchi:30,j_cheong:40,yeot:25,d_egg:30,d_fish:30,d_kimchi:28,d_jeon:32,d_juk:60,d_meat:45,d_hwachae:50,d_tarak:55,d_sam:120,d_galbi:60,d_jeonbok:75,d_sinseollo:110,d_sanjeok:45,d_mineo:60,d_hwayang:90,d_yaksik:40,d_sujeong:45,d_dasik:70,ginseng:70,egg:12,milk:25,apple:10,persimmon:10,mushroom:6,chestnut:6,turnip:10,carrot:14,strawberry:16,watermelon:30,pumpkin:30,bread:35,meat:20,
   minnow:8,crucian:10,scad:10,smelt:8,mackerel:14,sweetfish:14,catfish:18,salmon:22,carp:25,snapper:30};
 // 내 땅: 집 둘레 서북쪽 풀밭. 이 안의 빈 풀밭은 어디든 밭으로 갈 수 있다
 const inFarm=(x,y)=>x>=FARM[0]&&x<=FARM[2]&&y>=FARM[1]&&y<=FARM[3]&&tile[y][x]===0&&!objAt[y][x];
@@ -4822,12 +4835,22 @@ function openCook(home){
   openModal(home?'아궁이':'수라간',body=>{
     body.appendChild(el('p','note',home?'집에서 음식을 지어요. 불 조절에 실패해도 재료는 줄지 않아요. 수라간에서 배운 음식도 여기서 지을 수 있어요.'
       :'음식을 골라 지어요. 불 조절에 실패해도 재료는 줄지 않아요. 지은 음식은 수라상에 올리거나, 먹거나, 팔 수 있어요.'));
+    const sq=S.job?specOf('cook'):null;let head=false;
     for(const id in RECIPES){
-      const R=RECIPES[id],lock=!(R.home||(S.job&&R.rank<=S.job.rank));
+      const R=RECIPES[id];
+      if(R.spec){ /* 전문 갈래의 음식: 고른 갈래의 것만 보이고, 단계가 차야 배운다 */
+        if(!sq||sq.B.id!==R.spec)continue;
+        if(!head){head=true;body.appendChild(el('p','sub','전문 갈래 · '+sq.B.n+' '+SPEC_ST[sq.st].n))}
+        const no=sq.st<R.st;
+        row(body,icon('item',id),ITEMS[id].n,no?['【'+sq.B.n+' '+SPEC_ST[R.st].n+'】이 되면 배워요']:['재료: '+needText(R.need),'팔면 '+sellPrice(id)+'냥 · 먹으면 기력 +'+EAT[id]],[['짓기',()=>{closeModal();startCook(id)},no||!canCook(id)]]);
+        continue;
+      }
+      const lock=!(R.home||(S.job&&R.rank<=S.job.rank));
       if(lock&&!S.job)continue; // 수라간 사람이 아니면 배울 수 없는 음식은 보여 주지 않는다
       row(body,icon('item',id),ITEMS[id].n,lock?[JOBS.cook.ranks[S.sex==='f'?'f':'m'][R.rank]+'의 자리에 오르면 배워요']:['재료: '+needText(R.need),'팔면 '+sellPrice(id)+'냥 · 먹으면 기력 +'+EAT[id]],
         [['짓기',()=>{closeModal();startCook(id)},lock||!canCook(id)]]);
     }
+    if(S.job&&!sq&&S.level>=SPEC_LV&&S.job.rank>=1)body.appendChild(el('p','note','"나"의 "신분" 창에서 수라간의 전문 갈래를 고르면 그 갈래만의 음식을 배워요.'));
   });
 }
 // ───────── 장독대 ─────────
