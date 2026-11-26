@@ -1257,6 +1257,11 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:89,d:'11월 26일',t:'스탯은 레벨마다 1점',l:[
+    '레벨이 오를 때 받는 스탯 점수가 2점에서 1점으로 줄었어요. 모든 스탯을 다 올릴 수 없으니, 어느 길에 힘을 실을지 골라야 해요.',
+    '지금까지 받은 점수도 같은 기준으로 다시 셌어요. 남은 점수에서 먼저 빼고, 모자라면 스탯에서 고르게 줄여요. 한쪽으로 키운 모양과 이미 오른 길의 자리는 그대로예요.',
+    '일을 하면서 저절로 오르는 스탯은 전과 같아요.'
+  ]},
   {v:88,d:'11월 26일',t:'스탯도 다시 세기',l:[
     '레벨을 다시 세면서 내려온 만큼, 그 레벨들에서 받았던 스탯 점수(레벨마다 2점)도 거뒀어요. 남은 점수에서 먼저 빼고, 모자라면 스탯에서 고르게 줄여요. 한쪽으로 키운 모양은 그대로예요.',
     '거둔 점수는 없어지지 않아요. 레벨이 오를 때마다 전처럼 2점씩 다시 받아요. 이미 오른 길의 자리는 그대로예요.'
@@ -1483,21 +1488,18 @@ function fixState(s){
   if(!s.stFix){
     const cut0=Math.max(0,((s.lvOld?s.lvOld[0]|0:0)-(s.level|0))*2);
     if(cut0>0&&s.stats&&typeof s.stats==='object'){
-      s.stOld={sp:s.sp|0,stats:Object.assign({},s.stats)};
-      let cut=cut0;const a=Math.min(cut,s.sp|0);s.sp=(s.sp|0)-a;cut-=a;
-      const ks=Object.keys(STATS),tot=ks.reduce((n,k)=>n+(s.stats[k]|0),0);
-      if(cut>0&&tot>0){
-        cut=Math.min(cut,tot);
-        const part=ks.map(k=>[k,(s.stats[k]|0)*cut/tot]),dn={};let left=cut;
-        for(const q of part){dn[q[0]]=Math.floor(q[1]);left-=dn[q[0]]}
-        part.sort((x,y)=>(y[1]-Math.floor(y[1]))-(x[1]-Math.floor(x[1])));
-        for(const q of part){if(left<=0)break;if(dn[q[0]]<(s.stats[q[0]]|0)){dn[q[0]]++;left--}}
-        for(const k of ks)s.stats[k]=(s.stats[k]|0)-dn[k];
-      }
-      s.stNote=cut0;
+      s.stOld={sp:s.sp|0,stats:Object.assign({},s.stats)};s.stFrom=s.stFrom||Object.assign({},s.stats);
+      statCut(s,cut0);s.stNote=cut0;
     }
     if(s.lvPaid)s.lvPaid=0;
     s.stFix=1;
+  }
+  /* 레벨마다 받는 스탯 점수가 2점에서 1점으로(v89, 사용자 결정: 다 많이 올리면 재미없다): 지금 레벨까지 받은 것의 절반(레벨−1점)을 같은 식으로 거둔다.
+     stOld1=이 단계에서 거두기 전 값(되돌릴 때 쓸 것), stFrom=알림에 쓸 처음 값(알린 뒤 지운다) */
+  if((s.stFix|0)<2){
+    const cut=Math.max(0,(s.level|0)-1);
+    if(cut>0&&s.stats&&typeof s.stats==='object'){s.stOld1={sp:s.sp|0,stats:Object.assign({},s.stats)};s.stFrom=s.stFrom||Object.assign({},s.stats);statCut(s,cut);s.stNote=(s.stNote|0)+cut}
+    s.stFix=2;
   }
   /* 레벨이 모자란 장비는 벗긴다(v85, 사용자 요청): 없애지 않고 장비 창에 둔다. 그 레벨이 되면 다시 걸친다. 길의 장비(route)는 레벨이 아니라 길로 걸치는 것이라 그대로. lvOff=들어갈 때 한 번 알릴 것 */
   if(s.gear&&s.gear.on)for(const k in s.gear.on){const id=s.gear.on[k],G=GEAR[id];if(G&&!G.route&&(G.lv|0)>(s.level|0)){(s.lvOff=s.lvOff||[]).push(id);delete s.gear.on[k]}}
@@ -1678,6 +1680,18 @@ const sv=k=>S.stats?S.stats[k]||0:0;
 /* 스탯이 곱으로 붙는 큰 덤(경험치·친해지는 빠르기·파는 값·기력 최대치)을 셈할 때 쓰는 값(v80 균형): 10까지는 그대로, 그 위로는 절반만 친다(20이면 15).
    전에는 학식 20이면 경험치 +60%, 기품 20이면 친밀도 +80%라 중반부터 너무 셌다. 자리의 조건(스탯 몇 이상)은 그대로 sv로 본다 */
 const se=k=>{const v=sv(k);return v<=10?v:10+(v-10)*.5};
+/* 스탯에서 n점을 거둔다(레벨·스탯 환산에서 씀): 남은 점수(sp)에서 먼저, 모자라면 스탯에서 비율대로 줄인다(큰 나머지부터 올림). 한쪽으로 키운 모양이 남는다 */
+function statCut(s,n){
+  const a=Math.min(n,s.sp|0);s.sp=(s.sp|0)-a;n-=a;
+  const ks=Object.keys(STATS),tot=ks.reduce((t,k)=>t+(s.stats[k]|0),0);
+  if(n<=0||tot<=0)return;
+  n=Math.min(n,tot);
+  const part=ks.map(k=>[k,(s.stats[k]|0)*n/tot]),dn={};let left=n;
+  for(const q of part){dn[q[0]]=Math.floor(q[1]);left-=dn[q[0]]}
+  part.sort((x,y)=>(y[1]-Math.floor(y[1]))-(x[1]-Math.floor(x[1])));
+  for(const q of part){if(left<=0)break;if(dn[q[0]]<(s.stats[q[0]]|0)){dn[q[0]]++;left--}}
+  for(const k of ks)s.stats[k]=(s.stats[k]|0)-dn[k];
+}
 function train(k,n){
   if(!S.stats||S.stats[k]>=STAT_MAX)return;
   if((k==='grace'&&perk('queen'))||(k==='lore'&&perk('princess')))n*=2;
@@ -1803,7 +1817,7 @@ function addXp(n){
   S.xp+=Math.round(n*(1+se('lore')*.03)*(1+rk('civ')*.1)*(S.wx==='rainbow'?1.25:1)*(buddy()?1.1:1)*(1+gearFx('xp')));
   while(S.xp>=needXp(S.level)){
     S.xp-=needXp(S.level);S.level++;sfx('level');
-    const pts=S.level>(S.lvPaid|0)?2+(perk('prince')?1:0):0;S.sp+=pts; /* 레벨 환산(v84)으로 내려온 사람은 예전 레벨을 넘어설 때부터 스탯 점수를 다시 받는다 */
+    const pts=S.level>(S.lvPaid|0)?1+(perk('prince')?1:0):0;S.sp+=pts; /* v89: 레벨마다 2점 → 1점(사용자 결정). 세자와 혼인한 덤(+1)은 그대로 */ /* 레벨 환산(v84)으로 내려온 사람은 예전 레벨을 넘어설 때부터 스탯 점수를 다시 받는다 */
     toast(pts?'레벨 '+S.level+'! 스탯 점수 +'+pts+' · 아래 "나"의 "신분"에서 올려요':'레벨 '+S.level+'! (스탯 점수는 예전 레벨 '+S.lvPaid+'을 넘어설 때부터 다시 받아요)');
     const seed=Object.keys(ITEMS).find(k=>ITEMS[k].lv===S.level);
     if(seed)toast('잡화점에 '+jo(ITEMS[seed].n,'이','가')+' 들어왔어요');
@@ -5876,7 +5890,7 @@ function openStatus(){
         k.gift?'돌잡이: '+DOL[k.gift].n+' ('+DOL[k.gift].d+') · '+DOL[k.gift].h:kidAge(k)>=7?'돌잡이를 할 때예요. 집에서 아이에게 말을 걸어요':'돌잡이까지 '+(7-kidAge(k))+'일 · 날마다 안아 주고 먹여요'],[['이름',()=>kidName(S.kids.indexOf(k))]]);
     }
     body.appendChild(el('p','sub','스탯 · 남은 점수 '+S.sp+'점'));
-    body.appendChild(el('p','note','레벨이 오를 때마다 점수를 2점 받아요. 관련된 일을 해도 조금씩 저절로 올라요. 스탯 하나는 '+STAT_MAX+'까지 올릴 수 있어요.'));
+    body.appendChild(el('p','note','레벨이 오를 때마다 점수를 1점 받아요. 관련된 일을 해도 조금씩 저절로 올라요. 스탯 하나는 '+STAT_MAX+'까지 올릴 수 있어요.'));
     for(const k in STATS){
       const s=STATS[k],v=S.stats[k];
       row(body,el('span','badge',s.n[0]),s.n+' '+v,[s.d,v>=STAT_MAX?'끝까지 올렸어요':'저절로 오르는 중 '+Math.floor(S.stx[k]*10)+'%'],
@@ -9187,8 +9201,8 @@ function showNew(saved){
 function begin(st){
   townSeed=-1;buildTown(st.seed>>>0);kidKey=''; // 그 마을의 모양부터 새로 짓는다 (저장의 밭·나무 번호는 그 모양에 맞춰져 있다. 새로 지어야 남의 다리가 남지 않는다)
   S=fixState(st);fogRef=null;if(S.inQ){swapQ();S.inQ=0}
-  if(S.stNote){const n=S.stNote,o=S.stOld||{stats:{}};delete S.stNote;const ch=Object.keys(STATS).filter(k=>(o.stats[k]|0)!==(S.stats[k]|0)).map(k=>STATS[k].n+' '+(o.stats[k]|0)+'→'+(S.stats[k]|0)).join(', ');
-    setTimeout(()=>{if(S)toast('스탯도 새 레벨에 맞춰 다시 셌어요'+(ch?': '+ch:'')+'. 거둔 '+n+'점은 레벨이 오를 때마다 2점씩 다시 받아요')},8500)}
+  if(S.stNote){const o=S.stFrom||{};delete S.stNote;delete S.stFrom;const ch=Object.keys(STATS).filter(k=>(o[k]|0)!==(S.stats[k]|0)).map(k=>STATS[k].n+' '+(o[k]|0)+'→'+(S.stats[k]|0)).join(', ');
+    setTimeout(()=>{if(S)toast('스탯을 새 기준(레벨마다 1점)으로 다시 셌어요'+(ch?': '+ch:'')+'. 앞으로 레벨이 오를 때마다 1점씩 받아요')},8500)}
   if(S.lvOff){const q=S.lvOff;delete S.lvOff;setTimeout(()=>{if(S)toast('레벨이 모자란 장비 '+q.length+'가지('+q.slice(0,3).map(id=>GEAR[id].n).join(', ')+(q.length>3?' 등':'')+')를 벗어 장비 창에 넣어 뒀어요. 그 레벨이 되면 다시 걸칠 수 있어요')},5500)}
   if(S.lvNote){const q=S.lvNote;delete S.lvNote;setTimeout(()=>{if(S)toast('레벨을 새 기준으로 다시 셌어요: 레벨 '+q[0]+' → '+q[1]+'. 길의 자리·옷·집·돈은 그대로예요')},2500)} /* 궁궐 처소 안에서 저장된 채 끝났으면 방 정보를 집 것으로 되돌린다 */
   S.sound=false;S.bgm=false;bgmStop(); /* 소리는 열 때마다 꺼진 채로 시작한다(사용자 요청). 설정 창에서 켠다 */
