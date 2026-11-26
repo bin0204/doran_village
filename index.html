@@ -1265,6 +1265,10 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:88,d:'11월 26일',t:'스탯도 다시 세기',l:[
+    '레벨을 다시 세면서 내려온 만큼, 그 레벨들에서 받았던 스탯 점수(레벨마다 2점)도 거뒀어요. 남은 점수에서 먼저 빼고, 모자라면 스탯에서 고르게 줄여요. 한쪽으로 키운 모양은 그대로예요.',
+    '거둔 점수는 없어지지 않아요. 레벨이 오를 때마다 전처럼 2점씩 다시 받아요. 이미 오른 길의 자리는 그대로예요.'
+  ]},
   {v:87,d:'11월 26일',t:'도끼',l:[
     '맞붙는 무기에 도끼가 생겼어요. 받아칠 틈은 칼·창보다 좁지만 한 번에 기운을 3씩 깎아요(칼·창은 2, 맨손은 1).',
     '도끼 세 자루와 긴 창 한 자루는 대장간에서 지을 수 없고 찾아야만 해요. 사냥터와 동굴의 반짝이는 곳을 파거나, 곰과 늑대를 잡다 보면 드물게 나와요.'
@@ -1481,6 +1485,27 @@ function fixState(s){
     while(x>=needXp(l)){x-=needXp(l);l++}
     if(l<L){s.lvOld=[L,x0];s.lvPaid=L;s.lvNote=[L,l];s.level=l;s.xp=x}
     s.lvFix=1;
+  }
+  /* 스탯 환산(v88, 사용자 결정): 레벨을 다시 세어 내려온 만큼(환산 전 레벨−지금 레벨)의 스탯 점수(레벨마다 2점)를 거둔다. 남은 점수(sp)에서 먼저, 모자라면 스탯에서 비율대로 고르게 줄인다(한쪽으로 키운 모양은 그대로).
+     거둔 점수는 레벨이 오를 때 보통대로 2점씩 다시 받으므로 lvPaid(점수를 안 주던 구간)는 푼다. stOld=거두기 전 값(되돌릴 때 쓸 것, 지우지 말 것), stNote=들어갈 때 한 번 알릴 것 */
+  if(!s.stFix){
+    const cut0=Math.max(0,((s.lvOld?s.lvOld[0]|0:0)-(s.level|0))*2);
+    if(cut0>0&&s.stats&&typeof s.stats==='object'){
+      s.stOld={sp:s.sp|0,stats:Object.assign({},s.stats)};
+      let cut=cut0;const a=Math.min(cut,s.sp|0);s.sp=(s.sp|0)-a;cut-=a;
+      const ks=Object.keys(STATS),tot=ks.reduce((n,k)=>n+(s.stats[k]|0),0);
+      if(cut>0&&tot>0){
+        cut=Math.min(cut,tot);
+        const part=ks.map(k=>[k,(s.stats[k]|0)*cut/tot]),dn={};let left=cut;
+        for(const q of part){dn[q[0]]=Math.floor(q[1]);left-=dn[q[0]]}
+        part.sort((x,y)=>(y[1]-Math.floor(y[1]))-(x[1]-Math.floor(x[1])));
+        for(const q of part){if(left<=0)break;if(dn[q[0]]<(s.stats[q[0]]|0)){dn[q[0]]++;left--}}
+        for(const k of ks)s.stats[k]=(s.stats[k]|0)-dn[k];
+      }
+      s.stNote=cut0;
+    }
+    if(s.lvPaid)s.lvPaid=0;
+    s.stFix=1;
   }
   /* 레벨이 모자란 장비는 벗긴다(v85, 사용자 요청): 없애지 않고 장비 창에 둔다. 그 레벨이 되면 다시 걸친다. 길의 장비(route)는 레벨이 아니라 길로 걸치는 것이라 그대로. lvOff=들어갈 때 한 번 알릴 것 */
   if(s.gear&&s.gear.on)for(const k in s.gear.on){const id=s.gear.on[k],G=GEAR[id];if(G&&!G.route&&(G.lv|0)>(s.level|0)){(s.lvOff=s.lvOff||[]).push(id);delete s.gear.on[k]}}
@@ -9170,8 +9195,10 @@ function showNew(saved){
 function begin(st){
   townSeed=-1;buildTown(st.seed>>>0);kidKey=''; // 그 마을의 모양부터 새로 짓는다 (저장의 밭·나무 번호는 그 모양에 맞춰져 있다. 새로 지어야 남의 다리가 남지 않는다)
   S=fixState(st);fogRef=null;if(S.inQ){swapQ();S.inQ=0}
+  if(S.stNote){const n=S.stNote,o=S.stOld||{stats:{}};delete S.stNote;const ch=Object.keys(STATS).filter(k=>(o.stats[k]|0)!==(S.stats[k]|0)).map(k=>STATS[k].n+' '+(o.stats[k]|0)+'→'+(S.stats[k]|0)).join(', ');
+    setTimeout(()=>{if(S)toast('스탯도 새 레벨에 맞춰 다시 셌어요'+(ch?': '+ch:'')+'. 거둔 '+n+'점은 레벨이 오를 때마다 2점씩 다시 받아요')},8500)}
   if(S.lvOff){const q=S.lvOff;delete S.lvOff;setTimeout(()=>{if(S)toast('레벨이 모자란 장비 '+q.length+'가지('+q.slice(0,3).map(id=>GEAR[id].n).join(', ')+(q.length>3?' 등':'')+')를 벗어 장비 창에 넣어 뒀어요. 그 레벨이 되면 다시 걸칠 수 있어요')},5500)}
-  if(S.lvNote){const q=S.lvNote;delete S.lvNote;setTimeout(()=>{if(S)toast('레벨을 새 기준으로 다시 셌어요: 레벨 '+q[0]+' → '+q[1]+'. 스탯·자리·옷·장비는 그대로예요. 스탯 점수는 레벨 '+q[0]+'을 넘어설 때부터 다시 받아요')},2500)} /* 궁궐 처소 안에서 저장된 채 끝났으면 방 정보를 집 것으로 되돌린다 */
+  if(S.lvNote){const q=S.lvNote;delete S.lvNote;setTimeout(()=>{if(S)toast('레벨을 새 기준으로 다시 셌어요: 레벨 '+q[0]+' → '+q[1]+'. 길의 자리·옷·집·돈은 그대로예요')},2500)} /* 궁궐 처소 안에서 저장된 채 끝났으면 방 정보를 집 것으로 되돌린다 */
   S.sound=false;S.bgm=false;bgmStop(); /* 소리는 열 때마다 꺼진 채로 시작한다(사용자 요청). 설정 창에서 켠다 */
   applyBridges();syncRouteGear(true);started=true;$('title').hidden=true;scene='town';
   // 사냥터에서 저장된 채 끝났더라도 마을에서 다시 시작한다
