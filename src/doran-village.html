@@ -1257,6 +1257,11 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:84,d:'11월 26일',t:'레벨 다시 세기',l:[
+    '레벨 오르는 걸음이 느려진 데 맞춰, 지금까지 모은 경험치를 새 기준으로 다시 세어 레벨을 고쳤어요. 예를 들어 레벨 23은 14, 레벨 10은 7이 돼요. 마을마다 처음 들어올 때 한 번만 바뀌어요.',
+    '스탯과 길의 자리, 옷, 장비, 집, 돈은 그대로예요. 다만 스탯 점수는 예전 레벨을 다시 넘어설 때부터 받아요.',
+    '레벨이 내려가면서 레벨 조건이 있는 곳(눈고개 등)과 새 장비 걸치기는 그 레벨이 될 때까지 잠깐 닫힐 수 있어요. 이미 걸친 장비는 그대로 써요.'
+  ]},
   {v:83,d:'11월 26일',t:'축지 장승 · 시설 옮기기',l:[
     '사냥터와 마을을 잇는 축지 장승을 세울 수 있어요. 목수 모루에게 "짓기·고치기"로 터를 잡고, 나무 40·돌 30·쇳돌 10·깃털 6과 1,500냥을 모아 넣은 뒤 못질로 마무리해요.',
     '장승을 세우면 사냥터(숲·깊은 산·눈고개)에서 아래 "장승 길" 단추로 마을에 바로 돌아와요. 마을의 장승 앞에서 행동하면 사냥터로 바로 가요.',
@@ -1447,6 +1452,14 @@ function fixState(s){
   s.spec=s.spec&&typeof s.spec==='object'?s.spec:{}; /* 길마다 고른 전문 갈래 {id,st} */
   s.fuse=s.fuse&&typeof s.fuse==='object'?s.fuse:{}; /* 가구의 쓰임을 마지막으로 누린 날 */
   s.fog=s.fog&&typeof s.fog==='object'?s.fog:{}; /* 지도의 안개: 곳마다 가 본 칸 */
+  /* 레벨 환산(v84, 사용자 결정: 지금 하는 사람 모두): 예전 곡선(60+40(l-1))으로 올린 레벨을, 모은 경험치 그대로 새 곡선(needXp)으로 다시 센다. 저장마다 한 번만(lvFix).
+     lvOld=[환산 전 레벨,경험치](되돌릴 때 쓸 값), lvPaid=스탯 점수를 이미 받은 레벨(그 레벨을 넘어설 때부터 다시 준다), lvNote=들어갈 때 한 번 알릴 것. 스탯·자리·옷·장비는 그대로 둔다 */
+  if(!s.lvFix){
+    const L=Math.max(1,s.level|0),x0=Math.max(0,s.xp|0);let x=60*(L-1)+20*(L-1)*(L-2)+x0,l=1;
+    while(x>=needXp(l)){x-=needXp(l);l++}
+    if(l<L){s.lvOld=[L,x0];s.lvPaid=L;s.lvNote=[L,l];s.level=l;s.xp=x}
+    s.lvFix=1;
+  }
   // 마을 씨앗(seed): 0이면 처음 만든 모양의 마을(예전 저장), 아니면 그 씨앗으로 지은 마을. gen은 생성기 판 번호. 이 함수는 그 마을이 지어진 뒤(buildTown)에 불러야 한다
   s.seed=s.seed>>>0;s.gen=s.seed?(s.gen|0)||1:0;
   for(let i=0;i<TOWN.TREES.length;i++)if(!s.trees[i])s.trees[i]={d:1,h:0};
@@ -1749,8 +1762,8 @@ function addXp(n){
   S.xp+=Math.round(n*(1+se('lore')*.03)*(1+rk('civ')*.1)*(S.wx==='rainbow'?1.25:1)*(buddy()?1.1:1)*(1+gearFx('xp')));
   while(S.xp>=needXp(S.level)){
     S.xp-=needXp(S.level);S.level++;sfx('level');
-    const pts=2+(perk('prince')?1:0);S.sp+=pts;
-    toast('레벨 '+S.level+'! 스탯 점수 +'+pts+' · 아래 "나"의 "신분"에서 올려요');
+    const pts=S.level>(S.lvPaid|0)?2+(perk('prince')?1:0):0;S.sp+=pts; /* 레벨 환산(v84)으로 내려온 사람은 예전 레벨을 넘어설 때부터 스탯 점수를 다시 받는다 */
+    toast(pts?'레벨 '+S.level+'! 스탯 점수 +'+pts+' · 아래 "나"의 "신분"에서 올려요':'레벨 '+S.level+'! (스탯 점수는 예전 레벨 '+S.lvPaid+'을 넘어설 때부터 다시 받아요)');
     const seed=Object.keys(ITEMS).find(k=>ITEMS[k].lv===S.level);
     if(seed)toast('잡화점에 '+jo(ITEMS[seed].n,'이','가')+' 들어왔어요');
     /* 이 레벨부터 할 수 있는 일이 있으면 길잡이를 알려 준다. 본업은 놓치기 쉬워서 따로 짚어 준다 */
@@ -9118,7 +9131,8 @@ function showNew(saved){
 }
 function begin(st){
   townSeed=-1;buildTown(st.seed>>>0);kidKey=''; // 그 마을의 모양부터 새로 짓는다 (저장의 밭·나무 번호는 그 모양에 맞춰져 있다. 새로 지어야 남의 다리가 남지 않는다)
-  S=fixState(st);fogRef=null;if(S.inQ){swapQ();S.inQ=0} /* 궁궐 처소 안에서 저장된 채 끝났으면 방 정보를 집 것으로 되돌린다 */
+  S=fixState(st);fogRef=null;if(S.inQ){swapQ();S.inQ=0}
+  if(S.lvNote){const q=S.lvNote;delete S.lvNote;setTimeout(()=>{if(S)toast('레벨을 새 기준으로 다시 셌어요: 레벨 '+q[0]+' → '+q[1]+'. 스탯·자리·옷·장비는 그대로예요. 스탯 점수는 레벨 '+q[0]+'을 넘어설 때부터 다시 받아요')},2500)} /* 궁궐 처소 안에서 저장된 채 끝났으면 방 정보를 집 것으로 되돌린다 */
   S.sound=false;S.bgm=false;bgmStop(); /* 소리는 열 때마다 꺼진 채로 시작한다(사용자 요청). 설정 창에서 켠다 */
   applyBridges();syncRouteGear(true);started=true;$('title').hidden=true;scene='town';
   // 사냥터에서 저장된 채 끝났더라도 마을에서 다시 시작한다
