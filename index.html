@@ -1267,6 +1267,11 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:92,d:'11월 26일',t:'나머지 놀이판 · 곳마다 큰 지도',l:[
+    '아직 작던 놀이판도 커졌어요. 글공부 카드, 대장간 두드리기, 못질, 윷놀이, 그네, 과일 받기, 새알심 뜨기, 소금 간 맞추기, 돌잡이, 젖 짜기를 화면에 맞춰 크게 그려요.',
+    '지도를 열면 지금 있는 곳의 큰 지도가 나와요. 사냥터·궁궐·운종가·먼바다·동굴에서도 볼 수 있고, 거기서 "마을 지도 보기"로 넘어가요. 가 본 곳만 밝혀져요.',
+    '나무 베기, 나무 흔들기, 바위 캐기에서는 이제 장비가 나오지 않아요. 거기서 나오던 장비는 사냥터의 반짝이는 곳과 동굴 광맥으로 옮겼어요.'
+  ]},
   {v:91,d:'11월 26일',t:'스탯 다시 나누기',l:[
     '"나"의 "신분" 창 스탯 아래에 "스탯 다시 나누기"가 생겼어요. 모든 스탯을 0으로 돌리고 그만큼 점수를 돌려받아 내 뜻대로 다시 찍어요.',
     '처음 한 번은 삯이 없어요. 그 뒤로는 할 때마다 2,000냥씩 오르고, 한 번 하면 열흘 뒤에 다시 할 수 있어요. 이미 오른 길의 자리는 그대로예요.'
@@ -1494,6 +1499,7 @@ function fixState(s){
   s.spec=s.spec&&typeof s.spec==='object'?s.spec:{}; /* 길마다 고른 전문 갈래 {id,st} */
   s.fuse=s.fuse&&typeof s.fuse==='object'?s.fuse:{}; /* 가구의 쓰임을 마지막으로 누린 날 */
   s.fog=s.fog&&typeof s.fog==='object'?s.fog:{}; /* 지도의 안개: 곳마다 가 본 칸 */
+  if(typeof s.name!=='string'||!s.name.trim())s.name='새싹'; /* 이름이 빠진 저장은 "undefined 님"으로 보이지 않게 기본 이름으로 */
   /* 레벨 환산(v84, 사용자 결정: 지금 하는 사람 모두): 예전 곡선(60+40(l-1))으로 올린 레벨을, 모은 경험치 그대로 새 곡선(needXp)으로 다시 센다. 저장마다 한 번만(lvFix).
      lvOld=[환산 전 레벨,경험치](되돌릴 때 쓸 값), lvPaid=스탯 점수를 이미 받은 레벨(그 레벨을 넘어설 때부터 다시 준다), lvNote=들어갈 때 한 번 알릴 것. 스탯·자리·옷·장비는 그대로 둔다 */
   if(!s.lvFix){
@@ -3899,11 +3905,11 @@ function mgEnd(){
     else toast('한 단계 완성! ('+S.diy.step+'/3) 문 앞에서 이어서 지어요');
     saveAll();return;
   }
-  if(m.kind==='shake'){if(m.dropped){S.trees[m.o.i].d=S.day+2;tip('fruit','떨어진 열매는 그 위를 지나가면 주워요');gearFind('shake',.04,'나뭇가지에 걸려 있던');if(scene==='town')planFind('town',.05,'나무 옹이구멍에서')}}
+  if(m.kind==='shake'){if(m.dropped){S.trees[m.o.i].d=S.day+2;tip('fruit','떨어진 열매는 그 위를 지나가면 주워요'); /* v92: 나무 흔들기·베기·바위 캐기에서는 장비가 나오지 않는다(수확·줍기와 같은 기준) */if(scene==='town')planFind('town',.05,'나무 옹이구멍에서')}}
   else if(m.i>0){
     const wood=m.kind==='chop',id=wood?'wood':'stone';
     if(wood)S.trees[m.o.i].h=1;else S.rocks[m.o.i].h=1;
-    if(m.got){const n=m.got+tl(wood?'axe':'pick');gain(id,n);addXp(2+m.got);float('+'+n+' '+ITEMS[id].n,m.o.x*T+16,m.o.y*T-24);sfx('pick');gearFind(wood?'chop':'mine',.035,wood?'쓰러진 나무 밑에서':'바위틈에서')}
+    if(m.got){const n=m.got+tl(wood?'axe':'pick');gain(id,n);addXp(2+m.got);float('+'+n+' '+ITEMS[id].n,m.o.x*T+16,m.o.y*T-24);sfx('pick')}
     else toast(wood?'이번엔 나무를 못 얻었어요':'이번엔 돌을 못 얻었어요');
     if(m.ore){gain('iron',m.ore);float('+'+m.ore+' 쇳돌',m.o.x*T+16,m.o.y*T-40);tip('iron','쇳돌이 나왔어요! 모루의 대장간에서 연장을 벼릴 때 써요')}
   }
@@ -3994,21 +4000,21 @@ function drawMgIn(c,labels){
   }
   if(m.kind==='build'){
     // 양쪽에서 다가오는 눈금이 가운데에서 만날 때 못을 박는다
-    const bx=(rx(P)+.5)*T,by=(ry(P)+.9)*T-68,w=96,k=Math.cos(m.ph)*w/2;
+    const bx=(rx(P)+.5)*T,by=(ry(P)+.9)*T-68,w=96,k=Math.cos(m.ph)*w/2;padAt(c,bx,by+22); /* v92: 나머지 놀이판도 키운다 */
     rr(c,bx-w/2-3,by-3,w+6,16,8,'rgba(42,29,19,.78)');rr(c,bx-w/2,by,w,10,5,'#f3ead6');rr(c,bx-8,by,16,10,3,'#8fd06a');rr(c,bx-3,by,6,10,2,'#f7c531');
     rr(c,bx+k-2,by-4,4,18,2,'#d9412e');rr(c,bx-k-2,by-4,4,18,2,'#d9412e');
     labels.push(()=>label(c,bx,by-14,m.note||'눈금이 만날 때 행동! '+m.i+'/'+m.n));return;
   }
   if(m.kind==='forge'){
     // 달군 쇳덩이가 오른쪽에서 흘러와 모루 표시(초록 칸)에 닿을 때 두드린다
-    const bx=(rx(P)+.5)*T,by=(ry(P)+.9)*T-70,w=128,x0=bx-w/2,hx=x0+24;
+    const bx=(rx(P)+.5)*T,by=(ry(P)+.9)*T-70,w=128,x0=bx-w/2,hx=x0+24;padAt(c,bx,by+24);
     rr(c,x0-3,by-3,w+6,18,9,'rgba(42,29,19,.78)');rr(c,x0,by,w,12,6,'#f3ead6');rr(c,hx-14,by,28,12,3,'#8fd06a');rr(c,hx-6,by,12,12,2,'#f7c531');rr(c,hx-1.5,by-4,3,20,1.5,'#3a3a40');
     for(const q of m.notes){const x=hx+(q.t-m.t)*90;if(q.s===1||x<x0+5||x>x0+w-5)continue;circ(c,x,by+6,5,q.s?'#9aa3a8':'#f08a2a');if(!q.s)circ(c,x-1.5,by+4.5,1.8,'#f7d24a')}
     labels.push(()=>label(c,bx,by-14,m.note||'박자에 맞춰 행동! '+m.good+'/'+m.need));return;
   }
   if(m.kind==='swing'){
     // 그네: 두 기둥과 가로대, 줄 끝의 발판에 탄 사람. 오른쪽 막대가 지금 높이
-    const q=mid(),a=m.amp*Math.sin(m.ph),L=62,ty=q.cy-46,sx=q.cx+Math.sin(a)*L,sy=ty+Math.cos(a)*L;
+    const q=mid(),a=m.amp*Math.sin(m.ph),L=62,ty=q.cy-46,sx=q.cx+Math.sin(a)*L,sy=ty+Math.cos(a)*L;padAt(c,q.cx,q.cy);
     rr(c,q.cx-76,q.cy-64,152,128,16,'rgba(42,29,19,.86)');
     line(c,q.cx-52,q.cy+52,q.cx-36,ty-4,'#8a5a34',4);line(c,q.cx+52,q.cy+52,q.cx+36,ty-4,'#8a5a34',4);line(c,q.cx-40,ty-4,q.cx+40,ty-4,'#b98a5a',5);
     poly(c,[q.cx-5,q.cy+30,q.cx+5,q.cy+30,q.cx,q.cy+22],'#8fd06a');
@@ -4019,7 +4025,7 @@ function drawMgIn(c,labels){
   }
   if(m.kind==='catch'){
     // 세 줄로 떨어지는 과일과 아래의 바구니
-    const q=mid(),x0=q.cx-60,y0=q.cy-62;
+    const q=mid(),x0=q.cx-60,y0=q.cy-62;padAt(c,q.cx,q.cy);
     rr(c,x0-8,y0-8,136,140,16,'rgba(42,29,19,.86)');c.fillStyle='rgba(255,255,255,.08)';c.fillRect(x0+40,y0,1.5,124);c.fillRect(x0+80,y0,1.5,124);
     for(const it of m.items)blit(c,itemSpr(it.bad?'stone':it.id),x0+20+it.l*40,y0+it.y);
     const bx=x0+20+m.lane*40,by=y0+104;poly(c,[bx-16,by-6,bx+16,by-6,bx+11,by+10,bx-11,by+10],'#b98a5a');c.fillStyle='#8a5a34';c.fillRect(bx-16,by-7,32,3);
@@ -4027,7 +4033,7 @@ function drawMgIn(c,labels){
   }
   if(m.kind==='scoop'){
     // 팥죽 솥과 네 자리. 떠오른 새알심 둘레의 고리가 줄어들면 가라앉는다
-    const q=mid();
+    const q=mid();padAt(c,q.cx,q.cy);
     circ(c,q.cx,q.cy,62,'rgba(42,29,19,.86)');circ(c,q.cx,q.cy,54,'#3a2a22');circ(c,q.cx,q.cy,48,'#8a3a3a');circ(c,q.cx-14,q.cy-16,10,'#9a4a48');
     for(let d=0;d<4;d++){
       const x=q.cx+DIRS[d][0]*30,y=q.cy+DIRS[d][1]*30,on=m.cur===d&&!m.fin;
@@ -4038,7 +4044,7 @@ function drawMgIn(c,labels){
   }
   if(m.kind==='yut'){
     // 위는 말판(파랑=나, 주황=다미), 아래는 윷가락 넷
-    const q=mid(),w=150,x0=q.cx-w/2,ty=q.cy-30,mine=m.turn===0&&m.rev<=0&&!m.fin;
+    const q=mid(),w=150,x0=q.cx-w/2,ty=q.cy-30,mine=m.turn===0&&m.rev<=0&&!m.fin;padAt(c,q.cx,q.cy);
     rr(c,x0-14,q.cy-58,w+28,116,16,'rgba(42,29,19,.86)');rr(c,x0,ty-2,w,4,2,'#e9d8a8');
     for(let i=0;i<=m.goal;i+=5){c.fillStyle='#e9d8a8';c.fillRect(x0+w*i/m.goal-1,ty-6,2,12)}
     circ(c,x0+w*m.me/m.goal,ty-10,6,'#3f8fc4');circ(c,x0+w*m.foe/m.goal,ty+10,6,'#f08a2a');
@@ -4051,7 +4057,7 @@ function drawMgIn(c,labels){
   }
   if(m.kind==='dol'){
     // 돌상: 다섯 가지 물건 위를 아이 손(노란 칸)이 오간다. 방 안의 사람과 요람을 가리지 않게 방 위쪽 벽에 걸어 그린다
-    const rb=roomBox(),bx=(rb.x0+rb.x1+1)*T/2,by=rb.y0*T-52,w=186;
+    const rb=roomBox(),bx=(rb.x0+rb.x1+1)*T/2,by=rb.y0*T-52,w=186;padAt(c,bx,by-8); /* 위쪽을 축으로 아래로 자란다(화면 위로 넘치지 않게) */
     rr(c,bx-w/2,by,w,62,10,'rgba(42,29,19,.9)');
     DOL_IDS.forEach((g,i)=>{const x=bx-68+i*34,y=by+20;rr(c,x-14,y-14,28,28,6,i===m.cur?'#f7c531':'#f6f1e6');dolIcon(c,g,x,y)});
     labels.push(()=>{c.font='12px '+FONT;c.textAlign='center';c.textBaseline='middle';c.fillStyle='#fffbe8';c.fillText(m.note||'마음에 드는 것에 왔을 때 행동!',bx,by+49)});return;
@@ -4208,6 +4214,7 @@ function drawMgIn(c,labels){
   if(m.kind==='salt'){
     // 소금 눈금: 초록 띠가 알맞은 간. 손을 떼면 아래 가는 줄이 줄어들고, 다 줄면 뚜껑을 덮는다
     const bx=(rx(P)+.5)*T,by=(ry(P)+.9)*T+12,w=120,x0=bx-w/2,over=m.amt>m.hi; // 독이 가리지 않게 발 아래에 그린다
+    padAt(c,bx,by-4);
     rr(c,x0-4,by-4,w+8,26,9,'rgba(42,29,19,.8)');rr(c,x0,by,w,12,6,'#5a6a5a');rr(c,x0+m.lo*w,by,(m.hi-m.lo)*w,12,2,'#8fd06a');
     if(m.amt>0)rr(c,x0,by+2,Math.max(4,m.amt*w),8,4,over?'#d9412e':'#fffbe8');
     if(m.n&&!m.fin)rr(c,x0,by+16,w*clamp(1-m.idle/1.5,0,1),3,1.5,'#f7c531');
@@ -4224,7 +4231,7 @@ function drawMgIn(c,labels){
   }
   if(m.kind==='study'){
     // 글자 카드: 처음 잠깐과 뒤집은 것은 앞면, 짝을 찾은 것은 연두색. 노란 테두리가 지금 고른 자리
-    const b=studyBox(m),pre=m.pre>0;
+    const b=studyBox(m),pre=m.pre>0;padAt(c,b.x+b.w/2,b.y+b.h/2);
     rr(c,b.x-10,b.y-10,b.w+20,b.h+20,14,'rgba(42,29,19,.88)');c.textAlign='center';c.textBaseline='middle';
     m.cards.forEach((cd,i)=>{
       const x=b.x+(i%m.cols)*b.cw+2,y=b.y+Math.floor(i/m.cols)*b.ch+2,w=b.cw-4,h=b.ch-4,up=pre||cd.open||cd.done;
@@ -4284,7 +4291,7 @@ function drawMgIn(c,labels){
   }
   if(m.kind==='milk'){
     // 고리가 다 차면 한 번 짠다. 서두르면 소가 놀란다
-    const x=(rx(m.a)+.5)*T,y=ry(m.a)*T-16,ok=m.cd>=1,w=54;
+    const x=(rx(m.a)+.5)*T,y=ry(m.a)*T-16,ok=m.cd>=1,w=54;padAt(c,x,y+8);
     circ(c,x,y,14,'rgba(42,29,19,.78)');c.lineWidth=4;c.strokeStyle='#f3ead6';c.beginPath();c.arc(x,y,9,0,7);c.stroke();
     c.strokeStyle=ok?'#f7c531':'#3f9fd8';c.beginPath();c.arc(x,y,9,-Math.PI/2,-Math.PI/2+Math.PI*2*m.cd);c.stroke();
     // 화면 위쪽 끝에 붙어 있으면 통과 글씨를 소 아래쪽에 보여 준다
@@ -5399,7 +5406,7 @@ function updCatch(m,dt){
   if(m.t>=m.dur){m.fin=true;m.ok=m.score>=m.need;m.end=1.2;m.note='모두 '+m.score+'개'+(m.ok?' · 풍년이에요!':' · '+m.need+'개부터 통과')}
 }
 function catchMove(dx){const m=mg;if(m&&m.kind==='catch'&&!m.fin)m.lane=clamp(m.lane+dx,0,2)}
-function catchClick(wx,wy){const m=mg,q=mid(),l=Math.floor((wx-(q.cx-60))/40);if(!m.fin&&l>=0&&l<=2&&Math.abs(wy-q.cy)<90)m.lane=l}
+function catchClick(wx,wy){const m=mg,q=mid(),K=mgK(),l=Math.floor((wx-(q.cx-60*K))/(40*K));if(!m.fin&&l>=0&&l<=2&&Math.abs(wy-q.cy)<90*K)m.lane=l} /* 판을 키운 배율(mgK)만큼 누른 자리도 넓힌다 */
 // 동지 새알심 건지기: 네 곳 가운데 한 곳에 떠오르면 그쪽을 눌러 건진다. 갈수록 빨리 가라앉는다
 function scoopNext(m,hit){
   if(hit){m.hit++;sfx('pick')}else sfx('err');
@@ -5407,7 +5414,7 @@ function scoopNext(m,hit){
   if(m.i>=m.n){m.fin=true;m.ok=m.hit>=m.need;m.end=1.2;m.note='새알심 '+m.hit+'개'+(m.ok?' · 한 그릇 든든해요!':' · '+m.need+'개부터 통과')}
 }
 function scoopPress(d){const m=mg;if(!m||m.kind!=='scoop'||m.fin||d<0||d>3)return;m.flash=.15;m.lit=d;if(m.cur>=0)scoopNext(m,d===m.cur)}
-function scoopClick(wx,wy){const q=mid();for(let d=0;d<4;d++)if(Math.hypot(wx-(q.cx+DIRS[d][0]*30),wy-(q.cy+DIRS[d][1]*30))<=20){scoopPress(d);return}}
+function scoopClick(wx,wy){const q=mid(),K=mgK();for(let d=0;d<4;d++)if(Math.hypot(wx-(q.cx+DIRS[d][0]*30*K),wy-(q.cy+DIRS[d][1]*30*K))<=20*K){scoopPress(d);return}}
 function updScoop(m,dt){
   fNote(m,dt);if(m.flash>0)m.flash-=dt;if(m.fin){m.end-=dt;if(m.end<=0)mgEnd();return}
   if(m.cur<0){m.wait-=dt;if(m.wait<=0){m.cur=Math.floor(Math.random()*4);m.left=m.full=Math.max(.55,1.15-m.i*.05)}return}
@@ -5638,7 +5645,7 @@ function studyFlip(i){
     if(m.found*2>=m.cards.length){m.fin=true;m.ok=true;m.fine=m.miss<=2;m.bonus=Math.max(0,4-m.miss)*10;m.end=.9;m.note='짝을 모두 찾았어요!'}
   }else{m.miss++;m.lock=.8;sfx('err')}
 }
-function studyClick(wx,wy){const m=mg,b=studyBox(m),cx=Math.floor((wx-b.x)/b.cw),cy=Math.floor((wy-b.y)/b.ch);if(cx>=0&&cy>=0&&cx<m.cols&&cy<m.rows)studyFlip(cy*m.cols+cx)}
+function studyClick(wx,wy){const m=mg,b=studyBox(m),K=mgK(),mx=b.x+b.w/2,my=b.y+b.h/2;wx=mx+(wx-mx)/K;wy=my+(wy-my)/K;const cx=Math.floor((wx-b.x)/b.cw),cy=Math.floor((wy-b.y)/b.ch);if(cx>=0&&cy>=0&&cx<m.cols&&cy<m.rows)studyFlip(cy*m.cols+cx)}
 function studyMove(dx,dy){const m=mg;m.cur=clamp(Math.floor(m.cur/m.cols)+dy,0,m.rows-1)*m.cols+clamp(m.cur%m.cols+dx,0,m.cols-1)}
 function updStudy(m,dt){
   if(m.fin){m.end-=dt;if(m.end<=0)mgEnd();return}
@@ -7721,6 +7728,8 @@ const GEAR={
   t_wolf2:{n:'늑대 가죽 전대',s:'t',g:3,lv:11,fx:{sell:.09,luck:.05},drop:['wolf',.06],look:{gem:'#7d858b'}}
 };
 /* 길에서 받는 장비는 기본 장비다(v81, 사용자 요청): 효과를 절반 아래로 낮추고 등급도 내린다. 좋은 것은 사냥·낚시·캐기·채집·수확으로 찾거나 대장간에서 짓는다 */
+/* v92: 나무 베기·흔들기·바위 캐기에서 나오던 장비는 자리를 옮긴다(거기서는 이제 장비가 안 나온다). 나무 쪽 것은 사냥터의 반짝이는 곳, 바위 쪽 것은 동굴 광맥에서 */
+for(const id in GEAR){const G=GEAR[id];if(G.find==='chop'||G.find==='shake'){delete G.find;G.dig='wild'}else if(G.find==='mine')G.find='vein'}
 for(const id in GEAR){const G=GEAR[id];if(!G.route)continue;
   const k=G.rank>=3?.5:.4;
   for(const f in G.fx){if(f==='dmg'){if(G.rank<6)delete G.fx[f];else G.fx[f]=1}else G.fx[f]=Math.round(G.fx[f]*k*1000)/1000}
@@ -9183,7 +9192,19 @@ function drawMini(m,px,marks,me,map,fog){
       const X=(q[0]+.5)*px,Y=(q[1]+.5)*px;c.fillStyle='#2e2a2a';c.beginPath();c.arc(X,Y,px*.82,0,7);c.fill();c.fillStyle='#fff';c.fillText(String(i+1),X,Y+.5)})}
 }
 // 지도 창: 마을마다 자리가 다르니 어디에 무엇이 있는지 번호로 알려 준다
-function openMap(){
+function openMap(town){
+  fogStep(); /* 막 들어온 곳이라 안개를 아직 못 읽었을 수도 있으니 먼저 맞춘다 */
+  /* v92: 마을 밖에서는 지금 있는 곳(사냥터·궁궐·운종가·먼바다·동굴)의 큰 지도를 먼저 보여 준다. 거기서 "마을 지도 보기"로 넘어간다 */
+  if(!town&&scene!=='town'&&scene!=='home'){
+    const nm={wild:['사냥터 숲','깊은 산','금원','눈고개'][wz]||'사냥터',palace:'한양 궁궐',sea:'먼바다',resort:'운종가',cave:'동굴'}[scene]||'지금 있는 곳';
+    openModal('지도 · '+nm,body=>{
+      const m=el('canvas');m.style.cssText='display:block;width:100%;max-width:540px;margin:0 auto 8px;border-radius:10px;border:1.5px solid var(--line);image-rendering:pixelated';
+      drawMini(m,10,null,[P.x,P.y],{tile,objAt},fogArr&&fogRef===tile?fogArr:null);body.appendChild(m);
+      body.appendChild(el('p','note','분홍 점이 지금 내가 있는 곳이에요. 어두운 곳은 아직 가 보지 않은 곳이에요. 직접 걸어가 보면 밝혀져요.'));
+      const b=el('button','btn','마을 지도 보기');b.type='button';b.onclick=()=>openMap(true);body.appendChild(b);
+    });
+    return;
+  }
   openModal('마을 지도',body=>{
     const mid=b=>[b.x+(b.w-1)/2,b.y+.5],B=id=>BLD.find(b=>b.id===id);
     const list=[['내 집',mid(B('home'))],['만물상',mid(B('shop'))],['모루네와 대장간',mid(B('moru'))],['서당',mid(B('hun'))],['솔이네',mid(B('sol'))],['다미네',mid(B('dami'))],['파랑네',mid(B('parang'))],
