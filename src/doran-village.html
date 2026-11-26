@@ -524,9 +524,11 @@ const STOCK={hen:{n:'닭',baby:'병아리',grow:3,buy:150,pen:'coop',names:['꼬
   cow:{n:'소',baby:'송아지',grow:5,buy:1200,pen:'barn',names:['누렁이','복순이','얼룩이','순둥이']}};
 const FEED_PRICE=10;
 // 스탯: 레벨이 오를 때 받는 점수로 찍고, 관련된 일을 하면 조금씩 저절로도 오른다 (하나에 20까지)
-const STATS={cook:{n:'손맛',d:'요리할 때 알맞은 불의 폭이 넓어져요'},grace:{n:'기품',d:'이웃·왕실과 더 빨리 가까워져요 (1마다 +4%)'},
-  lore:{n:'학식',d:'경험치를 더 많이 얻어요 (1마다 +3%)'},arms:{n:'무예',d:'기력 최대치가 늘고 사냥 과녁이 커져요'},trade:{n:'수완',d:'물건을 더 비싸게 팔아요 (1마다 +2%)'}};
+const STATS={cook:{n:'손맛',d:'요리할 때 알맞은 불의 폭이 넓어져요'},grace:{n:'기품',d:'이웃·왕실과 더 빨리 가까워져요 (10까지 1마다 +4%, 그 위로는 +2%)'},
+  lore:{n:'학식',d:'경험치를 더 많이 얻어요 (10까지 1마다 +3%, 그 위로는 +1.5%)'},arms:{n:'무예',d:'기력 최대치가 늘고 사냥 과녁이 커져요'},trade:{n:'수완',d:'물건을 더 비싸게 팔아요 (10까지 1마다 +2%, 그 위로는 +1%)'}};
 const STAT_MAX=20;
+/* 길에서 자리가 오를 때 갖춰야 하는 레벨(v80 균형): [처음, 둘째 자리, 으뜸 자리]. 전에는 레벨 조건이 없어서 스탯만 채우면 초반에 으뜸 자리까지 갔다 */
+const RANK_LV=[0,8,14];
 // 직업의 길. need[품계]=그 품계가 되는 조건, pay=수라상 하사금, dishes=수라상에 올릴 가짓수, fit=받는 옷
 const JOBS={cook:{n:'수라간',stat:'cook',ranks:{f:['수라간 나인','수라간 상궁','수라간 최고상궁'],m:['수라간 견습 숙수','수라간 숙수','대령숙수']},
   need:[{stat:2},{stat:6,served:5,npc:'yeon',h:2},{stat:12,served:15,npc:'king',h:2}],pay:[120,300,600],dishes:[2,3,4],fit:['nain','sanggung','jejo'],exam:['d_juk','d_sam']}};
@@ -1247,6 +1249,10 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:80,d:'11월 26일',t:'성장 걸음 맞추기',l:[
+    '길에서 자리가 오를 때 레벨도 갖춰야 해요. 둘째 자리는 레벨 8, 으뜸 자리는 레벨 14부터예요. 이미 오른 자리는 그대로예요.',
+    '더 높은 자리의 레벨이 18·21·24·28로, 전문 갈래의 숙련과 달인이 레벨 14와 22로 올랐어요.',
+    '스탯이 10을 넘으면 경험치·친해지는 빠르기·파는 값·기력에 붙는 덤이 절반씩만 늘어요. 스탯 20이 너무 세던 것을 다듬었어요.']},
   {v:79,d:'11월 26일',t:'쓰임이 있는 가구',l:[
     '집 안의 가구를 바라보고 행동하면 그 가구로 할 수 있는 일이 나와요. 평상과 보료에서 낮잠, 다기로 차 마시기, 책장과 서책으로 책 읽기, 벼루로 글씨 쓰기, 바둑판 묘수풀이, 물레로 실 잣기 같은 것들이에요.',
     '가야금과 다듬잇돌은 장단에 맞춰 직접 뜯고 두드려요. 반닫이와 머릿장, 경대에서는 옷을 갈아입을 수 있어요.',
@@ -1589,6 +1595,9 @@ const perk=id=>hearts(id)>=3;
 const needXp=l=>60+40*(l-1)+8*(l-1)*(l-1);
 // 스탯 값과, 일을 하면서 저절로 오르는 몫(열 번 쌓이면 1 오른다)
 const sv=k=>S.stats?S.stats[k]||0:0;
+/* 스탯이 곱으로 붙는 큰 덤(경험치·친해지는 빠르기·파는 값·기력 최대치)을 셈할 때 쓰는 값(v80 균형): 10까지는 그대로, 그 위로는 절반만 친다(20이면 15).
+   전에는 학식 20이면 경험치 +60%, 기품 20이면 친밀도 +80%라 중반부터 너무 셌다. 자리의 조건(스탯 몇 이상)은 그대로 sv로 본다 */
+const se=k=>{const v=sv(k);return v<=10?v:10+(v-10)*.5};
 function train(k,n){
   if(!S.stats||S.stats[k]>=STAT_MAX)return;
   if((k==='grace'&&perk('queen'))||(k==='lore'&&perk('princess')))n*=2;
@@ -1605,7 +1614,8 @@ const courtTitle=()=>{const C=S.court;return C.rank===0?(S.sex==='f'?'궁녀':'�
 // 높은 자리(MAIN_TIERS): 레벨 lv, 그 길의 스탯 stat, 그 길의 일 횟수 done, 임금과의 ♥ h를 갖추고 임금 앞에서 사은숙배(예법 따라 하기)를 마치면 오른다.
 // 나쁜 길은 임금이 아니라 악명(inf)과 레벨로 저절로 오른다(mainRogueUp)
 const MAIN_LV=10;
-const MAIN_TIERS=[{lv:12,stat:15,done:20,h:3,inf:80,prize:2500},{lv:16,stat:17,done:30,h:3,inf:130,prize:5000},{lv:20,stat:19,done:42,h:4,inf:200,prize:9000},{lv:25,stat:20,done:56,h:5,inf:300,prize:15000}];
+/* v80 균형: 높은 자리의 레벨을 12·16·20·25에서 18·21·24·28로 올렸다(길의 으뜸 자리가 레벨 14라 그 뒤로 이어지게) */
+const MAIN_TIERS=[{lv:18,stat:15,done:20,h:3,inf:80,prize:2500},{lv:21,stat:17,done:30,h:3,inf:130,prize:5000},{lv:24,stat:19,done:42,h:4,inf:200,prize:9000},{lv:28,stat:20,done:56,h:5,inf:300,prize:15000}];
 const MAIN={
   cook:{n:'수라간의 길',fit:['cook3','cook4','cook5','cook6'],stat:'cook',dn:'올린 수라상',done:()=>S.job.served,perk:'수라상 하사금이 늘어요',titles:()=>S.sex==='f'?['부제조상궁','제조상궁','수라간 큰어른','나라의 손맛']:['사옹원 첨정','사옹원 정','사옹원 제조','사옹원 도제조']},
   court:{n:'왕실의 길',fit:['court3','court4','court5','court6'],stat:'grace',dn:'예법 수련',done:()=>S.court.done,perk:'내탕금이 늘어요',titles:()=>{const t=S.court&&S.court.mate==='princess'?'국서':'왕비';return['어진 '+t,'덕 높은 '+t,'백성의 어버이','성군의 짝']}},
@@ -1622,7 +1632,7 @@ const mainMul=k=>(S&&S.main&&S.main.k===k?1.25+.25*(S.main.tier|0):1)*(1+specPay
 // 단계 st: 1 입문 → 2 숙련 → 3 달인. 레벨과 그 길의 일 횟수(나쁜 길은 악명)가 차면 저절로 오른다(specSync). 입문일 때만 다른 갈래로 바꿀 수 있다.
 // fx=단계마다 붙는 덤(장비 효과와 같은 열쇠라 gearFx가 함께 센다) · fx3=달인이 되면 더 붙는 덤 · pay=단계마다 그 길의 수고비·녹봉이 느는 비율
 // mw=맞붙을 때 그 무기로 받아칠 틈이 단계마다 느는 초 · m=달인만의 재주를 적은 말(셈은 specMaster를 부르는 자리에 있다)
-const SPEC_LV=8,SPEC_ST=[null,{n:'입문'},{n:'숙련',lv:12,done:15,inf:30},{n:'달인',lv:18,done:35,inf:70}];
+const SPEC_LV=8,SPEC_ST=[null,{n:'입문'},{n:'숙련',lv:14,done:15,inf:30},{n:'달인',lv:22,done:35,inf:70}]; /* v80: 숙련 12→14, 달인 18→22 */
 const SPEC={
   /* dish=단계마다 하나씩 배우는 그 갈래의 음식(RECIPES의 spec·st와 짝) */
   cook:[{id:'tang',n:'탕과 찜',d:'국물과 찜에 밝아져요. 불 조절이 쉬워지고, 든든한 음식 덕에 기력이 늘어요.',fx:{cook:.015,en:5},fx3:{en:10},pay:.08,dish:['d_galbi','d_jeonbok','d_sinseollo']},
@@ -1690,11 +1700,11 @@ const trackTitle=k=>mainTier(k)&&routeOf(k)?MAIN[k].titles()[mainTier(k)-1]:base
 const villTitle=()=>{let i=0;while(i+1<TITLES.length&&S.level>=TITLE_LV[i+1])i++;return TITLES[i]};
 const rankName=()=>trackTitle(S.title)||(S.main?trackTitle(S.main.k):null)||(S.court&&S.court.rank>=1?courtTitle():null)||trackTitle('cook')||trackTitle('merch')||trackTitle('mil')||trackTitle('civ')||trackTitle('court')||trackTitle('rogue')||villTitle();
 // 파는 값: 은하와 친하면 10%, 수완 1마다 2%, 상인의 자리가 오를 때마다 5% 더 받는다
-const sellPrice=id=>Math.ceil(ITEMS[id].p*(perk('eunha')?1.1:1)*(1+sv('trade')*.02)*(1+rk('merch')*.05)*(CROPS[id]&&workDone('mill')?1.15:1)*(1+gearFx('sell')));
+const sellPrice=id=>Math.ceil(ITEMS[id].p*(perk('eunha')?1.1:1)*(1+se('trade')*.02)*(1+rk('merch')*.05)*(CROPS[id]&&workDone('mill')?1.15:1)*(1+gearFx('sell')));
 const setHas=k=>SETS[k].ids.every(id=>S.placed.some(f=>f.id===id)),setsDone=()=>Object.keys(SETS).filter(setHas);
 const comfort=()=>S.placed.reduce((a,f)=>a+FURN[f.id].c,0)+setsDone().reduce((a,k)=>a+SETS[k].c,0);
 // 기력: 일을 하면 줄고, 음식을 먹거나 자면 찬다
-const maxEn=()=>Math.min(250,Math.min(190,100+(S.level-1)*6)+sv('arms')*2+rk('mil')*10+S.kids.filter(k=>k.gift==='thread').length*10+(relic('c_pouch')?10:0)+gearFx('en'));
+const maxEn=()=>Math.min(250,Math.min(190,100+(S.level-1)*6)+se('arms')*2+rk('mil')*10+S.kids.filter(k=>k.gift==='thread').length*10+(relic('c_pouch')?10:0)+gearFx('en'));
 function useEn(n){
   if(S.en<n){toast('기력이 모자라요. 가방에서 음식을 먹거나 이부자리에서 자요');sfx('err');return false}
   S.en-=n;touch();hud();return true;
@@ -1709,7 +1719,7 @@ const grown=a=>a.age>=STOCK[a.k].grow;
 // 다 자란 소가 있으면 쟁기를 끌어 줘서 밭 갈기가 수월하다
 const hasOx=()=>S.stock.some(a=>a.k==='cow'&&grown(a));
 function addXp(n){
-  S.xp+=Math.round(n*(1+sv('lore')*.03)*(1+rk('civ')*.1)*(S.wx==='rainbow'?1.25:1)*(buddy()?1.1:1)*(1+gearFx('xp')));
+  S.xp+=Math.round(n*(1+se('lore')*.03)*(1+rk('civ')*.1)*(S.wx==='rainbow'?1.25:1)*(buddy()?1.1:1)*(1+gearFx('xp')));
   while(S.xp>=needXp(S.level)){
     S.xp-=needXp(S.level);S.level++;sfx('level');
     const pts=2+(perk('prince')?1:0);S.sp+=pts;
@@ -1725,7 +1735,7 @@ function addXp(n){
 }
 function addCoins(n){S.coins+=n;touch();hud()}
 function addFriend(id,n){
-  if(n>0)n=Math.round(n*(1+sv('grace')*.04)*(1+gearFx('friend')));
+  if(n>0)n=Math.round(n*(1+se('grace')*.04)*(1+gearFx('friend')));
   const b=hearts(id);S.npcs[id].pts=clamp(S.npcs[id].pts+n,0,500);
   if(hearts(id)>b)toast(jo(NPCS[id].name,'과','와')+' 한층 가까워졌어요 ♥'+hearts(id));
   touch();
@@ -5377,8 +5387,8 @@ function trackTalk(k){
 }
 function trackPromo(k){
   const D=TRACKS[k],A=S[k],q=D.need[A.rank+1],d=NPCS[D.npc],say=(text,choices)=>dialog({npc:D.npc,who:d.name,text,choices}),m=v=>v?'✓ ':'✗ ';
-  const ok=[sv(D.stat)>=q.stat,A.done>=q.done,q.ex[2]()>=q.ex[1],hearts(q.npc)>=q.h];tell(k,A.rank+1);
-  const list=m(ok[0])+STATS[D.stat].n+' '+q.stat+' (지금 '+sv(D.stat)+')\n'+m(ok[1])+D.work+' '+q.done+'번 (지금 '+A.done+'번)\n'+m(ok[2])+q.ex[0]+' '+q.ex[1]+' (지금 '+q.ex[2]()+')\n'+m(ok[3])+NPCS[q.npc].name+' ♥'+q.h+' (지금 ♥'+hearts(q.npc)+')';
+  const ok=[sv(D.stat)>=q.stat,A.done>=q.done,q.ex[2]()>=q.ex[1],hearts(q.npc)>=q.h,S.level>=RANK_LV[A.rank+1]];tell(k,A.rank+1);
+  const list=m(ok[4])+'레벨 '+RANK_LV[A.rank+1]+' (지금 '+S.level+')\n'+m(ok[0])+STATS[D.stat].n+' '+q.stat+' (지금 '+sv(D.stat)+')\n'+m(ok[1])+D.work+' '+q.done+'번 (지금 '+A.done+'번)\n'+m(ok[2])+q.ex[0]+' '+q.ex[1]+' (지금 '+q.ex[2]()+')\n'+m(ok[3])+NPCS[q.npc].name+' ♥'+q.h+' (지금 ♥'+hearts(q.npc)+')';
   if(!ok.every(Boolean)){say(D.t.need(D.ranks[A.rank+1])+'\n'+list);return}
   say(D.t.go[A.rank],[['치를게요',()=>D.start(A.rank+1)],['다음에요',null]]);
 }
@@ -5492,8 +5502,8 @@ function deliver(){
 }
 function tradePromo(){
   const M=S.merch,q=TRADE.need[M.rank+1],d=NPCS.eunha,say=(text,choices)=>dialog({npc:'eunha',who:d.name,text,choices}),m=v=>v?'✓ ':'✗ ',E=TRADE.eye[M.rank+1];
-  const ok=[sv('trade')>=q.stat,M.done>=q.done,M.sold>=q.sold,hearts(q.npc)>=q.h];tell('merch',M.rank+1);
-  const list=m(ok[0])+'수완 '+q.stat+' (지금 '+sv('trade')+')\n'+m(ok[1])+'안목 겨루기 '+q.done+'번 (지금 '+M.done+'번)\n'+m(ok[2])+'납품 '+q.sold+'번 (지금 '+M.sold+'번)\n'+m(ok[3])+NPCS[q.npc].name+' ♥'+q.h+' (지금 ♥'+hearts(q.npc)+')';
+  const ok=[sv('trade')>=q.stat,M.done>=q.done,M.sold>=q.sold,hearts(q.npc)>=q.h,S.level>=RANK_LV[M.rank+1]];tell('merch',M.rank+1);
+  const list=m(ok[4])+'레벨 '+RANK_LV[M.rank+1]+' (지금 '+S.level+')\n'+m(ok[0])+'수완 '+q.stat+' (지금 '+sv('trade')+')\n'+m(ok[1])+'안목 겨루기 '+q.done+'번 (지금 '+M.done+'번)\n'+m(ok[2])+'납품 '+q.sold+'번 (지금 '+M.sold+'번)\n'+m(ok[3])+NPCS[q.npc].name+' ♥'+q.h+' (지금 ♥'+hearts(q.npc)+')';
   if(!ok.every(Boolean)){say(jo(TRADE.ranks[M.rank+1],'이','가')+' 되려면 이만큼은 갖춰야 해요.\n'+list);return}
   say('다 갖췄네요. 값이 비슷한 물건 '+E.n+'쌍을 내놓을게요. '+E.bad+'번까지만 틀려도 돼요.',[['겨뤄 볼게요',()=>startEye(M.rank+1)],['다음에요',null]]);
 }
@@ -5599,8 +5609,8 @@ function courtPromo(){
   if(S.spouse&&C.rank===0){say('그대는 이미 '+jo(NPCS[S.spouse].name,'과','와')+' 혼인했군요. 간택에는 나설 수 없어요. 예법 수련은 언제든 와서 해요.');return}
   // 간택은 세자나 공주 가운데 ♥가 찬 쪽의 배필 자리에 나선다. 책봉은 이미 정해진 배필과의 ♥를 본다
   const mates=C.rank?[C.mate]:['prince','princess'],okM=mates.filter(id=>hearts(id)>=q.mate);
-  const ok=[sv('grace')>=q.stat,C.done>=q.done,okM.length>0,hearts(q.npc)>=q.h];tell('court',C.rank+1);
-  const list=m(ok[0])+'기품 '+q.stat+' (지금 '+sv('grace')+')\n'+m(ok[1])+'예법 수련 '+q.done+'번 (지금 '+C.done+'번)\n'
+  const ok=[sv('grace')>=q.stat,C.done>=q.done,okM.length>0,hearts(q.npc)>=q.h,S.level>=RANK_LV[C.rank+1]];tell('court',C.rank+1);
+  const list=m(ok[4])+'레벨 '+RANK_LV[C.rank+1]+' (지금 '+S.level+')\n'+m(ok[0])+'기품 '+q.stat+' (지금 '+sv('grace')+')\n'+m(ok[1])+'예법 수련 '+q.done+'번 (지금 '+C.done+'번)\n'
     +m(ok[2])+mates.map(id=>NPCS[id].name+' ♥'+q.mate+' (지금 ♥'+hearts(id)+')').join(' 또는 ')+'\n'+m(ok[3])+NPCS[q.npc].name+' ♥'+q.h+' (지금 ♥'+hearts(q.npc)+')';
   if(!ok.every(Boolean)){say((C.rank?'책봉 의식을 치르려면':'간택에 나서려면')+' 이만큼은 갖춰야 해요.\n'+list);return}
   if(C.rank){say('때가 되었군요. 책봉 의식은 세 차례예요. 동작의 차례는 한 번까지만 틀려도 돼요.',[['의식을 치를게요',()=>startRite(2,C.mate)],['다음에요',null]]);return}
@@ -5667,8 +5677,8 @@ function kitchenTalk(){
 }
 function promoTalk(){
   const J=JOBS.cook,r=S.job.rank,q=J.need[r+1],d=NPCS.yeon,say=(text,choices)=>dialog({npc:'yeon',who:d.name,text,choices});
-  const ok=[sv('cook')>=q.stat,S.job.served>=q.served,hearts(q.npc)>=q.h],m=v=>v?'✓ ':'✗ ',next=J.ranks[S.sex==='f'?'f':'m'][r+1];tell('cook',r+1);
-  const list=m(ok[0])+'손맛 '+q.stat+' (지금 '+sv('cook')+')\n'+m(ok[1])+'올린 수라상 '+q.served+'번 (지금 '+S.job.served+'번)\n'+m(ok[2])+NPCS[q.npc].name+' ♥'+q.h+' (지금 ♥'+hearts(q.npc)+')';
+  const ok=[sv('cook')>=q.stat,S.job.served>=q.served,hearts(q.npc)>=q.h,S.level>=RANK_LV[r+1]],m=v=>v?'✓ ':'✗ ',next=J.ranks[S.sex==='f'?'f':'m'][r+1];tell('cook',r+1);
+  const list=m(ok[3])+'레벨 '+RANK_LV[r+1]+' (지금 '+S.level+')\n'+m(ok[0])+'손맛 '+q.stat+' (지금 '+sv('cook')+')\n'+m(ok[1])+'올린 수라상 '+q.served+'번 (지금 '+S.job.served+'번)\n'+m(ok[2])+NPCS[q.npc].name+' ♥'+q.h+' (지금 ♥'+hearts(q.npc)+')';
   if(!ok.every(Boolean)){say(next+'의 자리에 오르려면 이만큼은 갖춰야 하네.\n'+list);return}
   say('다 갖췄구먼. 시험은 내가 보는 앞에서 '+jo(ITEMS[J.exam[r]].n,'을','를')+' 짓는 걸세. 불이 띠 위로 오래 넘치면 안 되네. 재료는 내어 주겠네.',[['시험 볼게요',()=>startCook(J.exam[r],true)],['다음에요',null]]);
 }
@@ -5725,14 +5735,14 @@ function openStatus(){
     else{
       const r=S.job.rank,q=J.need[r+1];
       note('수라간의 길: 【'+trackTitle('cook')+'】 · 올린 수라상 '+S.job.served+'번');
-      body.appendChild(el('p','note',q&&!told('cook',r+1)?'다음 자리로 가는 길은 연 상궁에게 "승급 시험"을 물어봐요.':q?'연 상궁에게 들은 다음 자리의 조건: 손맛 '+q.stat+' (지금 '+sv('cook')+') · 수라상 '+q.served+'번 (지금 '+S.job.served+'번) · '+NPCS[q.npc].name+' ♥'+q.h+' (지금 ♥'+hearts(q.npc)+') · 다 갖추면 연 상궁에게 승급 시험을 청해요':'수라간에서 가장 높은 자리에 올랐어요.'+topMore('cook')));
+      body.appendChild(el('p','note',q&&!told('cook',r+1)?'다음 자리로 가는 길은 연 상궁에게 "승급 시험"을 물어봐요.':q?'연 상궁에게 들은 다음 자리의 조건: 레벨 '+RANK_LV[r+1]+' (지금 '+S.level+') ·손맛 '+q.stat+' (지금 '+sv('cook')+') · 수라상 '+q.served+'번 (지금 '+S.job.served+'번) · '+NPCS[q.npc].name+' ♥'+q.h+' (지금 ♥'+hearts(q.npc)+') · 다 갖추면 연 상궁에게 승급 시험을 청해요':'수라간에서 가장 높은 자리에 올랐어요.'+topMore('cook')));
     }
     const C=S.court;
     if(!C){if(heard('court'))note('궁중 예법: 중전마마께서 몸가짐 바른 이에게 궁중의 법도를 가르치신다고 들었어요. 궁궐의 중전을 찾아가 봐요.')}
     else{
       const q=COURT.need[C.rank+1],mates=C.rank?[C.mate]:['prince','princess'];
       body.appendChild(el('p','note','왕실의 길: 【'+trackTitle('court')+'】 · 예법 수련 '+C.done+'번'+(C.rank?' · 날마다 내탕금 '+Math.round(COURT.stipend[C.rank]*mainMul('court'))+'냥':'')));
-      body.appendChild(el('p','note',q&&!told('court',C.rank+1)?'다음 자리로 가는 길은 중전에게 물어봐요.':q?'중전에게 들은 다음 자리의 조건: 기품 '+q.stat+' (지금 '+sv('grace')+') · 예법 수련 '+q.done+'번 (지금 '+C.done+'번) · '+mates.map(id=>NPCS[id].name+' ♥'+q.mate+' (지금 ♥'+hearts(id)+')').join(' 또는 ')
+      body.appendChild(el('p','note',q&&!told('court',C.rank+1)?'다음 자리로 가는 길은 중전에게 물어봐요.':q?'중전에게 들은 다음 자리의 조건: 레벨 '+RANK_LV[C.rank+1]+' (지금 '+S.level+') ·기품 '+q.stat+' (지금 '+sv('grace')+') · 예법 수련 '+q.done+'번 (지금 '+C.done+'번) · '+mates.map(id=>NPCS[id].name+' ♥'+q.mate+' (지금 ♥'+hearts(id)+')').join(' 또는 ')
         +' · '+NPCS[q.npc].name+' ♥'+q.h+' (지금 ♥'+hearts(q.npc)+') · 다 갖추면 중전에게 '+(C.rank?'책봉 의식을':'간택을')+' 청해요':'왕실에서 가장 높은 자리에 올랐어요.'+topMore('court')));
     }
     const M=S.merch;
@@ -5741,7 +5751,7 @@ function openStatus(){
       const q=TRADE.need[M.rank+1],o=M.order;
       body.appendChild(el('p','note','상인의 길: 【'+trackTitle('merch')+'】 · 안목 겨루기 '+M.done+'번 · 납품 '+M.sold+'번'+(rk('merch')?' · 파는 값 +'+rk('merch')*5+'%':'')));
       if(o)body.appendChild(el('p','note','오늘 주문: '+(o.done?'납품을 마쳤어요':(o.royal?'[왕실] ':'')+ITEMS[o.item].n+' '+o.n+'개 → '+won(o.pay)+' (가진 것 '+have(o.item)+'개)')));
-      body.appendChild(el('p','note',q&&!told('merch',M.rank+1)?'다음 자리로 가는 길은 은하에게 "승급 겨루기"를 물어봐요.':q?'은하에게 들은 다음 자리의 조건: 수완 '+q.stat+' (지금 '+sv('trade')+') · 안목 겨루기 '+q.done+'번 (지금 '+M.done+'번) · 납품 '+q.sold+'번 (지금 '+M.sold+'번) · '+NPCS[q.npc].name+' ♥'+q.h+' (지금 ♥'+hearts(q.npc)+') · 다 갖추면 은하에게 승급 겨루기를 청해요':'상인으로서 가장 높은 자리에 올랐어요.'+topMore('merch')));
+      body.appendChild(el('p','note',q&&!told('merch',M.rank+1)?'다음 자리로 가는 길은 은하에게 "승급 겨루기"를 물어봐요.':q?'은하에게 들은 다음 자리의 조건: 레벨 '+RANK_LV[M.rank+1]+' (지금 '+S.level+') ·수완 '+q.stat+' (지금 '+sv('trade')+') · 안목 겨루기 '+q.done+'번 (지금 '+M.done+'번) · 납품 '+q.sold+'번 (지금 '+M.sold+'번) · '+NPCS[q.npc].name+' ♥'+q.h+' (지금 ♥'+hearts(q.npc)+') · 다 갖추면 은하에게 승급 겨루기를 청해요':'상인으로서 가장 높은 자리에 올랐어요.'+topMore('merch')));
     }
     // 걷는 길이 둘 이상이면 어느 이름을 내세울지 고른다
     for(const k in TRACKS){
@@ -5749,10 +5759,10 @@ function openStatus(){
       if(!A){if(heard(k))note(k==='mil'?'무예: 궁궐 궐문을 지키는 무진이 활 잘 쏘는 사람을 눈여겨본다고 들었어요. 무진을 찾아가 봐요.':'글공부: 서당의 훈장이 글 배울 제자를 찾는다고 들었어요. 훈장을 찾아가 봐요.');continue}
       const q=D.need[A.rank+1];
       body.appendChild(el('p','note',D.n+': 【'+trackTitle(k)+'】 · '+D.work+' '+A.done+'번'+(A.rank?' · 날마다 녹봉 '+Math.round(D.stipend[A.rank]*mainMul(k))+'냥':'')));
-      body.appendChild(el('p','note',q&&!told(k,A.rank+1)?'다음 자리로 가는 길은 '+NPCS[D.npc].name+'에게 물어봐요.':q?NPCS[D.npc].name+'에게 들은 다음 자리의 조건: '+STATS[D.stat].n+' '+q.stat+' (지금 '+sv(D.stat)+') · '+D.work+' '+q.done+'번 (지금 '+A.done+'번) · '+q.ex[0]+' '+q.ex[1]+' (지금 '+q.ex[2]()+') · '+NPCS[q.npc].name+' ♥'+q.h+' (지금 ♥'+hearts(q.npc)+') · 다 갖추면 '+NPCS[D.npc].name+'에게 '+jo(D.test[A.rank+1],'을','를')+' 청해요':'이 길에서 가장 높은 자리에 올랐어요.'+topMore(k)));
+      body.appendChild(el('p','note',q&&!told(k,A.rank+1)?'다음 자리로 가는 길은 '+NPCS[D.npc].name+'에게 물어봐요.':q?NPCS[D.npc].name+'에게 들은 다음 자리의 조건: 레벨 '+RANK_LV[A.rank+1]+' (지금 '+S.level+') ·'+STATS[D.stat].n+' '+q.stat+' (지금 '+sv(D.stat)+') · '+D.work+' '+q.done+'번 (지금 '+A.done+'번) · '+q.ex[0]+' '+q.ex[1]+' (지금 '+q.ex[2]()+') · '+NPCS[q.npc].name+' ♥'+q.h+' (지금 ♥'+hearts(q.npc)+') · 다 갖추면 '+NPCS[D.npc].name+'에게 '+jo(D.test[A.rank+1],'을','를')+' 청해요':'이 길에서 가장 높은 자리에 올랐어요.'+topMore(k)));
     }
     // 나쁜 길
-    if(S.rogue){const R=S.rogue,nx=ROGUE.need[R.rank+1];body.appendChild(el('p','note','나쁜 길: 【'+trackTitle('rogue')+'】 · 악명 '+R.inf+(nx?' · 다음 자리 【'+ROGUE.ranks[R.rank+1]+'】까지 악명 '+(nx-R.inf):' · 이 길에서 가장 높은 자리예요')+(ROGUE.rent[R.rank]?' · 날마다 자릿세 '+Math.round(ROGUE.rent[R.rank]*mainMul('rogue'))+'냥':'')+(S.wanted?' · 수배 '+S.wanted:'')+(S.jail?' · 옥살이 '+S.jail+'번':'')))}
+    if(S.rogue){const R=S.rogue,nx=ROGUE.need[R.rank+1];body.appendChild(el('p','note','나쁜 길: 【'+trackTitle('rogue')+'】 · 악명 '+R.inf+(nx?' · 다음 자리 【'+ROGUE.ranks[R.rank+1]+'】까지 악명 '+Math.max(0,nx-R.inf)+(S.level<RANK_LV[R.rank+1]?', 레벨 '+RANK_LV[R.rank+1]+' (지금 '+S.level+')':''):'· 이 길에서 가장 높은 자리예요')+(ROGUE.rent[R.rank]?' · 날마다 자릿세 '+Math.round(ROGUE.rent[R.rank]*mainMul('rogue'))+'냥':'')+(S.wanted?' · 수배 '+S.wanted:'')+(S.jail?' · 옥살이 '+S.jail+'번':'')))}
     else if(S.lore.rogue)note('못된 짓: 이웃집 문 앞에서 못된 짓을 하고 달아나는 이들이 있다고 들었어요. 포졸에게 잡히면 옥에 갇힌대요.');
     const mine=['court','cook','merch','mil','civ','rogue'].filter(k=>trackTitle(k));
     // 본업: 레벨 MAIN_LV부터 걷는 길 가운데 하나를 고른다. 높은 자리에 오르기 전까지는 바꿀 수 있다
@@ -6291,7 +6301,7 @@ const bldOwner=b=>b&&NPCS[b.id]&&NPCS[b.id].at!=='palace'?b.id:null;
 function rogueAdd(n){
   const first=!S.rogue;if(first)S.rogue={rank:0,inf:0};
   const R=S.rogue;R.inf+=n;hear('rogue',true);let up=false;
-  while(R.rank<2&&R.inf>=ROGUE.need[R.rank+1]){R.rank++;up=true;const f=ROGUE.fit[R.rank];if(f&&!S.owned.includes(f))S.owned.push(f)}
+  while(R.rank<2&&R.inf>=ROGUE.need[R.rank+1]&&S.level>=RANK_LV[R.rank+1]){R.rank++;up=true; /* v80: 나쁜 길도 자리마다 레벨이 차야 오른다 */const f=ROGUE.fit[R.rank];if(f&&!S.owned.includes(f))S.owned.push(f)}
   mainRogueUp();
   if(first)setTimeout(()=>{if(S)toast('마을에서 【건달】이라고 수군거려요. 아래 "나"의 "신분"에 적혔어요')},1700);
   else if(up)setTimeout(()=>{if(S){sfx('level');toast('악명이 높아져 이제 【'+ROGUE.ranks[R.rank]+'】라 불려요. '+jo(OUTFITS[ROGUE.fit[R.rank]].n,'을','를')+' 얻었어요 (옷장)')}},1700);
