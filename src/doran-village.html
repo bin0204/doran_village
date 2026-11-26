@@ -1104,6 +1104,7 @@ const WILD=(function(){
 // 서쪽 들판(v109, 사용자 요청: 마을을 넓히자 → 기존 마을은 그대로 두고 서쪽에 새 구역을 붙인다). 사냥터와 같은 장면(scene 'wild')이고 구역 wz는 4.
 // 나무가 드문 너른 풀밭에 둥근 못과 낮은 둔덕이 있고, 순한 짐승만 다니며 들나물과 꽃이 많이 난다. 동쪽 길(W-1,FIELD_Y)로 마을에 돌아간다. 풍경에는 저장되는 상태가 없다
 const FIELD_Y=12,FIELD_HILL=[21,3,31,8],FIELD_ST=[26,8];
+const FFARM=[3,3,17,11],FPAST=[19,15,31,21],FPAST_GATE=[25,14]; /* 밭터 · 목장 · 목장 어귀의 푯말(지도를 만들 때 쓰므로 여기서 먼저 정한다) */
 const FIELD=(function(){
   const tile=[],objAt=[],TREES=[],ROCKS=[],GRASS=[];
   for(let y=0;y<H;y++){tile.push(new Array(W).fill(0));objAt.push(new Array(W).fill(null))}
@@ -1124,6 +1125,9 @@ const FIELD=(function(){
     if(rock){ROCKS.push(o);nR--}else{TREES.push(o);nT--}
     objAt[y][x]=o;
   }
+  /* 밭터(FFARM)와 목장(FPAST) 안의 나무·바위는 치우고, 목장 어귀에 푯말을 세운다 */
+  for(const R of [FFARM,FPAST])for(let y=R[1];y<=R[3];y++)for(let x=R[0];x<=R[2];x++){const o=objAt[y][x];if(o){const a=o.k==='rock'?ROCKS:TREES;a.splice(a.indexOf(o),1);objAt[y][x]=null}}
+  objAt[FPAST_GATE[1]][FPAST_GATE[0]]={t:'pasture',x:FPAST_GATE[0],y:FPAST_GATE[1]};
   for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++)if((tile[y][x]===0||tile[y][x]===12)&&!objAt[y][x])GRASS.push([x,y]);
   return{tile,objAt,TREES,ROCKS,GRASS,SAND:[]};
 })();
@@ -1311,6 +1315,11 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:110,d:'11월 26일',t:'들판의 밭과 목장',l:[
+    '서쪽 들판 북서쪽에 너른 밭터가 생겼어요. 점선 안의 땅은 마을의 내 땅처럼 갈고, 심고, 물 주고, 거둘 수 있어요. 마을 밭보다 훨씬 넓어요.',
+    '들판 밭은 까마귀와 가뭄이 닿지 않아요. 대신 물은 직접 가서 줘야 해요(비 오는 날은 저절로 젖어요).',
+    '들판 남동쪽에는 울타리를 두른 목장이 있어요. 어귀의 푯말에서 가축을 풀어 놓으면 그날은 사료를 주지 않아도 돼요.'
+  ]},
   {v:109,d:'11월 26일',t:'서쪽 들판',l:[
     '마을 서쪽 숲 가장자리에 길목이 생겼어요. 그 길로 나가면 새 구역 "서쪽 들판"이에요. 지금 하던 마을은 그대로이고, 바깥에 새 땅이 붙었어요.',
     '들판은 나무가 드문 너른 풀밭이에요. 토끼·사슴·꿩·고라니 같은 순한 짐승만 살고, 꽃과 들나물이 많이 나요. 둥근 못에서는 낚시를 할 수 있고, 통나무 디딤으로 오르는 둔덕도 있어요.',
@@ -1622,6 +1631,8 @@ function fixState(s){
   s.spec=s.spec&&typeof s.spec==='object'?s.spec:{}; /* 길마다 고른 전문 갈래 {id,st} */
   s.fuse=s.fuse&&typeof s.fuse==='object'?s.fuse:{}; /* 가구의 쓰임을 마지막으로 누린 날 */
   s.fog=s.fog&&typeof s.fog==='object'?s.fog:{}; /* 지도의 안개: 곳마다 가 본 칸 */
+  if(s.farmTown&&typeof s.farmTown==='object'){s.ffarm=s.farm;s.farm=s.farmTown;delete s.farmTown} /* 들판에 있는 채로 저장됐으면 밭을 되돌린다 */
+  s.ffarm=s.ffarm&&typeof s.ffarm==='object'?s.ffarm:{}; /* 서쪽 들판의 밭 */
   if(typeof s.tut!=='number')s.tut=(s.day>1||s.level>1)?-1:0; /* 길라잡이: 새 마을만 0에서 시작, 하던 마을은 끝난 것으로 */
   if(typeof s.name!=='string'||!s.name.trim())s.name='새싹'; /* 이름이 빠진 저장은 "undefined 님"으로 보이지 않게 기본 이름으로 */
   /* 레벨 환산(v84, 사용자 결정: 지금 하는 사람 모두): 예전 곡선(60+40(l-1))으로 올린 레벨을, 모은 경험치 그대로 새 곡선(needXp)으로 다시 센다. 저장마다 한 번만(lvFix).
@@ -1957,7 +1968,9 @@ const EAT={pirami:8,loach:10,ssogari:26,gamulchi:28,jogi:12,galchi:16,neopchi:28
   bangeo:30,mineo:35,muneo:28,abalone:30,f_guk:60,f_tteok:60,f_song:60,f_pat:60,h_bam:22,h_egg:20,d_jjigae:80,j_kimchi:30,j_cheong:40,yeot:25,d_egg:30,d_fish:30,d_kimchi:28,d_jeon:32,d_juk:60,d_meat:45,d_hwachae:50,d_tarak:55,d_sam:120,d_galbi:60,d_jeonbok:75,d_sinseollo:110,d_sanjeok:45,d_mineo:60,d_hwayang:90,d_yaksik:40,d_sujeong:45,d_dasik:70,ginseng:70,egg:12,milk:25,apple:10,persimmon:10,mushroom:6,chestnut:6,turnip:10,carrot:14,strawberry:16,watermelon:30,pumpkin:30,bread:35,meat:20,
   minnow:8,crucian:10,scad:10,smelt:8,mackerel:14,sweetfish:14,catfish:18,salmon:22,carp:25,snapper:30};
 // 내 땅: 집 둘레 서북쪽 풀밭. 이 안의 빈 풀밭은 어디든 밭으로 갈 수 있다
-const inFarm=(x,y)=>x>=FARM[0]&&x<=FARM[2]&&y>=FARM[1]&&y<=FARM[3]&&tile[y][x]===0&&!objAt[y][x];
+/* 들판의 밭터(v110): 서쪽 들판에서는 FFARM 네모 안을 갈 수 있다. 들판에 있는 동안 S.farm은 들판의 밭(S.ffarm)으로 바꿔 끼워 둔다(주울 것 S.pickups와 같은 방식) → 밭 코드는 그대로 쓴다 */
+const farmHere=()=>scene==='town'||(scene==='wild'&&wz===4);
+const inFarm=(x,y)=>{const R=scene==='wild'&&wz===4?FFARM:FARM;return x>=R[0]&&x<=R[2]&&y>=R[1]&&y<=R[3]&&tile[y][x]===0&&!objAt[y][x]};
 const tl=k=>S.tools[k]||0;
 const grown=a=>a.age>=STOCK[a.k].grow;
 // 다 자란 소가 있으면 쟁기를 끌어 줘서 밭 갈기가 수월하다
@@ -2484,7 +2497,7 @@ function buildGround(){
     /* 언덕(v107): 12 위의 풀밭(조금 밝다) · 13 벼랑(돌 벽. 남쪽 줄은 앞면이 보이고, 나머지는 바위 둘레) · 14 돌계단 */
     /* v108(사용자 의견: 돌담처럼 이질적이다): 언덕을 풀 덮인 둔덕으로 다시 그렸다. 위는 둘레 풀밭과 같은 풀빛에 조금만 밝게, 뒤·옆 가장자리는 둥근 풀 둔덕과 흙 턱·덤불(그래서 못 지나감),
        남쪽만 흙 벼랑이 보이고, 계단은 흙에 박은 통나무 디딤 */
-    const hillG=()=>{c.fillStyle=(x+y)%2?G[0]:G[1];c.fillRect(px,py,T,T)},hillTex=()=>{c.fillStyle='rgba(255,255,230,.1)';c.fillRect(px,py,T,T);for(let i=0;i<7;i++){const a=hash(x*5+i*13+1,y*7+i*3),b=hash(y*11+i*7+2,x*3+i);dot(px+a*30,py+b*30,2,2,i%3===0?'rgba(255,255,220,.18)':i%3===1?G[2]:'rgba(40,60,30,.12)')}};
+    const hillG=()=>{c.fillStyle=(x+y)%2?G[0]:G[1];c.fillRect(px,py,T,T)},hillTex=()=>{c.fillStyle='rgba(255,255,230,.2)';c.fillRect(px,py,T,T);for(let i=0;i<7;i++){const a=hash(x*5+i*13+1,y*7+i*3),b=hash(y*11+i*7+2,x*3+i);dot(px+a*30,py+b*30,2,2,i%3===0?'rgba(255,255,220,.18)':i%3===1?G[2]:'rgba(40,60,30,.12)')}};
     const isHill=(a,b)=>{const q=tile[b]&&tile[b][a];return q===12||q===13||q===14};
     if(t===12){hillG();hillTex();if(h<.4){const gx=px+4+h*40,gy=py+8+h2*14;dot(gx,gy,2,4,G[2]);dot(gx+4,gy+2,2,2,G[2])}}
     if(t===13){
@@ -2493,16 +2506,25 @@ function buildGround(){
       if(front){
         /* 흙 벼랑: 위에는 풀이 넘어오고, 흙 켜가 가로로 지고, 아래는 풀밭으로 스민다 */
         const x0=px+(oL?6:0),w0=T-(oL?6:0)-(oR?6:0);
-        rr(c,x0,py,w0,T-6,[0,0,oR?10:0,oL?10:0],'#8a7658');
-        for(let j=0;j<3;j++){c.fillStyle=j%2?'#9a8566':'#7a684c';for(let i=0;i<w0;i+=6)if(hash(x*6+i,y*5+j)>.35)c.fillRect(x0+i,py+7+j*6+Math.round(hash(x+i,j)*2),Math.min(5,w0-i),2)}
-        c.fillStyle=(x+y)%2?G[0]:G[1];c.fillRect(x0,py,w0,5);c.fillStyle='rgba(255,255,230,.1)';c.fillRect(x0,py,w0,5);
+        rr(c,x0,py,w0,T-2,[0,0,oR?10:0,oL?10:0],'#8a7658');
+        for(let j=0;j<4;j++){c.fillStyle=j%2?'#9a8566':'#7a684c';for(let i=0;i<w0;i+=6)if(hash(x*6+i,y*5+j)>.3)c.fillRect(x0+i,py+7+j*6+Math.round(hash(x+i,j)*2),Math.min(5,w0-i),2)}
+        c.fillStyle='rgba(50,35,20,.18)';c.fillRect(x0,py+14,w0,T-16);c.fillStyle='rgba(50,35,20,.3)';c.fillRect(x0,py+T-8,w0,6); /* 아래로 갈수록 어두워 높이가 읽힌다 */
+        c.fillStyle=(x+y)%2?G[0]:G[1];c.fillRect(x0,py,w0,5);c.fillStyle='rgba(255,255,230,.2)';c.fillRect(x0,py,w0,5);
         c.fillStyle=G[2];for(let i=0;i<w0;i+=4)c.fillRect(x0+i,py+4,2,2+Math.round(hash(x*9+i,y)*3));
-        c.fillStyle='rgba(60,45,25,.25)';c.fillRect(x0+2,py+T-9,w0-4,3);
       }else{
         /* 뒤·옆 가장자리: 흙 턱 위로 둥글게 솟은 풀 둔덕과 덤불 */
-        const r=[oL&&oU?16:0,oR&&oU?16:0,oR&&oD?16:0,oL&&oD?16:0],ix=px+(oL?5:0),iy=py+(oU?5:0),iw=T-(oL?5:0)-(oR?5:0),ih=T-(oU?5:0)-(oD?5:0);
-        rr(c,ix-2,iy-2,iw+4,ih+4,r.map(v=>v?v+2:0),'#8a7658');rr(c,ix,iy,iw,ih,r,(x+y)%2?G[0]:G[1]);rr(c,ix,iy,iw,ih,r,'rgba(255,255,230,.1)');
-        for(let i=0;i<3;i++){const a=hash(x*3+i*7+2,y*5+i),b=hash(y*3+i*5+1,x*7+i),bx=ix+4+a*(iw-10),by2=iy+5+b*(ih-12);circ(c,bx,by2,5,'#3f743c');circ(c,bx+4,by2+1,4,'#4d8548');circ(c,bx-1,by2-2,2,'#6aa25e')}
+        /* v110(사용자 의견: 둔덕 느낌이 하나도 안 난다): 덤불 테두리를 없애고 높이가 읽히게 다시 그렸다. 옆 가장자리는 바깥쪽으로 흙 비탈이 내려가고(아래로 갈수록 어둡다),
+           뒤 가장자리는 얇은 턱과 밝은 테, 위의 풀밭은 더 밝다. 남쪽 벼랑은 위에서 따로 그린다 */
+        const sw=oL||oR?13:0,sh=oU?7:0,r=[oL&&oU?14:0,oR&&oU?14:0,oR&&oD?14:0,oL&&oD?14:0];
+        const ix=px+(oL?sw:0),iy=py+sh,iw=T-(oL?sw:0)-(oR?sw:0),ih=T-sh;
+        if(oL||oR){const ex=oL?px+2:px+T-sw-2;rr(c,ex,py+(oU?5:0),sw+2,T-(oU?5:0),oL?[oU?12:0,0,0,oD?12:0]:[0,oU?12:0,oD?12:0,0],'#8a7658');
+          for(let j=0;j<5;j++){c.fillStyle=j%2?'#9a8566':'#7a684c';const yy=py+(oU?9:3)+j*6;if(yy<py+T-2)c.fillRect(ex+(oL?1:3),yy,sw-3,2)}
+          c.fillStyle='rgba(50,35,20,.28)';c.fillRect(oL?px+2:px+T-5,py+(oU?10:0),3,T-(oU?10:0))}
+        if(oU){rr(c,ix-1,py+2,iw+2,sh+4,[r[0],r[1],0,0],'#7a684c')}
+        rr(c,ix,iy,iw,ih,[r[0]?10:0,r[1]?10:0,0,0],(x+y)%2?G[0]:G[1]);rr(c,ix,iy,iw,ih,[r[0]?10:0,r[1]?10:0,0,0],'rgba(255,255,230,.2)');
+        c.fillStyle='rgba(255,255,235,.5)';if(oU)c.fillRect(ix+(r[0]?8:0),iy,iw-(r[0]?8:0)-(r[1]?8:0),2);if(oL)c.fillRect(ix,iy+(r[0]?8:0),2,ih-(r[0]?8:0));
+        c.fillStyle='rgba(40,60,30,.25)';if(oR)c.fillRect(ix+iw-2,iy+(r[1]?8:0),2,ih-(r[1]?8:0));
+        if(oD&&!front){c.fillStyle='#8a7658';c.fillRect(ix,py+T-12,iw,12);c.fillStyle='rgba(50,35,20,.3)';c.fillRect(ix,py+T-5,iw,5)}
       }
     }
     if(t===14){
@@ -2562,6 +2584,17 @@ function buildGround(){
       if(t===3&&sea<3){const h3=hash(x*5+1,y*7+9);if(h3>.8){const lx=px+10+h2*10,ly=py+12+h*10;dot(lx-4,ly-2,8,6,'#4f9d52');dot(lx-2,ly-4,6,2,'#4f9d52');dot(lx-2,ly+4,6,2,'#4f9d52');dot(lx+2,ly,4,2,'#5b9bb8');dot(lx-2,ly-2,2,2,'#72c480');if(h3>.93&&sea<2){dot(lx-2,ly-2,4,4,'#f6a3c4');dot(lx,ly,2,2,'#ffe27a')}}}
     }
     if(t===5){c.fillStyle='#c79a66';c.fillRect(px,py+2,T,T-4);c.fillStyle='#a87a48';for(let i=0;i<4;i++)c.fillRect(px+i*8,py+4,2,T-8);c.fillStyle='#8a5a34';c.fillRect(px,py,T,4);c.fillRect(px,py+T-4,T,4)}
+  }
+  if(scene==='wild'&&wz===4){
+    /* 들판의 밭터: 갈 수 있는 땅을 옅은 흙빛으로 물들이고 네 귀에 말뚝. 목장: 나무 울타리를 두르고 어귀에 푯말 */
+    const fr=FFARM,ps=FPAST;c.fillStyle='rgba(150,110,60,.13)';c.fillRect(fr[0]*T,fr[1]*T,(fr[2]-fr[0]+1)*T,(fr[3]-fr[1]+1)*T);
+    c.strokeStyle='rgba(120,85,45,.5)';c.lineWidth=2;c.setLineDash([8,6]);c.strokeRect(fr[0]*T+1,fr[1]*T+1,(fr[2]-fr[0]+1)*T-2,(fr[3]-fr[1]+1)*T-2);c.setLineDash([]);
+    for(const [a,b] of [[fr[0],fr[1]],[fr[2]+1,fr[1]],[fr[0],fr[3]+1],[fr[2]+1,fr[3]+1]]){rr(c,a*T-3,b*T-12,6,14,2,'#7a5230');rr(c,a*T-2,b*T-11,2,12,1,'#9a6a3e')}
+    const x0=ps[0]*T,y0=ps[1]*T,x1=(ps[2]+1)*T,y1=(ps[3]+1)*T,gx=FPAST_GATE[0]*T;
+    c.fillStyle='#8a5a34';for(const yy of [y0-6,y0-1,y1-6,y1-1]){c.fillRect(x0,yy,gx-T-x0,2.5);c.fillRect(gx+T*2,yy,x1-gx-T*2,2.5);if(yy>y0+T)c.fillRect(gx-T,yy,T*3,2.5)}
+    for(const xx of [x0-1,x1-2])for(const dy of [0,5]){c.fillRect(xx+dy-2,y0-6,2.5,y1-y0+6)}
+    c.fillStyle='#6b4a2a';for(let xx=x0;xx<=x1;xx+=T){if(xx>gx-T&&xx<gx+T*2)continue;c.fillRect(xx-2,y0-12,4,14);c.fillRect(xx-2,y1-12,4,14)}for(let yy=y0;yy<=y1;yy+=T){c.fillRect(x0-2,yy-12,4,14);c.fillRect(x1-2,yy-12,4,14)}
+    {const sx=gx+T/2,sy=FPAST_GATE[1]*T+T;rr(c,sx-2,sy-24,4,22,1,'#6b4a2a');rr(c,sx-13,sy-30,26,13,2,'#9a6a3e');rr(c,sx-11,sy-28,22,9,1,'#e9d8a8');c.fillStyle='#6b4a2a';c.fillRect(sx-7,sy-25,14,1.5);c.fillRect(sx-7,sy-22,9,1.5)}
   }
   for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(tile[y][x]===6){
     const px=x*T,py=y*T,h=hash(x,y);
@@ -3080,7 +3113,7 @@ function renderTown(c){
   const x0=Math.max(0,Math.floor(cam.x/T)-1),x1=Math.min(W-1,Math.ceil((cam.x+view.w)/T)+1),y0=Math.max(0,Math.floor(cam.y/T)-2),y1=Math.min(H-1,Math.ceil((cam.y+view.h)/T)+2);
   for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const t=tile[y][x];if(t===3||t===4){const h=hash(x,y),ox=Math.sin(now*1.2+h*6.28)*4,X=x*T+5+h*10+ox,Y=y*T+9+hash(y,x)*14;c.fillStyle='rgba(255,255,255,.4)';c.fillRect(Math.round(X/2)*2,Math.round(Y/2)*2,10,2)}}
   const inTown=scene==='town';
-  if(inTown)for(const k in S.farm){const xy=k.split(',');drawPlot(c,+xy[0],+xy[1],S.farm[k])}
+  if(inTown||(scene==='wild'&&wz===4))for(const k in S.farm){const xy=k.split(',');drawPlot(c,+xy[0],+xy[1],S.farm[k])}
   // 허수아비 가까이 가면 지키는 넓이를 점선으로 보여 준다
   if(inTown&&S.pens.scare&&S.pens.scare.done&&Math.abs(S.pens.scare.x-rx(P))+Math.abs(S.pens.scare.y-ry(P))<3){
     const s=S.pens.scare;c.setLineDash([5,4]);c.lineWidth=1.5;c.strokeStyle='rgba(255,240,150,.7)';c.strokeRect((s.x-4)*T+1,(s.y-4)*T+1,9*T-2,9*T-2);c.setLineDash([]);
@@ -3730,7 +3763,7 @@ function updPlayer(dt){
 // 이웃의 나들이(v69): 제자리 둘레만 맴돌지 않고, 가끔 다른 곳(다른 이웃의 자리, 건물 문 근처, 저마다의 단골 자리 spots)으로 걸어가 한동안 머물다가 돌아온다.
 // N[id].spot=지금 머무는 곳(없으면 제자리), .stay=머물 남은 시간, .path=가는 길. 얼마나 멀리 가는지는 NPCS[id].roam으로 정한다(가게 주인은 1이라 가까이만).
 // 밭·문 칸은 밟지 않고, 문 바로 앞 칸에는 서 있지 않는다(드나드는 길을 막지 않게). 날이 바뀌면 nextDay가 모두 제자리로 돌려놓는다
-const npcStepOk=(x,y)=>x>=0&&y>=0&&x<W&&y<H&&walkable(x,y)&&!isDoor(x,y)&&!(scene==='town'&&S.farm[x+','+y]);
+const npcStepOk=(x,y)=>x>=0&&y>=0&&x<W&&y<H&&walkable(x,y)&&!isDoor(x,y)&&!(farmHere()&&S.farm[x+','+y]);
 function npcPath(sx,sy,goal,max){
   const key=(x,y)=>y*64+x,prev=new Map(),q=[[sx,sy,0]];prev.set(key(sx,sy),null);
   for(let i=0;i<q.length&&i<1600;i++){
@@ -3791,7 +3824,7 @@ function updNpcs(dt){
     const [dx,dy]=pick(DIRS),nx=n.x+dx,ny=n.y+dy,home=NPCS[id].anchor,a=n.spot||home,rm=a===home?NPCS[id].roam||3:2;
     // 제자리 둘레를 벗어나는 걸음은 딛지 않는다. 다만 (나에게 다가오느라) 이미 벗어나 있으면 돌아가는 쪽 걸음은 딛는다
     if((Math.abs(nx-a[0])>rm||Math.abs(ny-a[1])>rm)&&Math.abs(nx-a[0])+Math.abs(ny-a[1])>=Math.abs(n.x-a[0])+Math.abs(n.y-a[1]))continue;
-    if(!walkable(nx,ny)||npcOn(nx,ny)||beastOn(nx,ny)||herdOn(nx,ny)||(nx===P.x&&ny===P.y)||(scene==='town'&&S.farm[nx+','+ny])||isDoor(nx,ny))continue;
+    if(!walkable(nx,ny)||npcOn(nx,ny)||beastOn(nx,ny)||herdOn(nx,ny)||(nx===P.x&&ny===P.y)||(farmHere()&&S.farm[nx+','+ny])||isDoor(nx,ny))continue;
     n.dir=[dx,dy];n.fx=n.x;n.fy=n.y;n.x=nx;n.y=ny;n.t=0;
   }
 }
@@ -3808,7 +3841,7 @@ function targetAt(x,y){
     if(x<0||y<0||x>=W||y>=H)return null;
     const o=objAt[y][x];if(o)return o;
     const t=tile[y][x];if((t===3||t===4)&&scene!=='sea')return{t:'water',sea:t===4}; // 먼바다에서는 물이 지나다니는 길이다 (낚시는 물고기 떼에서만)
-    if(scene==='town'&&S.farm[x+','+y])return{t:'soil',x,y};
+    if(farmHere()&&S.farm[x+','+y])return{t:'soil',x,y};
     return null;
   }
   if(mate&&mateId&&x===mate.x&&y===mate.y)return{t:'npc',id:mateId};
@@ -3824,7 +3857,7 @@ function faceTarget(){
   if(!tg||tg.t==='water'){const b=beastInLine();if(b)return{x:b.x,y:b.y,tg:{t:'beast',b}}}
   // 밭일은 서 있는 칸이 먼저다. 예전에는 바라보는 칸이 먼저라, 가고 싶은 칸까지 걸어가서 행동하면 한 칸 앞이 갈렸다("한 칸씩 밀린다"는 말을 들었다).
   // 차례: 발밑 밭에 할 일 → 바라보는 밭에 할 일 → 발밑 풀밭 갈기 → 바라보는 풀밭 갈기 → 할 일 없는 밭 살피기. 흰 테두리가 이 칸을 따라간다
-  if(scene==='town'&&(!tg||tg.t==='soil')){
+  if(farmHere()&&(!tg||tg.t==='soil')){
     const here=S.farm[P.x+','+P.y]?{t:'soil',x:P.x,y:P.y}:tillable(P.x,P.y)?{t:'till',x:P.x,y:P.y,d:P.dir}:null;
     const me=here&&{x:P.x,y:P.y,tg:here},front=tg?{x:fx,y:fy,tg}:null;
     if(here&&here.t==='till'&&soilSides(P.x,P.y)>=3)return me; /* 밭 한가운데 남은 빈칸은 옆 밭보다 먼저 */
@@ -3905,6 +3938,7 @@ function act(tg,x,y){
   case 'beast':startHunt(tg.b);break;
   case 'peer':peerMenu(tg.p);break;
   case 'cave':caveTalk();break;
+  case 'pasture':grazeTalk();break;
   case 'hboard':openHunt();break;
   case 'sgate':gateTalk();break;
   case 'spring':springAct();break;
@@ -4815,12 +4849,21 @@ function spawnField(){
 function enterField(){
   if(scene!=='town'||WEST_Y<0)return;
   scene='wild';wz=4;useMap(FIELD);townBeasts=beasts;S.pickTown=S.pickups;S.pickups=S.fpick||fieldPickups();S.away='field';
+  S.farmTown=S.farm;S.farm=S.ffarm||{};S.pickups=S.pickups.filter(p=>!S.farm[p.x+','+p.y]); /* 밭을 들판 것으로 바꿔 끼운다 */
   spawnField();miniRef=null;buildGround();mg=null;fishing=null;drops=[];warp(W-2,FIELD_Y,[-1,0]);syncPlace();hud();S.seenField=1;
   toast('서쪽 들판에 들어왔어요. 동쪽 길로 나가면 마을이에요');
   tip('field','들판에는 순한 짐승만 살아요. 들나물과 꽃이 많이 나고, 둥근 못에서는 낚시를, 둔덕 위에서는 멀리 내려다볼 수 있어요');
 }
+/* 목장(v110): 들판의 울타리 친 풀밭. 어귀의 푯말에서 가축을 풀어 놓으면(S.graze=그날) 그날은 사료를 주지 않아도 배불리 먹은 것으로 치고(dayStock), 가축들과 조금 가까워진다. 하루에 한 번 */
+function grazeTalk(){
+  const n=S.stock.length;
+  if(!n){dialog({who:'들판 목장',text:'울타리를 두른 너른 풀밭이에요. 닭이나 소를 기르게 되면 여기에 풀어 놓을 수 있어요.\n(가축은 목수의 조수 바우에게 닭장·외양간을 지은 뒤 들여요.)'});return}
+  if(S.graze===S.day){dialog({who:'들판 목장',text:'가축들이 풀을 뜯으며 한가롭게 거닐고 있어요. 오늘은 사료를 주지 않아도 돼요.'});return}
+  dialog({who:'들판 목장',text:'가축 '+n+'마리를 풀어 놓을까요? 오늘 하루 들판의 풀을 실컷 뜯어서, 사료를 주지 않아도 배불리 먹은 것으로 쳐요.',choices:[['풀어 놓기',()=>{S.graze=S.day;addXp(3+n);sfx('heart');toast('가축 '+n+'마리를 들판에 풀어 놓았어요. 오늘은 사료가 필요 없어요');saveAll()}],['그만',null]]});
+}
 function leaveField(quiet){
   if(scene!=='wild'||wz!==4)return;
+  if(S.farmTown){S.ffarm=S.farm;S.farm=S.farmTown;delete S.farmTown}
   fieldBeasts=beasts;S.fpick=S.pickups;wz=0;scene='town';useMap(TOWN);beasts=townBeasts;S.pickups=S.pickTown||[];delete S.pickTown;S.away=null;
   miniRef=null;buildGround();mg=null;fishing=null;drops=[];if(!quiet)warp(1,WEST_Y,[1,0]);syncPlace();hud();
 }
@@ -7334,7 +7377,7 @@ function updMilk(m,dt){
 function dayStock(msgs){
   let eggs=0,hungry=false;
   for(const a of S.stock){
-    const d=STOCK[a.k],pen=S.pens[d.pen],fed=!!(pen&&pen.fed);
+    const d=STOCK[a.k],pen=S.pens[d.pen],fed=!!(pen&&pen.fed)||S.graze===S.day-1; /* 어제 들판 목장에 풀어 놓았으면 먹이를 준 것으로 친다(v110) */
     if(!fed)hungry=true;
     a.love=clamp(a.love+(fed?3:-6),0,100);a.pet=false;a.age++;
     if(a.age===d.grow)msgs.push(jo(a.n,'이','가')+' 다 자랐어요');
@@ -7683,13 +7726,15 @@ function nextDay(forced){
   S.en=forced?Math.round(maxEn()*.7):maxEn();
   // 집 없이 짚자리에서 잔 밤: 기력이 덜 찬다. 비를 맞으며 잤으면 더 덜 찬다 (이때의 날씨는 아직 어젯밤 것)
   const campNight=S.camp&&!wakeQ&&!stay?(S.weather==='rain'?2:1):0;if(campNight)S.en=Math.round(S.en*(campNight===2?.7:.85));
+  /* 들판의 밭(v110)도 밤사이 자란다: 물 준 작물은 제철이면 하루 자라고, 빈 밭은 나흘 지나면 풀밭으로 돌아간다. 까마귀와 가뭄은 들판까지 오지 않는다 */
+  {const sw=season();for(const k in S.ffarm||{}){const p=S.ffarm[k];if(p.c){if(p.w&&CROPS[p.c]&&CROPS[p.c].s.includes(sw))p.g++}else if(++p.e>=4)delete S.ffarm[k]}}
   S.day++;S.min=360;
   // 오늘 날씨는 어제 정해 둔 것(wNext)이고, 내일 날씨를 새로 정해 둔다. 솟대가 서 있으면 아침에 알려 준다
   S.weather=S.wNext||rollW(S.day);S.wNext=rollW(S.day+1);
   // 날씨 사건: 비 갠 다음 날은 무지개, 맑은 날이 나흘 이어지면 가뭄, 그 밖의 맑은 날은 가끔 바람 (겨울에는 없다)
   S.dry=S.weather==='sun'?(S.dry|0)+1:0;
   S.wx=S.weather!=='sun'||season()===3?null:prevW==='rain'?'rainbow':S.dry>=4?'drought':Math.random()<.15?'wind':null;
-  for(const k in S.farm)S.farm[k].w=S.weather==='rain';
+  for(const k in S.farm)S.farm[k].w=S.weather==='rain';for(const k in S.ffarm||{})S.ffarm[k].w=S.weather==='rain';
   for(const t of S.trees)t.h=0;for(const r of S.rocks)r.h=0;
   spawnPickups(S);rollShop(S);rollQuests(S);rollGlints();
   if(S.wx==='wind')windDrops();
