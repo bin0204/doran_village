@@ -1257,10 +1257,14 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:85,d:'11월 26일',t:'레벨에 맞는 장비만',l:[
+    '레벨을 다시 세면서 내 레벨보다 높은 장비를 걸치고 있었다면, 들어올 때 벗겨서 장비 창에 넣어 둬요. 없어지지 않고, 그 레벨이 되면 다시 걸칠 수 있어요.',
+    '길에서 받은 장비는 레벨과 상관없이 그대로 걸쳐요.'
+  ]},
   {v:84,d:'11월 26일',t:'레벨 다시 세기',l:[
     '레벨 오르는 걸음이 느려진 데 맞춰, 지금까지 모은 경험치를 새 기준으로 다시 세어 레벨을 고쳤어요. 예를 들어 레벨 23은 14, 레벨 10은 7이 돼요. 마을마다 처음 들어올 때 한 번만 바뀌어요.',
     '스탯과 길의 자리, 옷, 장비, 집, 돈은 그대로예요. 다만 스탯 점수는 예전 레벨을 다시 넘어설 때부터 받아요.',
-    '레벨이 내려가면서 레벨 조건이 있는 곳(눈고개 등)과 새 장비 걸치기는 그 레벨이 될 때까지 잠깐 닫힐 수 있어요. 이미 걸친 장비는 그대로 써요.'
+    '레벨이 내려가면서 레벨 조건이 있는 곳(눈고개 등)과 새 장비 걸치기는 그 레벨이 될 때까지 잠깐 닫힐 수 있어요.'
   ]},
   {v:83,d:'11월 26일',t:'축지 장승 · 시설 옮기기',l:[
     '사냥터와 마을을 잇는 축지 장승을 세울 수 있어요. 목수 모루에게 "짓기·고치기"로 터를 잡고, 나무 40·돌 30·쇳돌 10·깃털 6과 1,500냥을 모아 넣은 뒤 못질로 마무리해요.',
@@ -1460,6 +1464,8 @@ function fixState(s){
     if(l<L){s.lvOld=[L,x0];s.lvPaid=L;s.lvNote=[L,l];s.level=l;s.xp=x}
     s.lvFix=1;
   }
+  /* 레벨이 모자란 장비는 벗긴다(v85, 사용자 요청): 없애지 않고 장비 창에 둔다. 그 레벨이 되면 다시 걸친다. 길의 장비(route)는 레벨이 아니라 길로 걸치는 것이라 그대로. lvOff=들어갈 때 한 번 알릴 것 */
+  if(s.gear&&s.gear.on)for(const k in s.gear.on){const id=s.gear.on[k],G=GEAR[id];if(G&&!G.route&&(G.lv|0)>(s.level|0)){(s.lvOff=s.lvOff||[]).push(id);delete s.gear.on[k]}}
   // 마을 씨앗(seed): 0이면 처음 만든 모양의 마을(예전 저장), 아니면 그 씨앗으로 지은 마을. gen은 생성기 판 번호. 이 함수는 그 마을이 지어진 뒤(buildTown)에 불러야 한다
   s.seed=s.seed>>>0;s.gen=s.seed?(s.gen|0)||1:0;
   for(let i=0;i<TOWN.TREES.length;i++)if(!s.trees[i])s.trees[i]={d:1,h:0};
@@ -9132,6 +9138,7 @@ function showNew(saved){
 function begin(st){
   townSeed=-1;buildTown(st.seed>>>0);kidKey=''; // 그 마을의 모양부터 새로 짓는다 (저장의 밭·나무 번호는 그 모양에 맞춰져 있다. 새로 지어야 남의 다리가 남지 않는다)
   S=fixState(st);fogRef=null;if(S.inQ){swapQ();S.inQ=0}
+  if(S.lvOff){const q=S.lvOff;delete S.lvOff;setTimeout(()=>{if(S)toast('레벨이 모자란 장비 '+q.length+'가지('+q.slice(0,3).map(id=>GEAR[id].n).join(', ')+(q.length>3?' 등':'')+')를 벗어 장비 창에 넣어 뒀어요. 그 레벨이 되면 다시 걸칠 수 있어요')},5500)}
   if(S.lvNote){const q=S.lvNote;delete S.lvNote;setTimeout(()=>{if(S)toast('레벨을 새 기준으로 다시 셌어요: 레벨 '+q[0]+' → '+q[1]+'. 스탯·자리·옷·장비는 그대로예요. 스탯 점수는 레벨 '+q[0]+'을 넘어설 때부터 다시 받아요')},2500)} /* 궁궐 처소 안에서 저장된 채 끝났으면 방 정보를 집 것으로 되돌린다 */
   S.sound=false;S.bgm=false;bgmStop(); /* 소리는 열 때마다 꺼진 채로 시작한다(사용자 요청). 설정 창에서 켠다 */
   applyBridges();syncRouteGear(true);started=true;$('title').hidden=true;scene='town';
