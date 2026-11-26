@@ -203,6 +203,7 @@ ul.help{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
     <canvas id="cv" tabindex="0" aria-label="마을 화면"></canvas>
     <div id="fade"></div>
     <div id="toasts" aria-live="polite"></div>
+    <div id="tut" style="display:none"></div>
     <button id="actBtn" type="button" aria-label="행동하기">행동</button>
     <button id="undoBtn" type="button" hidden>되돌리기</button>
     <div id="dlg" hidden>
@@ -1268,6 +1269,11 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:95,d:'11월 26일',t:'처음 하는 사람을 위한 길라잡이',l:[
+    '새 마을을 시작하면 조작법을 다섯 걸음으로 알려 줘요. 걷기, 행동(나무 흔들기), 가방 열기, 이웃에게 말 걸기, 하루 보내기 차례예요.',
+    '걸음마다 화면 왼쪽 아래에 짧은 글이 뜨고, 해 보면 바로 다음으로 넘어가요. 과일나무와 이웃 위에는 붉은 화살표가 떠요. 언제든 "건너뛰기"를 누를 수 있어요.',
+    '이미 하던 마을에는 뜨지 않아요. "설정"의 "길라잡이 · 다시 보기"로 언제든 다시 볼 수 있어요.'
+  ]},
   {v:94,d:'11월 26일',t:'동굴: 곡괭이질과 화약통',l:[
     '바위를 캘 때 곡괭이를 휘두르는 모습이 보여요. 뒤로 젖혔다가 내리찍는 순간 바위가 깨지고 돌 부스러기와 불똥이 튀어요. 광맥과 마을 바위를 캘 때도 같아요.',
     '화약통이 생겼어요. 목수 모루에게 "화약통 빚기"를 청하면 쇳돌 1·돌 3·나무 2와 30냥에 하나를 빚어 줘요.',
@@ -1510,6 +1516,7 @@ function fixState(s){
   s.spec=s.spec&&typeof s.spec==='object'?s.spec:{}; /* 길마다 고른 전문 갈래 {id,st} */
   s.fuse=s.fuse&&typeof s.fuse==='object'?s.fuse:{}; /* 가구의 쓰임을 마지막으로 누린 날 */
   s.fog=s.fog&&typeof s.fog==='object'?s.fog:{}; /* 지도의 안개: 곳마다 가 본 칸 */
+  if(typeof s.tut!=='number')s.tut=(s.day>1||s.level>1)?-1:0; /* 길라잡이: 새 마을만 0에서 시작, 하던 마을은 끝난 것으로 */
   if(typeof s.name!=='string'||!s.name.trim())s.name='새싹'; /* 이름이 빠진 저장은 "undefined 님"으로 보이지 않게 기본 이름으로 */
   /* 레벨 환산(v84, 사용자 결정: 지금 하는 사람 모두): 예전 곡선(60+40(l-1))으로 올린 레벨을, 모은 경험치 그대로 새 곡선(needXp)으로 다시 센다. 저장마다 한 번만(lvFix).
      lvOld=[환산 전 레벨,경험치](되돌릴 때 쓸 값), lvPaid=스탯 점수를 이미 받은 레벨(그 레벨을 넘어설 때부터 다시 준다), lvNote=들어갈 때 한 번 알릴 것. 스탯·자리·옷·장비는 그대로 둔다 */
@@ -2984,7 +2991,7 @@ function renderTown(c){
     c.strokeStyle='#f7c531';c.lineWidth=2;c.beginPath();c.arc(bx,by,13+Math.sin(now*5)*1.5,0,7);c.stroke();
     labels.push(()=>label(c,bx,by-32,'쏠 수 있어요'));
   }}
-  drawBombs(c);drawMg(c,labels);drawShots(c);drawPk(c);
+  drawBombs(c);drawMg(c,labels);drawShots(c);drawPk(c);drawTut(c);
   if(fishing){
     const f=fishing,rl=f.phase==='reel',thr=rl&&f.thr===2;
     let bx=f.bx*T+16,by=f.by*T+16;
@@ -3600,7 +3607,7 @@ const soilSides=(x,y)=>DIRS.reduce((a,d)=>a+(S.farm[(x+d[0])+','+(y+d[1])]?1:0),
 function act(tg,x,y){
   switch(tg.t){
   case 'npc':talk(tg.id);break;
-  case 'tree':if(tg.k==='pine')startChop(tg);else startShake(tg);break;
+  case 'tree':tutMark('act');if(tg.k==='pine')startChop(tg);else startShake(tg);break;
   case 'rock':startMine(tg);break;
   case 'beast':startHunt(tg.b);break;
   case 'peer':peerMenu(tg.p);break;
@@ -3929,7 +3936,7 @@ function mgEnd(){
   touch();
 }
 function updMg(dt){
-  updShots(dt);updPk(dt);updBombs(dt);
+  updShots(dt);updPk(dt);updBombs(dt);updTut();
   if(drops.length){
     for(const d of drops)d.t+=dt*1.7;
     for(const d of drops)if(d.t>=1){S.pickups.push({x:d.x,y:d.y,id:d.id});if(P.x===d.x&&P.y===d.y&&P.t>=1)grab(S.pickups.length-1)}
@@ -8436,7 +8443,7 @@ function talk(id){
   else if(h>=5&&!st.m5){st.m5=true;addCoins(500);text=d.m5+'\n(500냥을 받았어요.)';sfx('heart')}
   else if(rumorOf(id)){const ru=rumorOf(id);text=ru[3];hear(ru[0])} /* 때가 된 소문이 있으면 이번 말은 그 이야기 */
   else text=S.spouse===id&&Math.random()<.7?pick(d.wed.lines):S.weather==='rain'&&Math.random()<.35?d.rain:S.min>=1200&&Math.random()<.4?d.night:pick(d.lines[h>=4?2:h>=2?1:0]);
-  touch();
+  touch();tutMark('talk');
   const ch=[],q=S.quests.find(q=>q.npc===id&&!q.done);
   if(q)ch.push(['부탁 듣기',()=>questTalk(id,q)]);
   ch.push(['선물하기',()=>openGift(id)]);
@@ -8568,8 +8575,55 @@ function openSettings(){
     row(body,badge('♬'),'배경 음악',[S.bgm?'지금 켜져 있어요':'지금 꺼져 있어요 · 효과음과 따로 켜요','옛 5음 음계로 새로 지은 가락이에요. 낮·밤·궁궐·사냥터마다 달라요'],[[S.bgm?'끄기':'켜기',()=>{S.bgm=!S.bgm;bgmTick();openSettings()}]]);
     body.appendChild(el('p','note','소리는 게임을 열 때마다 꺼진 채로 시작해요.'));
     if(touchDev)row(body,badge('✥'),'조작키',padOn?'화면 왼쪽 아래에 방향 단추가 보여요':'방향 단추를 감췄어요. 가고 싶은 곳을 눌러서 걸어요',[[padOn?'끄기':'켜기',()=>{padOn=!padOn;try{localStorage.setItem('doran-village-keys',padOn?'1':'0')}catch(e){}syncKeys();openSettings()}]]);
+    row(body,badge('길'),'길라잡이','처음 하는 사람을 위한 조작 안내예요. 걷기·행동·가방·이웃·하루를 차례로 해 봐요',[['다시 보기',()=>{S.tut=0;tutM=null;closeModal();tutSync();touch()}]]);
     body.appendChild(el('p','note','이름 바꾸기와 마을 옮기기는 "나"의 "신분" 창에 있어요.'));
   });
+}
+// ───────── 처음 하는 사람을 위한 길라잡이 (v95, 사용자 요청) ─────────
+// 새 마을에서 한 번, 조작법을 다섯 걸음으로 맛보인다(걷기 → 행동 → 가방 → 이웃 → 하루). 걸음마다 화면 왼쪽 아래에 짧은 글이 뜨고, 해 보면 바로 다음으로 넘어간다. 언제든 건너뛸 수 있다.
+// S.tut=지금 걸음(0~4), -1이면 끝났거나 건너뜀. 이미 하던 마을(이틀째 이후나 레벨 2 이상)은 -1로 시작한다(fixState). 설정에서 다시 볼 수 있다.
+// tutM=이번 걸음에서 한 일(저장하지 않는다). 걷기는 updTut이 칸 수를 세고, 나머지는 그 일을 하는 곳에서 tutMark로 알린다(행동=나무, 가방=openBag, 이웃=말 걸기)
+const TUT=[
+  {t:'걷기',d:()=>touchDev?'가고 싶은 곳을 눌러서 걸어 봐요.':'방향키(또는 W·A·S·D)로 걸어 봐요. 가고 싶은 곳을 눌러도 돼요.',ok:m=>m.walk>=5},
+  {t:'행동',d:()=>'과일나무(붉은 화살표) 앞에 서서 '+(touchDev?'오른쪽 아래 "행동" 단추를':'스페이스 키를')+' 눌러 흔들어 봐요. 떨어진 열매는 그 위를 지나가면 주워요.',ok:m=>m.act},
+  {t:'가방',d:()=>'아래 "가방"을 눌러 주운 것을 봐요. 먹을 것은 가방에서 먹어 기력을 채워요.',ok:m=>m.bag},
+  {t:'이웃',d:()=>npcOut()?'이웃(붉은 화살표)에게 다가가 행동을 눌러 말을 걸어 봐요. 선물을 주고 부탁을 들어주면 가까워져요.':'이웃들은 아침 6시 반에 집에서 나와요. 나오면 다가가 행동을 눌러 말을 걸어 봐요. 밤 10시에는 다시 들어가요.',ok:m=>m.talk},
+  {t:'하루',d:()=>'해가 지면 '+(S.camp?'짚자리':'집의 이부자리')+'에서 행동을 눌러 자요. 자면 하루가 넘어가고 기력이 차요. 이제 마음대로 살아 봐요!',ok:m=>m.fin,btn:'알겠어요'}
+];
+const tutEl=$('tut');let tutM=null;
+tutEl.style.cssText='display:none;position:absolute;left:8px;bottom:8px;z-index:3;max-width:min(470px,calc(100% - 96px));background:rgba(251,245,230,.97);border:1.5px solid var(--line);border-radius:12px;padding:8px 10px;font-size:14px;line-height:1.45;color:#33261c;box-shadow:0 2px 8px rgba(0,0,0,.2);gap:8px;align-items:center';
+function tutMark(k){if(tutM&&S&&S.tut>=0)tutM[k]=1}
+function tutSync(){
+  const on=!!S&&started&&S.tut>=0&&S.tut<TUT.length;
+  tutEl.style.display=on?'flex':'none';if(!on){tutM=null;return}
+  const q=TUT[S.tut];if(!tutM)tutM={walk:0,px:P.x,py:P.y};
+  tutEl.textContent='';
+  const tx=el('div',null,'');tx.style.flex='1';tx.appendChild(el('b',null,'길라잡이 '+(S.tut+1)+'/'+TUT.length+' · '+q.t+' '));tx.appendChild(document.createTextNode(q.d()));tutEl.appendChild(tx);
+  const b=el('button','btn'+(q.btn?' pri':''),q.btn||'건너뛰기');b.type='button';b.style.flex='none';
+  b.onclick=()=>{if(q.btn)tutMark('fin');else tutEnd(true);cv.focus({preventScroll:true})};tutEl.appendChild(b);
+}
+function tutEnd(skip){
+  S.tut=-1;tutM=null;tutSync();touch();
+  toast(skip?'길라잡이를 건너뛰었어요. "설정"에서 다시 볼 수 있어요':'길라잡이 끝! 아래 "기록"의 "길잡이"에 레벨마다 할 수 있는 일이 적혀 있어요');
+}
+function updTut(){
+  if(!S||!started||!(S.tut>=0)){if(tutEl.style.display!=='none')tutEl.style.display='none';return}
+  if(!tutM||tutEl.style.display==='none'){tutSync();return}
+  if(P.x!==tutM.px||P.y!==tutM.py){tutM.walk++;tutM.px=P.x;tutM.py=P.y}
+  if(S.tut===3){const o=npcOut();if(tutM.out!==o){tutM.out=o;tutSync()}} /* 이웃이 집에서 나오고 들어감에 따라 글을 바꾼다 */
+  if(!TUT[S.tut].ok(tutM)||mg)return; /* 하던 놀이(나무 흔들기)가 끝난 뒤에 넘어간다 */
+  S.tut++;tutM=null;sfx('pick');touch();
+  if(S.tut>=TUT.length)tutEnd(false);else tutSync();
+}
+/* 길라잡이의 화살표: 행동 걸음에는 가장 가까운 열매 달린 과일나무, 이웃 걸음에는 가장 가까운 이웃 위에 */
+function drawTut(c){
+  if(!S||!(S.tut===1||S.tut===3)||scene!=='town'||mg)return;
+  let t=null,best=1e9;
+  if(S.tut===1){for(const o of TREES){if(o.k==='pine'||!S.trees[o.i]||S.trees[o.i].d>S.day)continue;const d=Math.abs(o.x-P.x)+Math.abs(o.y-P.y);if(d<best){best=d;t=[o.x,o.y,-52]}}}
+  else if(npcOut())for(const id of TOWN_IDS){if(!npcHere(id))continue;const n=N[id],d=Math.abs(n.x-P.x)+Math.abs(n.y-P.y);if(d<best){best=d;t=[rx(n),ry(n),-40]}}
+  if(!t)return;
+  const x=(t[0]+.5)*T,y=t[1]*T+t[2]+Math.sin(now*6)*4;
+  poly(c,[x-10,y-13,x+10,y-13,x,y+3],'#fffbe8');poly(c,[x-7,y-11,x+7,y-11,x,y],'#d9412e');
 }
 function closeModal(){if($('modal').hidden)return;$('modal').hidden=true;cv.focus({preventScroll:true})}
 function row(body,ic,name,sub,acts){
@@ -8580,6 +8634,7 @@ function row(body,ic,name,sub,acts){
 }
 function cellOf(kind,k,sub,tag){const c=el(tag||'div','cell');if(tag)c.type='button';c.appendChild(icon(kind,k));c.appendChild(el('b',null,(kind==='item'?ITEMS:FURN)[k].n));c.appendChild(el('small',null,sub));return c}
 function openBag(){
+  tutMark('bag');
   openModal('가방',body=>{
     body.appendChild(el('p','note',S.day+'일째 · '+S.name+' · '+rankName()+' · '+HOUSES[S.house-1].n+' · 아늑함 '+comfort()));
     const ids=Object.keys(S.inv);
