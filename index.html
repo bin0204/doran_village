@@ -1282,6 +1282,12 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:104,d:'11월 26일',t:'모든 일에 팔과 발',l:[
+    '일을 하는 동안 내내 팔이 보여요. 낚시하는 동안은 낚싯대를 들고 있고, 나무 베기는 도끼, 못질·대장간·떡메는 망치, 나무 흔들기·요리·젖 짜기·글공부 같은 일은 손을 뻗고 있어요.',
+    '연장을 휘두르는 순간에는 발도 같이 디뎌요.',
+    '사람·나무·건물·가구 아래의 그림자를 없앴어요. 화면이 한결 깔끔해요.',
+    '바다가 달라졌어요. 뭍에서 멀어질수록 짙어지는 푸른 띠가 지고, 물비늘이 가로로 반짝이고, 모래밭과 닿는 곳에 흰 물거품이 일어요.'
+  ]},
   {v:103,d:'11월 26일',t:'물과 나무, 점무늬 그늘',l:[
     '물빛을 가라앉히고 잔물결 줄을 넣었어요.',
     '소나무는 짙은 솔빛에 왼쪽은 빛, 오른쪽은 그늘이 지고, 과일나무는 줄기와 가지가 보이고 잎 뭉치가 가지마다 따로 달려요.',
@@ -2301,7 +2307,7 @@ function bake(w,h,ox,oy,rx,ry,draw,outline){
   for(let i=0;i<lw*lh;i++){
     const a=d[i*4+3];
     if(a>=128){d[i*4+3]=255;solid[i]=1}
-    else if(a>=24&&d[i*4]+d[i*4+1]+d[i*4+2]<90){d[i*4]=d[i*4+1]=d[i*4+2]=0;d[i*4+3]=((i%lw)+(i/lw|0))&1?104:0} // 그림자는 점무늬로 찍는다(v103: 옛 도트 그림의 그늘)
+    else if(a>=24&&d[i*4]+d[i*4+1]+d[i*4+2]<90){d[i*4]=d[i*4+1]=d[i*4+2]=0;d[i*4+3]=0} // 그림자는 찍지 않는다(v104, 사용자 의견: 그림자가 어디에나 있어서 별로다. v103의 점무늬 그림자도 뺌. 다시 넣지 말 것)
     else d[i*4+3]=0;
   }
   if(outline!==false)for(let y=0;y<lh;y++)for(let x=0;x<lw;x++){
@@ -2438,7 +2444,15 @@ function buildGround(){
     }
     if(t===3||t===4||t===5){
       c.fillStyle=t===4?(y>=24?'#3d7fa6':'#4689ae'):'#5b9bb8';c.fillRect(px,py,T,T); /* v103: 물빛을 가라앉히고 잔물결 줄을 넣는다 */
-      for(let i=0;i<4;i++){const a=hash(x*7+i*11+3,y*5+i*2),b=hash(y*9+i*5+1,x*3+i*7);dot(px+a*24,py+4+b*24,i%2?6:4,2,i%2?'rgba(255,255,255,.2)':'rgba(20,50,80,.16)')}
+      if(t===4){
+        /* 바다(v104, 사용자 요청: 단조롭다): 뭍에서 멀어질수록 짙어지는 띠, 가로로 반짝이는 물비늘, 뭍과 닿는 곳의 흰 물거품 */
+        let dp=0;while(dp<4&&y-dp-1>=0&&!land(x,y-dp-1))dp++;if(y-dp-1<0)dp=4;
+        const SEA=['#7fd3ea','#4fb6e2','#2f9ad8','#2384cc','#1c74bd'];
+        c.fillStyle=SEA[dp];c.fillRect(px,py,T,T);
+        if(dp<4){c.fillStyle=SEA[dp+1];for(let i=0;i<T;i+=4)if(hash(x*4+i,y*3+dp)>.45)c.fillRect(px+i,py+T-4-(hash(x+i,y)>.5?2:0),4,6)} /* 띠의 경계를 들쭉날쭉하게 */
+        for(let i=0;i<6;i++){const a=hash(x*7+i*11+3,y*5+i*2),b=hash(y*9+i*5+1,x*3+i*7);dot(px+a*22,py+2+b*26,i%3===0?10:i%3===1?6:4,2,i%2?'rgba(255,255,255,.5)':dp<2?'rgba(255,255,255,.28)':'rgba(120,200,255,.35)')}
+        if(dp===0){c.fillStyle='#ffffff';for(let i=0;i<T;i+=4){const k=2+Math.round(hash(x*8+i,y*2+1)*4);c.fillRect(px+i,py,4,k)}c.fillStyle='rgba(255,255,255,.6)';for(let i=0;i<T;i+=8)if(hash(x*5+i,y*7)>.4)c.fillRect(px+i,py+8+Math.round(hash(x+i,y*3)*4),6,2)}
+      }else for(let i=0;i<4;i++){const a=hash(x*7+i*11+3,y*5+i*2),b=hash(y*9+i*5+1,x*3+i*7);dot(px+a*24,py+4+b*24,i%2?6:4,2,i%2?'rgba(255,255,255,.2)':'rgba(20,50,80,.16)')}
       if(land(x,y-1)){c.fillStyle='rgba(30,80,110,.28)';c.fillRect(px,py,T,6);c.fillStyle='rgba(255,255,255,.55)';c.fillRect(px,py,T,2)}
       c.fillStyle='rgba(255,255,255,.4)';
       if(land(x-1,y))c.fillRect(px,py,2,T);if(land(x+1,y))c.fillRect(px+T-2,py,2,T);if(land(x,y+1))c.fillRect(px,py+T-2,T,2);
@@ -3071,7 +3085,7 @@ function renderTown(c){
     for(const bx of [15,20]){const X=bx*T+16;rr(c,X-1,2,2,14,1,'#8a5a34');poly(c,[X+1,2,X+11,6,X+1,10],'#d9412e');circ(c,X,18,4,'#f3ead6')}
     if(ry(P)<5)labels.push(()=>label(c,17.5*T+16,30,'▲ 포구로 돌아가는 뱃길'));
   }
-  list.push([ry(P)+.2,()=>emoDraw(c,px,afloat?py-5:py,myEmo,now-myEmoAt,fy=>drawChar(c,px,fy,playerLook(),P.dir,P.t<1&&!afloat,now*stepPace()))]);
+  list.push([ry(P)+.2,()=>emoDraw(c,px,afloat?py-5:py,myEmo,now-myEmoAt,fy=>drawChar(c,px,fy,playerLook(),P.dir,(P.t<1||!!useS||!!pkS)&&!afloat,now*stepPace()))]); /* 연장을 휘두를 때는 발도 디딘다(v104) */
   headRects.length=0;headStack(c,labels,px,py,tagIt(),rps&&rps.done?RPS[rps.me]:rps&&(rps.st==='pick'||rps.st==='show')?'냈어요':'',now-mySayAt<5?mySay:'',myEmo&&now-myEmoAt<EMO_T?EMO[myEmo][1]:'');
   // 같이 하는 친구들
   for(const p of peers){
@@ -3721,9 +3735,19 @@ function useTool(tg,x,y){
   return null;
 }
 function updUse(dt){if(useS&&(useS.t-=dt)<=0)useS=null}
+/* 하고 있는 동안 내내 들고 있는 자세(v104, 사용자 요청: 모든 행동에 팔이 나와야 한다): 낚시하는 동안은 낚싯대, 놀이마다 그 연장을 든 팔이 계속 보이고 살짝 까딱인다.
+   휘두르는 순간(useS)이 있으면 그것이 먼저다. 새 놀이를 넣으면 HOLD_TOOL에 한 줄 */
+const HOLD_TOOL={chop:'axe',shake:'hand',build:'hammer',forge:'hammer',mine:'hammer',plane:'hand',pour:'hand',pound:'hammer',haul:'hand',milk:'hand',cook:'hand',salt:'hand',kindle:'hand',study:'hand',rite:'hand',eye:'hand',haggle:'hand',tuho:'hand',jegi:'hand',yut:'hand',catch:'hand',scoop:'hand',dol:'hand'};
+function holdPose(){
+  const f=[P.x+P.dir[0],P.y+P.dir[1]];
+  if(fishing)return{t:USE_T*(.5+.08*Math.sin(now*3)),x:f[0],y:f[1],tool:'rod'};
+  if(mg&&HOLD_TOOL[mg.kind]){const o=mg.o&&mg.o.x!=null?mg.o:null,sw=HOLD_TOOL[mg.kind]==='hand'?.5+.12*Math.sin(now*5):.42+.1*Math.sin(now*4);return{t:USE_T*(1-sw),x:o?o.x:f[0],y:o?o.y:f[1],tool:HOLD_TOOL[mg.kind]}}
+  return null;
+}
 function drawUse(c){
-  if(!useS||pkS||(mg&&mg.kind==='hunt'))return;
-  const s=useS,u=1-s.t/USE_T,px=(rx(P)+.5)*T,py=(ry(P)+.9)*T,tx=(s.x+.5)*T,ty=(s.y+.5)*T,a0=Math.atan2(ty-(py-16),tx-px)||0,sw=Math.sin(u*Math.PI);
+  if(pkS||(mg&&mg.kind==='hunt'))return;
+  const s=useS||holdPose();if(!s)return;
+  const u=1-s.t/USE_T,px=(rx(P)+.5)*T,py=(ry(P)+.9)*T,tx=(s.x+.5)*T,ty=(s.y+.5)*T,a0=Math.atan2(ty-(py-16),tx-px)||0,sw=Math.sin(u*Math.PI);
   const swing=s.tool==='hoe'||s.tool==='axe'||s.tool==='hammer',r=swing?9:s.tool==='hand'?8+sw*7:10,ha=swing?a0-1.1+u*u*1.5:a0,h=[px+Math.cos(ha)*r,py-17+Math.sin(ha)*r*.8];
   drawArm(c,h);
   c.save();c.translate(h[0],h[1]);
