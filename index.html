@@ -1247,6 +1247,10 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:77,d:'11월 26일',t:'길마다 전문 갈래',l:[
+    '걷는 길마다 전문 갈래를 하나씩 골라 깊이 팔 수 있어요. 수라간은 탕과 찜·구이와 전·병과와 음청, 무관은 궁술·검술·창술처럼 길마다 세 갈래가 있어요.',
+    '레벨 8부터, 그 길에서 다음 자리에 오른 뒤에 "나"의 "신분" 창에서 골라요. 레벨과 일 횟수가 차면 입문에서 숙련, 달인으로 저절로 올라요.',
+    '갈래마다 붙는 힘이 달라요. 달인이 되면 그 갈래만의 재주가 생겨요(검술 달인은 더 깊이 베고, 창술 달인은 세 칸 앞까지 닿아요).']},
   {v:76,d:'11월 26일',t:'맞붙어 싸우기',l:[
     '짐승과 붙어 있으면 활 대신 맞붙어요. 칼이나 창을 걸쳤으면 그것으로, 아니면 맨손으로 싸워요. 짐승이 덤벼들면 고리가 좁혀 오는데, 두 고리가 겹치는 순간 행동을 눌러 받아쳐요.',
     '칼과 창은 한 번에 깊이 들어가고, 창은 두 칸 앞까지 닿아요. 맨손은 약하지만 무기 없이도 싸울 수 있어요. 때를 놓치면 내가 다치고, 센 짐승은 덤비는 척 속이기도 해요.',
@@ -1402,6 +1406,7 @@ function fixState(s){
   s.inv=s.inv||{};s.furn=s.furn||{};s.placed=s.placed||[];s.trees=s.trees||[];s.rocks=s.rocks||[];
   s.plots=s.plots||[];s.npcs=s.npcs||{};s.known=s.known||{};s.quests=s.quests||[];s.shopFurn=s.shopFurn||[];
   s.gseen=s.gseen||{}; /* 길잡이에서 이미 본 일 */
+  s.spec=s.spec&&typeof s.spec==='object'?s.spec:{}; /* 길마다 고른 전문 갈래 {id,st} */
   // 마을 씨앗(seed): 0이면 처음 만든 모양의 마을(예전 저장), 아니면 그 씨앗으로 지은 마을. gen은 생성기 판 번호. 이 함수는 그 마을이 지어진 뒤(buildTown)에 불러야 한다
   s.seed=s.seed>>>0;s.gen=s.seed?(s.gen|0)||1:0;
   for(let i=0;i<TOWN.TREES.length;i++)if(!s.trees[i])s.trees[i]={d:1,h:0};
@@ -1603,7 +1608,70 @@ const MAIN={
 };
 const mainTier=k=>S&&S.main&&S.main.k===k?S.main.tier|0:0;
 const rk=k=>{const A=routeOf(k);return A?A.rank+mainTier(k):0}; /* 본업의 높은 자리까지 더한 품계: 길의 혜택을 셈할 때 쓴다 */
-const mainMul=k=>S&&S.main&&S.main.k===k?1.25+.25*(S.main.tier|0):1; /* 본업의 수고비·녹봉 배수 */
+const mainMul=k=>(S&&S.main&&S.main.k===k?1.25+.25*(S.main.tier|0):1)*(1+specPay(k)); /* 본업의 수고비·녹봉 배수 × 전문 갈래의 덤 */
+// ───────── 전문 갈래 (v77) ─────────
+// 걷는 길마다 세 갈래 가운데 하나를 골라 깊이 판다(S.spec[길]={id,st}). 레벨 SPEC_LV부터, 그 길에서 다음 자리(rank 1)에 오른 뒤에 고른다.
+// 단계 st: 1 입문 → 2 숙련 → 3 달인. 레벨과 그 길의 일 횟수(나쁜 길은 악명)가 차면 저절로 오른다(specSync). 입문일 때만 다른 갈래로 바꿀 수 있다.
+// fx=단계마다 붙는 덤(장비 효과와 같은 열쇠라 gearFx가 함께 센다) · fx3=달인이 되면 더 붙는 덤 · pay=단계마다 그 길의 수고비·녹봉이 느는 비율
+// mw=맞붙을 때 그 무기로 받아칠 틈이 단계마다 느는 초 · m=달인만의 재주를 적은 말(셈은 specMaster를 부르는 자리에 있다)
+const SPEC_LV=8,SPEC_ST=[null,{n:'입문'},{n:'숙련',lv:12,done:15,inf:30},{n:'달인',lv:18,done:35,inf:70}];
+const SPEC={
+  cook:[{id:'tang',n:'탕과 찜',d:'국물과 찜에 밝아져요. 불 조절이 쉬워지고, 든든한 음식 덕에 기력이 늘어요.',fx:{cook:.03,en:5},fx3:{en:10},pay:.08},
+    {id:'gui',n:'구이와 전',d:'굽고 지지는 솜씨가 늘어요. 불 조절이 쉬워지고 물건을 더 비싸게 팔아요.',fx:{cook:.03,sell:.03},fx3:{sell:.05},pay:.08},
+    {id:'byeong',n:'병과와 음청',d:'떡과 한과, 화채에 밝아져요. 달콤한 솜씨로 사람들과 빨리 가까워져요.',fx:{cook:.02,friend:.06},fx3:{friend:.1},pay:.08}],
+  mil:[{id:'bow',n:'궁술',d:'활을 깊이 익혀요. 사냥 과녁이 커져요.',fx:{aim:.8},fx3:{dmg:1},m:'화살이 한 번에 더 깊이 박혀요',pay:.06},
+    {id:'sword',n:'검술',d:'칼을 깊이 익혀요. 칼로 맞붙을 때 받아칠 틈이 길어지고 덜 다쳐요.',fx:{guard:.06},mw:{sword:.01},m:'칼로 한 번에 더 깊이 베요',pay:.06},
+    {id:'spear',n:'창술',d:'창을 깊이 익혀요. 창으로 맞붙을 때 받아칠 틈이 길어지고 덜 다쳐요.',fx:{guard:.04},mw:{spear:.012},m:'창이 세 칸 앞까지 닿아요',pay:.06}],
+  civ:[{id:'gyeong',n:'경학',d:'옛 글을 깊이 읽어요. 무엇이든 빨리 배워서 경험치를 더 얻어요.',fx:{xp:.04},fx3:{xp:.06},pay:.08},
+    {id:'simun',n:'시문',d:'시와 글씨를 닦아요. 글로 사람의 마음을 얻어 빨리 가까워지고, 귀한 것도 잘 눈에 띄어요.',fx:{friend:.06,luck:.02},fx3:{friend:.08},pay:.08},
+    {id:'yul',n:'율학',d:'법과 셈에 밝아져요. 녹봉이 크게 늘고 물건 값도 잘 받아요.',fx:{sell:.03},fx3:{sell:.04},pay:.14}],
+  merch:[{id:'bobu',n:'보부상',d:'먼 길을 다니는 장사예요. 걸음이 빨라지고 물건 값을 더 받아요.',fx:{spd:.03,sell:.03},fx3:{luck:.05},pay:.06},
+    {id:'gaekju',n:'객주',d:'물건을 크게 떼어 파는 장사예요. 파는 값을 크게 올려 받아요.',fx:{sell:.05},fx3:{sell:.06},pay:.08},
+    {id:'sijeon',n:'시전',d:'가게를 지키는 장사예요. 단골이 늘어 빨리 가까워지고 귀한 물건이 잘 들어와요. 수고비도 많이 늘어요.',fx:{luck:.03,friend:.04},fx3:{luck:.05},pay:.12}],
+  court:[{id:'yeak',n:'예악',d:'예법과 음악을 닦아요. 몸가짐이 고와져 사람들과 빨리 가까워져요.',fx:{friend:.06},fx3:{friend:.08},pay:.08},
+    {id:'sallim',n:'궁 살림',d:'궁 안 살림을 맡아요. 내탕금이 크게 늘고 기력이 늘어요.',fx:{en:6},fx3:{en:10},pay:.14},
+    {id:'uijang',n:'의장',d:'행차와 호위의 법도를 익혀요. 덜 다치고 귀한 것이 잘 눈에 띄어요.',fx:{guard:.05,luck:.03},fx3:{luck:.05},pay:.08}],
+  rogue:[{id:'jumeok',n:'주먹패',d:'주먹으로 이름을 날려요. 맨손으로 맞붙을 때 받아칠 틈이 길어지고 덜 다쳐요.',fx:{guard:.06},mw:{fist:.012},m:'맨손으로 한 번에 더 세게 쳐요',pay:.06},
+    {id:'bam',n:'밤손님',d:'발소리 없이 다녀요. 걸음이 빨라지고 귀한 것이 잘 눈에 띄어요.',fx:{spd:.04,luck:.04},fx3:{luck:.06},pay:.06},
+    {id:'jarit',n:'자릿세패',d:'구역을 넓혀요. 자릿세가 크게 늘고 기력이 늘어요.',fx:{en:5},fx3:{en:8},pay:.2}]
+};
+const specOf=k=>{const q=S&&S.spec&&S.spec[k];if(!q||!SPEC[k])return null;const B=SPEC[k].find(b=>b.id===q.id);return B?{B,st:clamp(q.st|0,1,3)}:null};
+function specPay(k){const q=specOf(k);return q&&routeOf(k)?(q.B.pay||0)*q.st:0}
+const specFx=key=>{let v=0;if(S&&S.spec)for(const k in S.spec){const q=specOf(k);if(!q||!routeOf(k))continue;v+=(q.B.fx[key]||0)*q.st+(q.st>=3&&q.B.fx3?q.B.fx3[key]||0:0)}return v};
+const specMw=w=>{let v=0;if(S&&S.spec)for(const k in S.spec){const q=specOf(k);if(q&&routeOf(k)&&q.B.mw&&q.B.mw[w])v+=q.B.mw[w]*q.st}return v};
+const specMaster=(k,id)=>{const q=specOf(k);return !!q&&!!routeOf(k)&&q.B.id===id&&q.st>=3};
+const specProg=k=>k==='rogue'?(S.rogue?S.rogue.inf|0:0):(MAIN[k].done()|0);
+const specNeed=(k,n)=>k==='rogue'?'악명 '+n.inf+' (지금 '+specProg(k)+')':MAIN[k].dn+' '+n.done+'번 (지금 '+specProg(k)+'번)';
+/* 갈래의 덤을 글로: st 단계에서 붙는 것 */
+function specTxt(B,st){
+  const a=[];for(const key in B.fx){const v=B.fx[key]*st+(st>=3&&B.fx3&&B.fx3[key]||0);if(FX_TXT[key])a.push(FX_TXT[key](Math.round(v*100)/100))}
+  if(st>=3&&B.fx3)for(const key in B.fx3)if(!(key in B.fx)&&FX_TXT[key])a.push(FX_TXT[key](B.fx3[key]));
+  if(B.mw)for(const w in B.mw)a.push('받아칠 틈 +'+(B.mw[w]*st).toFixed(3)+'초');
+  if(B.pay)a.push('이 길의 수고비·녹봉 +'+Math.round(B.pay*st*100)+'%');
+  if(st>=3&&B.m)a.push(B.m);
+  return a.join(' · ');
+}
+/* 레벨과 일 횟수가 찼으면 다음 단계로 올린다. hud가 부른다 */
+function specSync(){
+  if(!S.spec)return;
+  for(const k in S.spec){
+    const q=S.spec[k];if(!q||!SPEC[k]||!routeOf(k))continue;const B=SPEC[k].find(b=>b.id===q.id);if(!B)continue;
+    while((q.st|0)<3){
+      const n=SPEC_ST[(q.st|0)+1];if(S.level<n.lv||specProg(k)<(k==='rogue'?n.inf:n.done))break;
+      q.st=(q.st|0)+1;const st=q.st;touch();
+      setTimeout(()=>{if(S){sfx('level');toast('【'+B.n+' '+SPEC_ST[st].n+'】에 올랐어요! '+(st===3&&B.m?'달인의 재주: '+B.m:'갈래의 힘이 더 세졌어요')+' ("나"의 "신분")')}},900);
+    }
+  }
+}
+function pickSpec(k,id){
+  S.spec=S.spec||{};const A=routeOf(k),B=SPEC[k]&&SPEC[k].find(b=>b.id===id),cur=S.spec[k];
+  if(!A||!B||S.level<SPEC_LV||A.rank<1||(cur&&(cur.st|0)>1))return;
+  if(cur&&cur.id===id){toast('이미 '+jo(B.n,'을','를')+' 닦고 있어요');return}
+  closeModal();
+  const n2=SPEC_ST[2],n3=SPEC_ST[3];
+  dialog({who:MAIN[k].n+' · '+B.n,text:B.d+'\n· 입문: '+specTxt(B,1)+'\n· 숙련(레벨 '+n2.lv+', '+specNeed(k,n2)+'): '+specTxt(B,2)+'\n· 달인(레벨 '+n3.lv+', '+specNeed(k,n3)+'): '+specTxt(B,3)+'\n(입문 단계에서는 다른 갈래로 바꿀 수 있어요. 숙련에 오르면 바꿀 수 없어요.)',
+    choices:[['이 갈래로 간다',()=>{S.spec[k]={id,st:1};sfx('level');specSync();hud();saveAll();toast('【'+B.n+' 입문】 · '+MAIN[k].n+'에서 '+jo(B.n,'을','를')+' 닦기 시작했어요');openStatus()}],['다른 갈래를 볼게요',()=>openStatus()]]});
+}
 /* 신분 창: 으뜸 자리에 오른 길 옆에 붙이는 한마디 (본업 이야기를 들었거나 골랐을 때만) */
 const topMore=k=>!(S.main||heard('main')||S.level>=MAIN_LV)||mainTier(k)>=MAIN_TIERS.length?'':S.main&&S.main.k===k?' 본업이라 더 높은 자리가 열려 있어요(아래 "본업").':S.main&&S.main.tier?'':' 본업으로 삼으면 더 높은 자리가 열려요.';
 const baseTitle=k=>k==='rogue'?(S.rogue?ROGUE.ranks[S.rogue.rank]:null):k==='court'?(S.court?courtTitle():null):k==='cook'?(S.job?JOBS.cook.ranks[S.sex==='f'?'f':'m'][S.job.rank]:null):k==='merch'?(S.merch?TRADE.ranks[S.merch.rank]:null):TRACKS[k]&&S[k]?TRACKS[k].ranks[S[k].rank]:null;
@@ -3055,6 +3123,7 @@ function float(txt,x,y){floats.push({txt:jz(txt),x:x!=null?x:(P.x+.5)*T,y:y!=nul
 function hud(){
   if(!S)return;
   if(started)syncRouteGear(); /* 길에서 자리가 올랐으면 그 자리의 장비를 받는다 */
+  if(started)specSync(); /* 전문 갈래의 단계가 찼으면 올린다 */
   syncGuide();syncAsk();
   {const b=$('hSeason'),t=SEASONS[season()]+' '+((S.day-1)%7+1)+'일';if(b.textContent!==t)b.textContent=t;b.style.setProperty('--sc',SEASON_COL[season()])}
   $('hDay').textContent=(S.weather==='rain'?(season()===3?'눈':'비'):S.wx==='drought'?'가뭄':S.wx==='wind'?'바람':S.wx==='rainbow'?'무지개':'맑음')+(isMarket()?' · 장날':'')+(fest()?' · '+fest().n:'')+(cupDay()?' · 사냥 대회':'')+(scene==='cave'&&cave?' · 동굴 '+cave.floor+'층':'')+(scene==='sea'?' · 먼바다':'')+(scene==='resort'?' · 운종가':'')+(scene==='wild'&&wz?(wz===2?' · 금원':wz===3?' · 눈고개':' · 깊은 산'):'')+(mailNew()?' · 편지 '+mailNew():'');
@@ -5626,7 +5695,7 @@ function openStatus(){
       else{
         if(M){
           const D=MAIN[M.k],q=MAIN_TIERS[M.tier],A=routeOf(M.k);
-          note('본업: '+D.n+' 【'+trackTitle(M.k)+'】 · 수고비·녹봉 '+mainMul(M.k)+'배'+(M.tier?' · 높은 자리 '+M.tier+'/'+MAIN_TIERS.length:''));
+          note('본업: '+D.n+' 【'+trackTitle(M.k)+'】 · 수고비·녹봉 '+Math.round(mainMul(M.k)*100)/100+'배'+(M.tier?' · 높은 자리 '+M.tier+'/'+MAIN_TIERS.length:''));
           note(!q?'본업의 맨 꼭대기에 올랐어요.':A.rank<2?'먼저 이 길의 으뜸 자리에 올라야 더 높은 자리가 열려요.'
             :M.k==='rogue'?'다음 자리 【'+D.titles()[M.tier]+'】: 악명 '+q.inf+' (지금 '+A.inf+') · 레벨 '+q.lv+' (지금 '+S.level+'). 갖추면 저절로 올라요.'
             :!told('main',M.tier+1)?'더 높은 자리는 궁궐의 '+kn+'에게 "높은 자리 청하기"로 물어봐요.'
@@ -5640,6 +5709,22 @@ function openStatus(){
         }else note('높은 자리에 오른 뒤라 본업은 바꿀 수 없어요.');
       }
     }
+    // 전문 갈래: 걷는 길마다 하나씩. 그 길에서 다음 자리에 오른 뒤, 레벨 SPEC_LV부터 고른다
+    {const can=mine.filter(k=>SPEC[k]&&routeOf(k));
+      if(can.length&&(S.level>=SPEC_LV||Object.keys(S.spec||{}).length)){
+        body.appendChild(el('p','sub','전문 갈래'));
+        if(S.level<SPEC_LV)note('레벨 '+SPEC_LV+'이 되면 걷는 길마다 전문 갈래를 하나씩 골라 깊이 팔 수 있어요. (지금 레벨 '+S.level+')');
+        else for(const k of can){
+          const A=routeOf(k),q=specOf(k),nm=MAIN[k].n;
+          if(!q&&A.rank<1){note(nm+': 이 길에서 다음 자리에 오르면 갈래를 고를 수 있어요.');continue}
+          if(q){const nx=SPEC_ST[q.st+1];note(nm+': 【'+q.B.n+' '+SPEC_ST[q.st].n+'】 · '+specTxt(q.B,q.st)+(nx?' · 다음 단계 '+nx.n+': 레벨 '+nx.lv+' (지금 '+S.level+'), '+specNeed(k,nx)+'. 갖추면 저절로 올라요.':' · 이 갈래의 끝까지 왔어요.'))}
+          if(!q||q.st===1){
+            const t=el('div','tabs');t.style.flexWrap='wrap';
+            for(const B of SPEC[k]){const b=el('button','btn'+(q&&q.B.id===B.id?' on':''),B.n);b.type='button';b.onclick=()=>pickSpec(k,B.id);t.appendChild(b)}
+            body.appendChild(t);note(q?'입문 단계에서는 다른 갈래로 바꿀 수 있어요.':nm+'의 갈래를 골라요. 누르면 설명이 나와요.');
+          }
+        }
+      }}
     if(mine.length>1){
       body.appendChild(el('p','sub','내세울 호칭'));
       const t=el('div','tabs');t.style.flexWrap='wrap';
@@ -5698,11 +5783,11 @@ const aimAmp=k=>1+Math.min(16,BEASTS[k].lv|0)*.05;
 // (처음에는 "덤비는 순간 0.4~0.6초 안에 누르기"로 만들었더니 맨손으로 백호도 늘 이겨서, 때를 맞히는 방식으로 바꿨다)
 const MELEE={sword:{n:'칼',w:.09,d:2},spear:{n:'창',w:.1,d:2},fist:{n:'맨손',w:.065,d:1}}; /* w=받아칠 틈(앞뒤 초). 0.07초쯤 흔들리는 손으로 칼은 범에게 넷에 셋, 백호에게 열에 일곱쯤 받아치게 맞췄다 */
 const meleeKind=()=>{const G=GEAR[S.gear&&S.gear.on.w];return G&&(G.ic==='sword'||G.ic==='spear')?G.ic:'fist'};
-const meleeReach=()=>meleeKind()==='spear'?2:1;
-const meleeWin=m=>Math.max(.045,MELEE[m.mel].w-(BEASTS[m.b.k].lv|0)*.003+sv('arms')*.0015);
+const meleeReach=()=>meleeKind()==='spear'?(specMaster('mil','spear')?3:2):1; /* 창술 달인은 세 칸 */
+const meleeWin=m=>Math.max(.045,MELEE[m.mel].w-(BEASTS[m.b.k].lv|0)*.003+sv('arms')*.0015+specMw(m.mel)); /* 전문 갈래(검술·창술·주먹패)가 틈을 늘린다 */
 const meleeDur=k=>clamp(1.08-(BEASTS[k].sp||2)*.13,.55,.9);
 const meleeFeint=k=>{const l=BEASTS[k].lv|0;return l>=14?.33:l>=9?.25:l>=5?.15:0};
-const meleeDmg=k=>MELEE[k].d+(k==='fist'?0:gearFx('dmg'));
+const meleeDmg=k=>MELEE[k].d+(k==='fist'?0:gearFx('dmg'))+((k==='sword'&&specMaster('mil','sword'))||(k==='fist'&&specMaster('rogue','jumeok'))?1:0); /* 검술·주먹패 달인은 한 번에 1 더 */
 const beastAtk=k=>BEASTS[k].bite||3+(BEASTS[k].lv|0); /* 덤비지 않는 짐승도 붙들리면 발길질쯤은 한다 */
 const GUARD_MAX=.6; /* 장비가 짐승의 공격을 덜어 주는 한도(v76: 0.75에서 낮춤. 곰 가죽 한 벌이면 한도를 넘겨서 물려도 아프지 않았다) */
 function startMelee(b){
@@ -7002,6 +7087,7 @@ const GUIDE=[
   {k:'route',lv:3,t:'살아갈 길 걷기',d:()=>'이웃들이 들려주는 이야기를 따라 스승을 찾아가면 길이 열려요(수라간·왕실·상인·무관·문관). 지금까지 들은 길 '+ROUTES.filter(k=>heard(k)).length+'/'+ROUTES.length+' · 들은 길은 "나"의 "신분"에 적혀 있어요',done:()=>ROUTE_ALL.some(k=>routeOf(k))},
   {k:'mall',lv:5,lore:'mall',t:'운종가 구경하기',d:()=>'궁궐 동쪽 문으로 나가면 큰 저잣거리예요. 가게와 놀이마당, 묵어 갈 곳이 있어요',done:()=>!!S.seenRes},
   {k:'deep',lv:DEEP_LV,lore:'deep',t:'깊은 산 들어가기',d:()=>'사냥터 숲의 동쪽 길 끝으로 가요. 여우와 늑대, 곰이 살아요',done:()=>!!S.seenDeep},
+  {k:'spec',lv:SPEC_LV,t:'전문 갈래 고르기',d:()=>ROUTE_ALL.some(k=>routeOf(k)&&routeOf(k).rank>=1)?'"나"의 "신분" 창에서 걷는 길마다 전문 갈래를 하나씩 골라요. 수라간이면 음식의 갈래, 무관이면 활·칼·창처럼요. 레벨과 일 횟수가 차면 입문에서 숙련, 달인으로 올라요':'걷는 길에서 다음 자리에 한 번 오르면 "나"의 "신분" 창에서 전문 갈래를 고를 수 있어요',done:()=>Object.keys(S.spec||{}).some(k=>routeOf(k))},
   {k:'main',lv:MAIN_LV,t:'본업 고르기',d:()=>ROUTE_ALL.some(k=>routeOf(k))?'"나"의 "신분" 창에서 걷고 있는 길 가운데 하나를 본업으로 정해요. 본업은 수고비와 녹봉을 더 받고, 으뜸 자리에 오르면 더 높은 자리가 열려요. 다른 길의 일은 그대로 할 수 있어요':'먼저 길을 하나 걸어야 해요. 길을 걷기 시작하면 "나"의 "신분" 창에서 본업으로 정할 수 있어요',done:()=>!!S.main},
   {k:'snow',lv:SNOW_LV,lore:'snow',t:'눈고개 넘기',d:()=>'깊은 산의 동쪽 길 끝으로 가요. 표범과 스라소니, 담비, 산양이 살고 레벨 '+BEASTS.wtiger.lv+'부터는 가끔 백호가 나타나요',done:()=>!!S.seenSnow},
   ...MAIN_TIERS.map((q,i)=>({k:'tier'+i,lv:q.lv,t:'더 높은 자리 '+['첫','둘','셋','넷'][i]+'째',d:()=>guideTier(i),done:()=>!!S.main&&(S.main.tier|0)>i}))
@@ -7346,6 +7432,7 @@ const FX_TXT={aim:v=>'사냥 과녁 +'+v,dmg:v=>'화살 힘 +'+v,en:v=>'기력 �
 const gearFx=k=>{let v=0;if(S&&S.gear)for(const s in S.gear.on){const G=GEAR[S.gear.on[s]];if(G&&G.fx[k])v+=G.fx[k]}
   if(S&&S.fortune&&S.fortune.day===S.day&&S.fortune.k===k)v+=S.fortune.v; /* 점집에서 본 오늘의 운세도 여기에 얹는다 */
   if(S&&S.stayDay===S.day&&STAY_FX[k])v+=STAY_FX[k]; /* 별서에서 묵고 난 날의 덤 */
+  v+=specFx(k); /* 전문 갈래의 덤 */
   return v};
 const gearTxt=id=>Object.keys(GEAR[id].fx).map(k=>FX_TXT[k](GEAR[id].fx[k])).join(' · ');
 const gearSlot=s=>GEAR_SLOTS.find(q=>q[0]===s)[1];
