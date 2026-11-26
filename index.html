@@ -1267,6 +1267,10 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:93,d:'11월 26일',t:'시설 옮기기 고침',l:[
+    '모루의 "짓기·고치기 → 시설 옮기기"를 누르면 엉뚱하게 "마을 옮기기"(다른 기기로 저장 옮기기) 창이 열리던 것을 고쳤어요.',
+    '이제 우물·정자·물레방아·솟대·축지 장승의 목록이 나오고, "옮길 자리 고르기"를 누른 뒤 마을의 빈 풀밭을 누르면 옮겨져요.'
+  ]},
   {v:92,d:'11월 26일',t:'나머지 놀이판 · 곳마다 큰 지도',l:[
     '아직 작던 놀이판도 커졌어요. 글공부 카드, 대장간 두드리기, 못질, 윷놀이, 그네, 과일 받기, 새알심 뜨기, 소금 간 맞추기, 돌잡이, 젖 짜기를 화면에 맞춰 크게 그려요.',
     '지도를 열면 지금 있는 곳의 큰 지도가 나와요. 사냥터·궁궐·운종가·먼바다·동굴에서도 볼 수 있고, 거기서 "마을 지도 보기"로 넘어가요. 가 본 곳만 밝혀져요.',
@@ -5182,7 +5186,8 @@ function applyWorks(){
   for(const k of workKeys()){const d=WORKS[k],at=S&&S.works&&S.works[k]&&S.works[k].at;if(at){d.x=at[0];d.y=at[1]}const o={t:'work',k,x:d.x,y:d.y};for(let i=0;i<d.w;i++)oa[d.y][d.x+i]=o}
 }
 // 시설 옮기기(v83): 모루에게 삯을 내고 우물·정자·물레방아·솟대·축지 장승을 다른 풀밭으로 옮긴다. 고깃배는 못 옮긴다. 축지 장승의 첫 터 잡기는 삯이 없다
-function openMove(){
+/* 이름 주의: openMove는 저장을 다른 기기로 옮기는 창("마을 옮기기")이 이미 쓰고 있다. v83에서 같은 이름으로 지어 그 창이 대신 열리던 것을 v93에서 openRelo로 고쳤다 */
+function openRelo(){
   openModal('시설 옮기기',body=>{
     body.appendChild(el('p','note','마을의 시설을 다른 빈 풀밭으로 옮겨요. 고른 뒤 마을에서 옮길 자리를 누르면 그때 삯을 내요. 닭장·외양간은 그 앞에서 삯 없이 옮길 수 있어요.'));
     for(const k of workKeys()){const d=WORKS[k];if(d.solo)continue;const fee=MOVE_FEE(k);
@@ -6930,7 +6935,7 @@ function buildTalk(){
   if(!S.furn.agungi&&!S.placed.some(f=>f.id==='agungi'))ch.push(['아궁이 놓기',hearthTalk]);
   if(!S.spouse&&!have('goose'))ch.push(['나무 기러기 깎기',gooseTalk]);
   if(!S.works.gate.at)ch.push(['축지 장승 터 잡기',()=>dialog({npc:'moru',who:NPCS.moru.name,text:'사냥터를 한달음에 오가는 축지 장승 말인가? 터는 자네가 고르게. 터를 잡은 뒤 나무 40, 돌 30, 쇳돌 10, 깃털 6에 1,500냥을 모아 넣고 못질하면 되네.',choices:[['터 고르기',()=>moveStart('gate')],['그만',null]]})]);
-  ch.push(['시설 옮기기',openMove]);
+  ch.push(['시설 옮기기',openRelo]);
   ch.push(['그만',null]);
   dialog({npc:'moru',who:NPCS.moru.name,text:'무엇을 지어 줄까? 닭장이나 외양간은 자네 땅 어디든, 자네가 고른 자리에 세울 수 있네.',choices:ch});
 }
