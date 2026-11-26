@@ -1293,7 +1293,7 @@ const BD_Y=12,BD_SHOPS=[{x:5,k:'silk',n:'비단전'},{x:15,k:'herb',n:'다약방
 const BD_FOLK=[{k:'guide',x:4,y:10,n:'역관',look:{skin:'#f0cdb0',hair:'#2e2a2a',shirt:'#f3ead6',bot:'#e9e0c8',rib:'#2e4a6a',sex:'m',hat:'gat'}},
   {k:'silk',x:8,y:5,n:'비단 상인',look:{skin:'#eec9a4',hair:'#1f1f24',shirt:'#2e4a8a',bot:'#1f2a44',rib:'#e9b930',sex:'m',hat:'skull',robe:1}},
   {k:'herb',x:18,y:5,n:'차·약재 상인',look:{skin:'#f0cdb0',hair:'#1f1f24',shirt:'#7a2f2a',bot:'#8a2f2a',rib:'#e9b930',sex:'f',hat:'pins',robe:1}},
-  {k:'fur',x:28,y:5,n:'큰 상인',look:{skin:'#e0b48c',hair:'#2e2a2a',shirt:'#5a3a6a',bot:'#2a2220',rib:'#d9a93a',sex:'m',hat:'fur',hatC:'#6e5040',robe:1,beard:1}}];
+  {k:'fur',x:28,y:5,n:'큰 상인',buy:1,look:{skin:'#e0b48c',hair:'#2e2a2a',shirt:'#5a3a6a',bot:'#2a2220',rib:'#d9a93a',sex:'m',hat:'fur',hatC:'#6e5040',robe:1,beard:1}}];
 const BD_CARTS=[[10,20],[24,20],[17,22]];
 const BORDER=(function(){
   const tile=[],objAt=[];
@@ -1306,6 +1306,26 @@ const BORDER=(function(){
   for(const [x,y] of BD_CARTS){tile[y][x]=15;tile[y][x+1]=15}
   for(const f of BD_FOLK)objAt[f.y][f.x]={t:'trader',k:f.k,x:f.x,y:f.y};
   return{tile,objAt,TREES:[],ROCKS:[],GRASS:[],SAND:[]};
+})();
+/* 남쪽 바닷길 나루(v118, 사용자 요청: 일본 쪽과의 교역, 그 나라 분위기에 맞게): 먼바다의 남쪽 끝 너머. 장면은 'wild', 구역 wz는 6.
+   북쪽 줄에 섬나라풍 가게 셋(PT_SHOPS: 검은 널벽·흰 회벽·곧은 기와지붕·가게 앞 드림천), 가운데 마당, 남쪽은 모래톱과 바다. 잔교(PT_PIER) 끝에서 배에 올라 먼바다로 돌아간다. 석등 자리(PT_LAMPS)는 타일 15 */
+const PT_PIER=[17,23],PT_SHOPS=[{x:4,k:'metal'},{x:14,k:'craft'},{x:24,k:'buy'}],PT_LAMPS=[[6,9],[29,9]];
+const PT_FOLK=[{k:'guide',x:15,y:16,n:'역관',look:{skin:'#f0cdb0',hair:'#2e2a2a',shirt:'#f3ead6',bot:'#e9e0c8',rib:'#2e4a6a',sex:'m',hat:'gat'}},
+  {k:'metal',x:7,y:5,n:'쇠붙이 상인',look:{skin:'#eec9a4',hair:'#1f1f24',shirt:'#3f5468',bot:'#2c3a4a',rib:'#d9d2bc',sex:'m',hat:'mage',robe:2}},
+  {k:'craft',x:17,y:5,n:'잡화 상인',look:{skin:'#f3d6bd',hair:'#1f1f24',shirt:'#9a4a6a',bot:'#7a3454',rib:'#e9d8a8',sex:'f',hat:'shimada',robe:2}},
+  {k:'buy',x:27,y:5,n:'큰 상인',buy:1,look:{skin:'#e6bd96',hair:'#2e2a2a',shirt:'#4f6040',bot:'#35422c',rib:'#b98a3a',sex:'m',hat:'mage',robe:2,beard:1}},
+  {k:'sailor',x:21,y:18,n:'뱃사공',say:'큰 배는 물때를 기다리는 중이오. 잔교 끝에서 그대의 배에 오르면 먼바다로 돌아가오.',look:{skin:'#d9a878',hair:'#2e2a2a',shirt:'#5a6a7a',bot:'#3a4450',rib:'#3a4450',sex:'m',hat:'straw'}}];
+const PORT=(function(){
+  const tile=[],objAt=[],TREES=[];
+  for(let y=0;y<H;y++){tile.push(new Array(W).fill(y>=19?4:y>=17?2:1));objAt.push(new Array(W).fill(null))}
+  for(let y=0;y<19;y++)for(let x=0;x<W;x++)if(x===0||y===0||x===W-1)tile[y][x]=6;
+  for(let y=1;y<=4;y++)for(let x=1;x<W-1;x++)tile[y][x]=15; /* 가게가 늘어선 북쪽 줄 */
+  for(let y=8;y<=14;y++)for(let x=8;x<=27;x++)tile[y][x]=7; /* 가운데 마당 */
+  for(let y=19;y<=PT_PIER[1];y++){tile[y][17]=11;tile[y][18]=11} /* 잔교 */
+  for(const [x,y] of PT_LAMPS)tile[y][x]=15;
+  for(const [x,y] of [[2,7],[33,7],[3,14],[32,14],[4,11],[31,11]]){const o={t:'deco',k:'pine',x,y,sh:0,i:-1};TREES.push(o);objAt[y][x]=o}
+  for(const f of PT_FOLK)objAt[f.y][f.x]={t:'trader',k:f.k,x:f.x,y:f.y};
+  return{tile,objAt,TREES,ROCKS:[],GRASS:[],SAND:[]};
 })();
 /* 눈고개의 동쪽 끝에 국경으로 가는 길을 낸다(그 자리의 나무·바위는 풍경이라 치워도 된다) */
 {for(let x=W-5;x<W;x++){const o=SNOW.objAt[SNOW_Y][x];if(o){const a=o.k==='rock'?SNOW.ROCKS:SNOW.TREES,i=a.indexOf(o);if(i>=0)a.splice(i,1);SNOW.objAt[SNOW_Y][x]=null}SNOW.tile[SNOW_Y][x]=1}}
@@ -1345,6 +1365,12 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:118,d:'11월 26일',t:'남쪽 바닷길 나루',l:[
+    '먼바다의 남쪽 끝 너머에 섬나라 상인들의 나루가 열렸어요. 수군 군관에게 뱃길 문서를 받아야 해요(800냥, 객주부터는 삯 없음).',
+    '구리 덩이·유황·칠기 함·쥘부채·후추를 살 수 있어요.',
+    '큰 상인은 산삼과 비단·청화 자기·먹, 콩·보리를 비싸게 사 줘요. 국경 장터에서 산 것을 여기서 팔면 남아요.',
+    '돌아갈 때는 잔교 끝으로 가요.'
+  ]},
   {v:117,d:'11월 26일',t:'아침 소식 한 장으로',l:[
     '아침에 알림이 줄줄이 뜨지 않아요. 쪽지 한 장에 모아서 보여 주고, 누르면 모두 볼 수 있어요.',
     '휴대폰에서 읽기 쉽게 아침 글과 국경 장터의 글을 줄이고, 목록의 단추가 글을 누르지 않게 했어요.'
@@ -1706,6 +1732,7 @@ function fixState(s){
   s.fog=s.fog&&typeof s.fog==='object'?s.fog:{}; /* 지도의 안개: 곳마다 가 본 칸 */
   if(s.farmTown&&typeof s.farmTown==='object'){s.ffarm=s.farm;s.farm=s.farmTown;delete s.farmTown} /* 들판에 있는 채로 저장됐으면 밭을 되돌린다 */
   s.ffarm=s.ffarm&&typeof s.ffarm==='object'?s.ffarm:{}; /* 서쪽 들판의 밭 */
+  s.ptPass=s.ptPass?1:0;s.pt=s.pt&&typeof s.pt==='object'&&s.pt.left&&typeof s.pt.left==='object'?s.pt:null; /* 바닷길 나루의 뱃길 문서와 오늘 거래(v118) */
   s.pass=s.pass?1:0;s.bd=s.bd&&typeof s.bd==='object'&&s.bd.left&&typeof s.bd.left==='object'?s.bd:null; /* 국경 통행 문서, 국경 장터의 오늘 거래(v116) */
   if(typeof s.tut!=='number')s.tut=(s.day>1||s.level>1)?-1:0; /* 길라잡이: 새 마을만 0에서 시작, 하던 마을은 끝난 것으로 */
   if(typeof s.name!=='string'||!s.name.trim())s.name='새싹'; /* 이름이 빠진 저장은 "undefined 님"으로 보이지 않게 기본 이름으로 */
@@ -2044,6 +2071,7 @@ const EAT={pirami:8,loach:10,ssogari:26,gamulchi:28,jogi:12,galchi:16,neopchi:28
 /* 국경 장터에서만 사 오는 물건(v116). 값(p)은 만물상에 되팔 때의 바탕값이고, 장터에서는 그보다 조금 싸게 산다(BD_SELL) */
 Object.assign(ITEMS,{silk:{n:'비단',p:240},tea:{n:'찻잎',p:70},gamcho:{n:'감초',p:90},chinaware:{n:'청화 자기',p:420},ink:{n:'먹',p:130}});
 EAT.tea=18;EAT.gamcho=22;
+Object.assign(ITEMS,{copper:{n:'구리 덩이',p:150},sulfur:{n:'유황',p:100},lacquer:{n:'칠기 함',p:400},jfan:{n:'쥘부채',p:90},pepper:{n:'후추',p:170}}); /* 남쪽 바닷길 나루의 물건(v118) */
 // 내 땅: 집 둘레 서북쪽 풀밭. 이 안의 빈 풀밭은 어디든 밭으로 갈 수 있다
 /* 들판의 밭터(v110): 서쪽 들판에서는 FFARM 네모 안을 갈 수 있다. 들판에 있는 동안 S.farm은 들판의 밭(S.ffarm)으로 바꿔 끼워 둔다(주울 것 S.pickups와 같은 방식) → 밭 코드는 그대로 쓴다 */
 const farmHere=()=>scene==='town'||(scene==='wild'&&wz===4);
@@ -2099,6 +2127,11 @@ function drawCore(c,id){
   case 'wood':rr(c,-10,-5,20,10,4,'#9a6a3e');ell(c,8,0,3,5,'#d9b98a');ell(c,8,0,1.5,2.5,'#9a6a3e');line(c,-7,-1,2,-1,'#7a5230',1.5);break;
   case 'branch':line(c,-8,5,8,-4,'#8a5a34',3);line(c,0,0,5,5,'#8a5a34',2.5);ell(c,-7,2,3,1.6,'#5cab4a');break;
   case 'stone':poly(c,[-9,4,-6,-5,1,-8,8,-3,9,5,2,8,-5,8],'#9aa3a8');poly(c,[-5,-3,1,-6,5,-2,-1,0],'#c3cbcf');break;
+  case 'copper':poly(c,[-9,5,-6,-5,6,-5,9,5],'#b5622e');poly(c,[-6,-5,6,-5,4,-8,-4,-8],'#d98a4a');c.fillStyle='#8a4420';c.fillRect(-9,4,18,2);c.fillStyle='rgba(255,255,255,.35)';c.fillRect(-4,-7,5,1.5);break;
+  case 'sulfur':circ(c,-4,3,5,'#d9c23a');circ(c,4,2,5.5,'#e6d24a');circ(c,0,-4,5,'#f1e06a');circ(c,-1,-5,1.6,'#fff6b0');circ(c,5,1,1.3,'#fff6b0');break;
+  case 'lacquer':rr(c,-9,-3,18,11,2,'#1f1a1a');rr(c,-10,-7,20,6,2,'#2e2424');c.fillStyle='#b5332a';c.fillRect(-9,-2,18,1.5);circ(c,0,3,3,'#d9a93a');circ(c,0,3,1.4,'#1f1a1a');c.fillStyle='#d9a93a';c.fillRect(-6,-5,3,1.2);c.fillRect(3,-5,3,1.2);break;
+  case 'jfan':poly(c,[0,9,-10,-3,-6,-8,0,-10,6,-8,10,-3],'#f3ead6');for(const a of [-7,-3.5,0,3.5,7])line(c,0,9,a*1.3,-7,'#b98a5a',1);poly(c,[-10,-3,-6,-8,0,-10,6,-8,10,-3,8,-1,0,-6,-8,-1],'#c8392f');circ(c,0,8,1.6,'#5e3f24');break;
+  case 'pepper':rr(c,-7,-4,14,13,5,'#c9b58a');rr(c,-5,-8,10,5,2,'#a8905e');line(c,-4,-6,4,-6,'#6b4a2a',1.5);for(const q of [[-3,1],[2,0],[0,4],[4,4],[-4,5]])circ(c,q[0],q[1],1.5,'#2e2420');break;
   case 'silk':rr(c,-9,-6,18,12,5,'#c8392f');rr(c,-9,-6,18,4,3,'#e0584a');ell(c,-8,0,2.5,5.5,'#a82a22');ell(c,8,0,2.5,5.5,'#f3ead6');ell(c,8,0,1.2,3,'#c8392f');c.fillStyle='#e9b930';c.fillRect(-3,-6,2,12);c.fillRect(2,-6,1.2,12);break;
   case 'tea':rr(c,-7,-7,14,15,3,'#5a7a4a');rr(c,-7,-7,14,4,2,'#6f9458');rr(c,-4,-1,8,7,1,'#f3ead6');line(c,-2,1,2,1,'#5a7a4a',1.2);line(c,-2,3.5,1,3.5,'#5a7a4a',1.2);line(c,-3,-7,3,-10,'#8a5a34',1.5);break;
   case 'gamcho':for(const [a,b,d] of [[-7,-6,5],[-3,-8,7],[1,-7,6],[5,-5,4]]){line(c,a,b,a+3,b+14+d*.3,'#b08a55',3);line(c,a+.6,b+1,a+3,b+12,'#d0b07a',1)}rr(c,-8,0,16,3.5,1.5,'#c8392f');break;
@@ -2341,7 +2374,9 @@ function charSprite(o,view,fr){
     else{put(15,'...okkkkkkkko...');put(16,'...okkkkkkkko...');put(17,'..okkkkkkkkkko..');put(18,'..okkkkkkkkkko..');put(19,'..oooooooooooo..')}
     if(back&&o.sex==='f'){put(10,'...obbbhhbbbo...');put(11,'..obBbbhhbbBbo..');put(12,'..obBbbhhbbBbo..');put(13,'..osBbbrrbbBso..')}
   }
-  if(o.robe&&!back&&!side){put(10,'...obbbrrbbbo...');put(11,'..obBbbbrrbBbo..');put(12,'..obBbbbbrbBbo..');put(13,'..osBbbbbrbBso..')} /* 세운 깃과 비스듬히 여민 섶의 금빛 선 */
+  if(o.robe===2&&!back&&!side){put(10,'...obbwsswbbo...');put(11,'..obBbbwwbbBbo..');put(12,'..obBbbbwbbBbo..');put(13,'..osBrrrrrrBso..')} /* v118 섬나라 옷: 가슴에서 엇갈려 여미는 깃과 넓은 허리띠 */
+  if(o.robe===2&&back)put(13,'..osBrrrrrrBso..');
+  if(o.robe===1&&!back&&!side){put(10,'...obbbrrbbbo...');put(11,'..obBbbbrrbBbo..');put(12,'..obBbbbbrbBbo..');put(13,'..osBbbbbrbBso..')} /* 세운 깃과 비스듬히 여민 섶의 금빛 선 */
   if(o.beard&&!back){put(8,side?'...ohhssshhho...':'...oshhhhhhso...');put(9,side?'....ohsshhho....':'....ohhhhhho....')}
   switch(o.hat){
   case 'cap':put(2,'....oxxxxxxo....');put(3,'...oxxxxxxxxo...');put(4,side?'...oxxxxxxXXXo..':back?'...oxxxxxxxxo...':'...oXXXXXXXXo...');break;
@@ -2353,6 +2388,9 @@ function charSprite(o,view,fr){
   /* v116 국경 장터: 둥근 모자(꼭지에 붉은 구슬), 쌍상투에 금비녀 */
   case 'skull':put(0,'.......rr.......');put(1,'....oxxxxxxo....');put(2,'...oxxxxxxxxo...');put(3,'...oXXXXXXXXo...');break;
   case 'pins':put(-1,'...ooo....ooo...');put(0,'..ohhhoyyohhho..');break;
+  /* v118 바닷길 나루: 곧추 세운 상투, 빗을 꽂은 올림머리 */
+  case 'mage':put(-2,'.......oo.......');put(-1,'......ohho......');put(0,'......ohho......');break;
+  case 'shimada':put(-2,'......oooo......');put(-1,'....oohhhhoo....');put(0,'...ohhhrrhhho...');break;
   case 'gat':put(-1,'.....xxxxxx.....');put(0,'.....xxxxxx.....');put(1,'.....xxxxxx.....');put(2,'.xxxxxxxxxxxxxx.');break;
   // 익선관(임금·세자의 관)과 가체(중전의 큰머리)
   case 'ikseon':put(-1,'......oooo......');put(0,'.....oxxxxo.....');put(1,'....oxxxxxxo....');put(2,'...oxxxxxxxxo...');put(3,'...oXXXXXXXXo...');break;
@@ -2827,6 +2865,80 @@ function buildGround(){
     }
     /* 길가에 쓸어 모은 눈 */
     for(let i=0;i<26;i++){const a=hash(i*7+3,11),b=hash(13,i*5+1),sx=Math.round(T+a*(W-3)*T),sy=Math.round((i%2?17.3:6.2)*T+b*(i%2?7:1.2)*T);if(tile[Math.floor(sy/T)]&&tile[Math.floor(sy/T)][Math.floor(sx/T)]===1){ell(c,sx,sy,9+a*8,4,'#e9eef1');ell(c,sx-2,sy-1.5,5+a*4,2,'#ffffff')}}
+  }
+  if(scene==='wild'&&wz===6){
+    /* 바닷길 나루(v118, 사용자 요청: 그 나라의 분위기에 맞게): 섬나라풍 가게 셋 — 흰 회벽 아래 검은 널벽, 처마 끝이 올라가지 않는 곧은 잿빛 기와지붕,
+       가게 앞에 드리운 쪽빛·팥빛 천, 세로 간판, 흰 종이 등. 가게 사이에는 세로 깃발과 짚으로 싼 술통, 마당 가에는 석등, 바다에는 네모 돛을 단 큰 배가 매여 있다 */
+    const mark=(gx,gy,col)=>{c.fillStyle=col;c.fillRect(gx-3,gy-3,6,1.4);c.fillRect(gx-.7,gy-4,1.4,8);c.fillRect(gx-3,gy+1.6,6,1.4)}; /* 글씨처럼 보이는 먹 획 */
+    const chochin=(lx,ly)=>{c.fillStyle='#2a211c';c.fillRect(lx-.5,ly-6,1.5,6);rr(c,lx-4,ly-1,8,3,1,'#2a211c');rr(c,lx-6,ly+2,12,15,5,'#f3ead6');c.fillStyle='rgba(120,100,60,.35)';for(let i=0;i<4;i++)c.fillRect(lx-6,ly+5+i*3,12,.8);circ(c,lx,ly+9.5,2.6,'#b5332a');rr(c,lx-4,ly+16,8,3,1,'#2a211c')};
+    const taru=(bx,by)=>{rr(c,bx-9,by-18,18,18,4,'#d9c79a');c.fillStyle='#8a7440';for(let i=0;i<3;i++)c.fillRect(bx-9,by-15+i*5,18,1.2);for(let i=-6;i<=6;i+=4)c.fillRect(bx+i,by-18,1,18);rr(c,bx-8,by-20,16,4,2,'#b9a36e');circ(c,bx,by-9,3.4,'#b5332a')};
+    const crate=(bx,by,s2)=>{rr(c,bx,by-s2,s2,s2,1,'#5e4630');rr(c,bx+1,by-s2+1,s2-2,s2-2,1,'#9a7a52');c.fillStyle='#5e4630';c.fillRect(bx+1,by-s2/2-1,s2-2,1.5);c.fillStyle='rgba(255,255,255,.2)';c.fillRect(bx+1,by-s2+1,s2-2,1.5)};
+    const nobori=(fx,col)=>{c.fillStyle='#2e2219';c.fillRect(fx-1.5,40,3,120);c.fillStyle='#6b5340';c.fillRect(fx-1.5,40,1.5,120);c.fillStyle='#2e2219';c.fillRect(fx,46,17,2);rr(c,fx+2,48,14,74,0,col);c.fillStyle='rgba(255,255,255,.14)';c.fillRect(fx+2,48,3,74);for(let i=0;i<4;i++)mark(fx+9,60+i*16,'#f3ead6');c.fillStyle='#2e2219';for(let i=0;i<5;i++)c.fillRect(fx+1,52+i*16,2,2)};
+    const roofJ=(x0,x1,ry0,ry1)=>{ /* 곧게 뻗은 기와지붕 */
+      const w=x1-x0;poly(c,[x0+8,ry0,x1-8,ry0,x1+10,ry1,x0-10,ry1],'#4d5861');
+      for(let yy=ry0+5,n=0;yy<ry1-3;yy+=6,n++){const a=(yy-ry0)/(ry1-ry0);c.fillStyle=n%2?'#434d55':'#5a6670';c.fillRect(x0+8-18*a,yy,w-16+36*a,3)}
+      for(let i=0,n=Math.round(w/10);i<=n;i++){const a=i/n;line(c,x0+8+(w-16)*a,ry0+2,x0-10+(w+20)*a,ry1-1,'rgba(30,36,42,.4)',1)}
+      c.fillStyle='#343c43';c.fillRect(x0-10,ry1-3,w+20,5);for(let xx=x0-8;xx<x1+8;xx+=7)circ(c,xx+2,ry1+1,2.2,'#6b7680');
+      rr(c,x0+2,ry0-6,w-4,9,2,'#2f363c');c.fillStyle='#6b7680';c.fillRect(x0+6,ry0-5,w-12,2);
+      for(const ex of [x0+2,x1-12]){rr(c,ex,ry0-10,10,13,2,'#2f363c');c.fillStyle='#5a6670';c.fillRect(ex+2,ry0-8,6,2)}
+    };
+    /* 북쪽 줄 뒤의 나무 널담 */
+    c.fillStyle='#6b5340';c.fillRect(T,104,(W-2)*T,32);c.fillStyle='rgba(30,22,16,.3)';for(let xx=T+6;xx<(W-1)*T;xx+=9)c.fillRect(xx,104,1,32);c.fillStyle='#3a2c22';c.fillRect(T,100,(W-2)*T,5);c.fillRect(T,134,(W-2)*T,3);
+    taru(1.5*T,158);taru(2.15*T,158);taru(1.83*T,141);crate(2.7*T,158,22);
+    nobori(11.9*T,'#27406b');taru(13.2*T,158);crate(12.5*T+4,158,16);
+    nobori(21.9*T,'#8a2f3a');crate(22.6*T,158,20);taru(23.5*T,158);
+    for(let i=0;i<3;i++){const bx=(W-4)*T+i*24-8;rr(c,bx,140,22,18,6,'#d9cfae');c.fillStyle='#b5a780';c.fillRect(bx+6,140,2,18);c.fillRect(bx+14,140,2,18)}
+    for(const s of PT_SHOPS){
+      const x0=s.x*T,x1=x0+7*T,w=7*T,yb=5*T-2,yw=94;
+      c.fillStyle='#e9e2cf';c.fillRect(x0+6,yw,w-12,20);c.fillStyle='#5a4636';c.fillRect(x0+6,yw+20,w-12,yb-yw-20);
+      c.fillStyle='rgba(30,22,16,.3)';for(let xx=x0+12;xx<x1-8;xx+=8)c.fillRect(xx,yw+20,1,yb-yw-20);
+      c.fillStyle='#3a2c22';c.fillRect(x0+6,yw+18,w-12,3);
+      c.fillStyle='#7d766a';c.fillRect(x0+4,yb-6,w-8,6);c.fillStyle='#a39c90';c.fillRect(x0+4,yb-6,w-8,1.5);
+      const cx0=x0+64,cw=96;c.fillStyle='#2a211c';c.fillRect(cx0,yw+4,cw,yb-yw-10);
+      /* 올라앉는 마루와 그 위의 물건 */
+      rr(c,cx0-4,yb-24,cw+8,6,1,'#c9a36a');c.fillStyle='#e0c08a';c.fillRect(cx0-4,yb-24,cw+8,2);c.fillStyle='#8a6a40';c.fillRect(cx0-2,yb-18,cw+4,12);c.fillStyle='rgba(0,0,0,.2)';for(let i=0;i<cw;i+=12)c.fillRect(cx0+i+5,yb-18,1,12);
+      const gy=yb-24;
+      if(s.k==='metal'){
+        for(let i=0;i<3;i++){const ix=cx0+8+i*17;for(let r=0;r<2-(i%2);r++){poly(c,[ix,gy-r*6,ix+2,gy-6-r*6,ix+12,gy-6-r*6,ix+14,gy-r*6],'#b5622e');c.fillStyle='#d98a4a';c.fillRect(ix+3,gy-6-r*6,8,1.5)}}
+        for(const bx of [cx0+64,cx0+80]){rr(c,bx,gy-8,13,8,2,'#8a6a40');ell(c,bx+6.5,gy-8,6,3.5,'#e6d24a');ell(c,bx+5,gy-9,2.5,1.5,'#fff6b0')}
+      }else if(s.k==='craft'){
+        for(const [o,cl] of [[6,'#1f1a1a'],[22,'#7a1f1a']]){rr(c,cx0+o,gy-9,13,9,1,cl);c.fillStyle='#d9a93a';c.fillRect(cx0+o,gy-6,13,1.2);circ(c,cx0+o+6.5,gy-3,1.4,'#d9a93a')}
+        for(const fx of [cx0+48,cx0+66]){c.fillStyle='#f3ead6';c.beginPath();c.moveTo(fx,gy);c.arc(fx,gy,10,Math.PI,0);c.fill();c.strokeStyle='#b5332a';c.lineWidth=2;c.beginPath();c.arc(fx,gy,8.5,Math.PI,0);c.stroke();for(const a of [-6,-2,2,6])line(c,fx,gy,fx+a,gy-8,'#b98a5a',.8)}
+        rr(c,cx0+80,gy-10,10,10,4,'#c9b58a');rr(c,cx0+82,gy-12,6,3,1,'#a8905e');
+      }else{
+        rr(c,cx0+8,gy-7,34,7,1,'#6b4a30');c.fillStyle='#8a6a44';c.fillRect(cx0+8,gy-7,34,2);
+        rr(c,cx0+12,gy-13,22,6,1,'#3a2c22');for(let i=0;i<6;i++){circ(c,cx0+15+i*3.4,gy-11.4,1.1,'#d9a93a');circ(c,cx0+15+i*3.4,gy-8.6,1.1,'#b98a3a')}
+        for(let i=0;i<3;i++){rr(c,cx0+54+i*13,gy-12,12,12,4,'#d9cfae');c.fillStyle='#b5a780';c.fillRect(cx0+59+i*13,gy-12,1.5,12)}
+      }
+      /* 살창, 기둥 */
+      for(const wx of [x0+16,x0+170]){rr(c,wx,yw+26,38,30,1,'#3a2c22');c.fillStyle='#efe6cc';c.fillRect(wx+2,yw+28,34,26);c.fillStyle='#4a3828';for(let i=0;i<9;i++)c.fillRect(wx+3+i*4,yw+28,1.6,26);c.fillRect(wx+2,yw+40,34,1.5)}
+      for(const p2 of [x0+6,cx0-8,cx0+cw,x1-14]){c.fillStyle='#2e2219';c.fillRect(p2,yw,8,yb-yw-4);c.fillStyle='#4a3828';c.fillRect(p2,yw,5,yb-yw-4);c.fillStyle='#6b5340';c.fillRect(p2+1,yw,1.5,yb-yw-4)}
+      /* 가게 앞에 드리운 천 */
+      const nc=s.k==='metal'?'#27406b':s.k==='craft'?'#8a2f3a':'#2f5a44';
+      c.fillStyle='#2e2219';c.fillRect(cx0-2,yw+3,cw+4,2.5);
+      for(let i=0;i<4;i++){const nx=cx0+i*24;rr(c,nx+.5,yw+5,23,19,[0,0,2,2],nc);c.fillStyle='rgba(255,255,255,.13)';c.fillRect(nx+.5,yw+5,23,2);circ(c,nx+12,yw+14.5,5,'#f3ead6');circ(c,nx+12,yw+14.5,2.6,nc)}
+      /* 차양, 지붕, 세로 간판, 종이 등 */
+      c.fillStyle='#343c43';c.fillRect(x0-2,yw-8,w+4,8);c.fillStyle='#5a6670';c.fillRect(x0-2,yw-8,w+4,2.5);
+      roofJ(x0,x1,46,yw-8);
+      rr(c,x1-17,yw+22,14,46,1,'#2e2219');rr(c,x1-15,yw+24,10,42,1,'#c9a36a');for(let i=0;i<3;i++)mark(x1-10,yw+32+i*12,'#2a211c');
+      chochin(cx0-4,yw+8);chochin(cx0+cw+4,yw+8);
+    }
+    /* 마당 가의 석등 */
+    for(const [lx,ly] of PT_LAMPS){const X=lx*T+16,Y=ly*T+30;rr(c,X-9,Y-5,18,6,2,'#8d8a82');rr(c,X-3.5,Y-22,7,18,1,'#a39f96');rr(c,X-8,Y-26,16,5,1,'#8d8a82');rr(c,X-7,Y-37,14,12,1,'#b0aca2');rr(c,X-4,Y-34,8,7,1,'#f1d98a');c.fillStyle='#8d8a82';c.fillRect(X-.6,Y-34,1.2,7);poly(c,[X-12,Y-37,X+12,Y-37,X+6,Y-45,X-6,Y-45],'#7d7a72');rr(c,X-2.5,Y-50,5,6,2,'#8d8a82');c.fillStyle='rgba(255,255,255,.25)';c.fillRect(X-6,Y-44,8,1.5)}
+    /* 바다에 매어 둔 큰 배: 네모 돛, 고물의 뜸집 */
+    {const hx=20.8*T,hy=21.3*T,L=6.2*T,mx=hx+L*.42;
+      for(let i=0;i<7;i++)ell(c,hx+10+i*30,hy+25,14,3,'rgba(255,255,255,.55)');
+      poly(c,[hx-10,hy-6,hx+L+16,hy-13,hx+L-2,hy+24,hx+14,hy+24],'#5a4030');
+      c.fillStyle='rgba(20,14,10,.3)';for(let i=1;i<4;i++)c.fillRect(hx+6+i*2,hy+i*6,L-8-i*4,1.2);
+      poly(c,[hx-10,hy-6,hx+L+16,hy-13,hx+L+14,hy-8,hx-9,hy-1],'#8a6a44');
+      rr(c,hx+L-58,hy-34,44,24,1,'#6b5340');c.fillStyle='rgba(30,22,16,.3)';for(let i=0;i<5;i++)c.fillRect(hx+L-52+i*8,hy-34,1,24);rr(c,hx+L-44,hy-28,16,10,1,'#efe6cc');c.fillStyle='#4a3828';for(let i=1;i<4;i++)c.fillRect(hx+L-44+i*4,hy-28,1,10);
+      poly(c,[hx+L-64,hy-34,hx+L-8,hy-34,hx+L-14,hy-42,hx+L-58,hy-42],'#343c43');
+      c.fillStyle='#3a2c22';c.fillRect(mx-1.5,hy-72,3,68);line(c,mx-38,hy-66,mx+38,hy-66,'#3a2c22',2.5);
+      rr(c,mx-36,hy-65,72,46,[0,0,2,2],'#efe6cc');c.fillStyle='rgba(120,100,60,.3)';for(let i=1;i<6;i++)c.fillRect(mx-36+i*12,hy-65,1,46);c.fillStyle='#27406b';c.fillRect(mx-36,hy-55,72,4);c.fillRect(mx-36,hy-47,72,4);
+      line(c,mx,hy-72,hx-6,hy-6,'rgba(40,30,20,.6)',1);line(c,mx,hy-72,hx+L-20,hy-42,'rgba(40,30,20,.6)',1);
+      poly(c,[mx+1.5,hy-72,mx+1.5,hy-80,mx+14,hy-76],'#b5332a');
+      line(c,hx-4,hy-4,18.5*T+14,20.4*T,'#6b5340',1.5); /* 잔교에 맨 밧줄 */
+    }
   }
   if(scene==='wild'&&wz===4){
     /* 들판의 밭터: 갈 수 있는 땅을 옅은 흙빛으로 물들이고 네 귀에 말뚝. 목장: 나무 울타리를 두르고 어귀에 푯말 */
@@ -3473,13 +3585,14 @@ function renderTown(c){
   if(scene==='wild'&&wz===3&&!mg&&rx(P)<5&&Math.abs(SNOW_Y-ry(P))<3)labels.push(()=>label(c,1.5*T,SNOW_Y*T-12,'깊은 산으로'));
   if(scene==='wild'&&wz===3&&!mg&&rx(P)>W-6&&Math.abs(SNOW_Y-ry(P))<3)labels.push(()=>label(c,(W-1.5)*T,SNOW_Y*T-12,'국경 장터로'));
   if(scene==='wild'&&wz===5&&!mg){if(rx(P)<5&&Math.abs(BD_Y-ry(P))<3)labels.push(()=>label(c,1.5*T,BD_Y*T-12,'눈고개로'));if(rx(P)>W-8&&Math.abs(BD_Y-ry(P))<4)labels.push(()=>label(c,(W-2)*T,10*T-4,'닫힌 국경 관문'))}
+  if(scene==='wild'&&wz===6&&!mg&&ry(P)>17)labels.push(()=>label(c,18*T,(PT_PIER[1]+1)*T+4,'▼ 먼바다로'));
   if(scene==='cave'&&cave){
     const u=cave.up,d=cave.found?cave.hid:null;
     list.push([u[1],()=>blit(c,spr('ladderU',()=>bake(36,64,2,32,0,0,c2=>ladderArt(c2,false)),false),u[0]*T,u[1]*T)]);
     if(d)list.push([d[1]-.4,()=>blit(c,spr('ladderD',()=>bake(36,36,2,4,0,0,c2=>ladderArt(c2,true)),false),d[0]*T,d[1]*T)]);
   }
   for(const o of TREES)if(inV(o))list.push([o.y,()=>drawTree(c,o)]);
-  if(scene==='wild'&&wz===5)for(const f of BD_FOLK){ /* 국경 장터의 사람들 */
+  if(scene==='wild'&&(wz===5||wz===6))for(const f of MKT[mkNow()].folk){ /* 국경 장터·바닷길 나루의 사람들 */
     const x=(f.x+.5)*T,y=(f.y+.9)*T,d=[Math.sign(P.x-f.x),Math.sign(P.y-f.y)],near=Math.abs(P.x-f.x)+Math.abs(P.y-f.y)<=3;
     list.push([f.y+.1,()=>drawChar(c,x,y,f.look,near&&(d[0]||d[1])?(d[0]&&d[1]?[0,d[1]]:d):[0,1],false,now+f.x)]);
     if(near&&!mg)labels.push(()=>label(c,x,y+9,f.n));
@@ -3511,6 +3624,9 @@ function renderTown(c){
     // 포구로 돌아가는 뱃길 표시
     for(const bx of [15,20]){const X=bx*T+16;rr(c,X-1,2,2,14,1,'#8a5a34');poly(c,[X+1,2,X+11,6,X+1,10],'#d9412e');circ(c,X,18,4,'#f3ead6')}
     if(ry(P)<5)labels.push(()=>label(c,17.5*T+16,30,'▲ 포구로 돌아가는 뱃길'));
+    /* 남쪽 끝: 바닷길 나루로 가는 뱃길 표시(v118) */
+    for(const bx of [15,20]){const X=bx*T+16,Y=H*T-22;rr(c,X-1,Y,2,14,1,'#8a5a34');poly(c,[X+1,Y,X+11,Y+4,X+1,Y+8],'#2f5ea8');circ(c,X,Y+16,4,'#f3ead6')}
+    if(ry(P)>H-6)labels.push(()=>label(c,17.5*T+16,H*T-34,'▼ 남쪽 나루로 가는 뱃길'));
   }
   list.push([ry(P)+.2,()=>emoDraw(c,px,(afloat?py-5:py)-bridgeRise(rx(P),ry(P)),myEmo,now-myEmoAt,fy=>drawChar(c,px,fy,playerLook(),P.dir,(P.t<1||!!useS||!!pkS)&&!afloat,now*stepPace()))]); /* 연장을 휘두를 때는 발도 디딘다(v104) */
   headRects.length=0;headStack(c,labels,px,py,tagIt(),rps&&rps.done?RPS[rps.me]:rps&&(rps.st==='pick'||rps.st==='show')?'냈어요':'',now-mySayAt<5?mySay:'',myEmo&&now-myEmoAt<EMO_T?EMO[myEmo][1]:'');
@@ -3851,7 +3967,7 @@ function hud(){
   if(started)specSync(); /* 전문 갈래의 단계가 찼으면 올린다 */
   syncGuide();syncAsk();
   {const b=$('hSeason'),t=SEASONS[season()]+' '+((S.day-1)%7+1)+'일';if(b.textContent!==t)b.textContent=t;b.style.setProperty('--sc',SEASON_COL[season()])}
-  $('hDay').textContent=(S.weather==='rain'?(season()===3?'눈':'비'):S.wx==='drought'?'가뭄':S.wx==='wind'?'바람':S.wx==='rainbow'?'무지개':'맑음')+(isMarket()?' · 장날':'')+(fest()?' · '+fest().n:'')+(cupDay()?' · 사냥 대회':'')+(scene==='cave'&&cave?' · 동굴 '+cave.floor+'층':'')+(scene==='sea'?' · 먼바다':'')+(scene==='resort'?' · 운종가':'')+(scene==='wild'&&wz?(wz===2?' · 금원':wz===3?' · 눈고개':wz===4?' · 서쪽 들판':wz===5?' · 국경 장터':' · 깊은 산'):'')+(mailNew()?' · 편지 '+mailNew():'');
+  $('hDay').textContent=(S.weather==='rain'?(season()===3?'눈':'비'):S.wx==='drought'?'가뭄':S.wx==='wind'?'바람':S.wx==='rainbow'?'무지개':'맑음')+(isMarket()?' · 장날':'')+(fest()?' · '+fest().n:'')+(cupDay()?' · 사냥 대회':'')+(scene==='cave'&&cave?' · 동굴 '+cave.floor+'층':'')+(scene==='sea'?' · 먼바다':'')+(scene==='resort'?' · 운종가':'')+(scene==='wild'&&wz?(wz===2?' · 금원':wz===3?' · 눈고개':wz===4?' · 서쪽 들판':wz===5?' · 국경 장터':wz===6?' · 바닷길 나루':' · 깊은 산'):'')+(mailNew()?' · 편지 '+mailNew():'');
   const m=Math.floor(S.min);$('hTime').textContent=String(Math.floor(m/60)).padStart(2,'0')+':'+String(Math.floor(m%60/10)*10).padStart(2,'0');
   $('hCoin').textContent=S.coins.toLocaleString('ko-KR')+'냥';
   $('hLv').textContent='Lv.'+S.level;$('hXp').style.width=Math.round(S.xp/needXp(S.level)*100)+'%';
@@ -3995,6 +4111,8 @@ function arrive(){
     else if(scene==='town'&&P.y===0)enterPalace();else if(scene==='palace'&&P.y===H-1)leavePalace();
     else if(scene==='palace'&&P.x===W-1)enterResort();else if(scene==='resort'&&P.x===0)leaveResort(); /* 궁궐 동쪽 문 밖이 운종가 */
     else if(scene==='sea'&&P.y===0)leaveSea();
+    else if(scene==='sea'&&P.y===H-1)portGate(); /* 먼바다의 남쪽 끝은 바닷길 나루(뱃길 문서가 있어야) */
+    else if(scene==='wild'&&wz===6&&P.y===PT_PIER[1])leavePort(); /* 나루의 잔교 끝에서 배에 오른다 */
   }else{const e=roomEntry();if(P.x===e[0]&&P.y===e[1]+1)leaveHome()}
 }
 function grab(i){const p=S.pickups.splice(i,1)[0],id=p.id==='branch'?'wood':p.id;gain(id,1);addXp(2);float('+1 '+ITEMS[id].n);sfx('pick')}
@@ -5093,6 +5211,7 @@ function enterWild(){
 function leaveWild(quiet){
   if(scene!=='wild')return;
   if(wz===4){leaveField(quiet);return} /* 들판에서 장승 길 등으로 곧장 돌아올 때 */
+  if(wz===6){leavePort(true);leaveSea(quiet);return} /* 바닷길 나루에서 곧장 돌아올 때: 먼바다를 거쳐 포구로 */
   if(wz===5)leaveBorder(true); /* 국경 장터에서 곧장 나가면 눈고개를 거친 셈으로 친다 */
   if(wz)leaveDeep(true); /* 깊은 산(이나 눈고개)에서 곧장 나가게 되면 숲을 거친 셈으로 친다 */
   scene='town';useMap(TOWN);wildBeasts=beasts;beasts=townBeasts;S.wpick=S.pickups;S.pickups=S.pickTown||[];delete S.pickTown;
@@ -5130,13 +5249,21 @@ function enterField(){
 const BD_PASS=800,BD_WANT={ginseng:2,hide:1.5,foxfur:1.6,antler:1.6,abalone:1.5,tigerskin:1.5,martenfur:1.6,bearhide:1.5,deodeok:1.7},
   BD_SELL={silk:{s:'silk',n:3},chinaware:{s:'silk',n:2},tea:{s:'herb',n:6},gamcho:{s:'herb',n:5},ink:{s:'herb',n:4}};
 const bdCap=()=>2500+1500*((S.merch&&S.merch.rank)|0);
-function bdRates(){
-  const rng=mulberry((S.day*7919+townSeed*13+5)>>>0),ids=Object.keys(BD_WANT).filter(k=>ITEMS[k]),hot=ids[Math.floor(rng()*ids.length)],want={},buy={};
-  for(const k of ids)want[k]=Math.ceil(ITEMS[k].p*BD_WANT[k]*(.85+rng()*.3)*(k===hot?1.35:1));
-  for(const k in BD_SELL)buy[k]=Math.ceil(ITEMS[k].p*.8*(.85+rng()*.4));
+/* 남쪽 바닷길 나루(v118)의 물건: 구리·유황은 쇠붙이 상인, 칠기·쥘부채·후추는 잡화 상인이 판다. 큰 상인은 산삼과 대륙 물건(비단·자기·먹), 콩·보리를 찾는다
+   → 국경 장터에서 사다가 나루에 파는 중개 무역이 된다(가게의 하루 수량과 하루 한도가 있어 돈이 끝없이 불지는 않는다).
+   장터마다의 것은 MKT에 모은다: bd=국경 장터(S.bd), pt=바닷길 나루(S.pt). 지금 있는 곳은 mkNow() */
+const PT_WANT={ginseng:2,silk:1.55,chinaware:1.4,ink:1.4,tigerskin:1.5,leopardskin:1.4,bean:1.5,bori:1.5,hide:1.4},
+  PT_SELL={copper:{s:'metal',n:4},sulfur:{s:'metal',n:5},lacquer:{s:'craft',n:2},jfan:{s:'craft',n:4},pepper:{s:'craft',n:4}};
+const MKT={bd:{want:BD_WANT,sell:BD_SELL,folk:BD_FOLK,k:7919,role:'조선 사역원',hint:'산삼·더덕·털가죽·사슴뿔·전복'},
+  pt:{want:PT_WANT,sell:PT_SELL,folk:PT_FOLK,k:6841,role:'조선 왜학 역관',hint:'산삼·비단·청화 자기·먹·콩·보리'}};
+const mkNow=()=>wz===6?'pt':'bd';
+function bdRates(mk){
+  const M=MKT[mk||mkNow()],rng=mulberry((S.day*M.k+townSeed*13+5)>>>0),ids=Object.keys(M.want).filter(k=>ITEMS[k]),hot=ids[Math.floor(rng()*ids.length)],want={},buy={};
+  for(const k of ids)want[k]=Math.ceil(ITEMS[k].p*M.want[k]*(.85+rng()*.3)*(k===hot?1.35:1));
+  for(const k in M.sell)buy[k]=Math.ceil(ITEMS[k].p*.8*(.85+rng()*.4));
   return{hot,want,buy};
 }
-function bdToday(){if(!S.bd||S.bd.day!==S.day){S.bd={day:S.day,sold:0,left:{}};for(const k in BD_SELL)S.bd.left[k]=BD_SELL[k].n}return S.bd}
+function bdToday(mk){mk=mk||mkNow();const M=MKT[mk];if(!S[mk]||S[mk].day!==S.day){S[mk]={day:S.day,sold:0,left:{}};for(const k in M.sell)S[mk].left[k]=M.sell[k].n}return S[mk]}
 function borderGate(){
   if(S.pass){enterBorder();return}
   const free=!!(S.merch&&S.merch.rank>=1),fee=free?0:BD_PASS;
@@ -5157,31 +5284,54 @@ function leaveBorder(quiet){
   wz=3;useMap(SNOW);S.pickups=S.npick||snowPickups();S.away='snow';spawnSnow(); /* 장터에서 날이 바뀌었으면 눈고개를 새로 채운다 */
   miniRef=null;buildGround();mg=null;fishing=null;drops=[];if(!quiet)warp(W-2,SNOW_Y,[-1,0]);syncPlace();hud();
 }
+/* 먼바다의 남쪽 끝 → 바닷길 나루. 뱃길 문서(S.ptPass)가 있어야 한다(삯은 국경과 같다) */
+function portGate(){
+  if(S.ptPass){enterPort();return}
+  const free=!!(S.merch&&S.merch.rank>=1),fee=free?0:BD_PASS;
+  warp(P.x,H-2,[0,-1]);
+  dialog({who:'수군 군관',text:'멈추시오. 이 남쪽은 섬나라 상인들의 나루로 가는 뱃길이오. 뱃길 문서가 있어야 하오.\n'+(free?'객주 이상이구려. 문서를 바로 써 주겠소.':'문서 삯은 '+won(fee)+'이오. (객주 이상은 삯 없음)'),
+    choices:[[free?'뱃길 문서 받기':S.coins>=fee?'뱃길 문서 받기 ('+won(fee)+')':'돈이 모자라요',S.coins>=fee?()=>{if(fee)addCoins(-fee);S.ptPass=1;sfx('level');float('뱃길 문서를 받았어요');saveAll()}:null],['돌아가기',null]]});
+}
+function enterPort(){
+  if(scene!=='sea'||!S.ptPass)return;
+  S.spick=S.pickups;scene='wild';wz=6;useMap(PORT);beasts=[];S.pickups=[];S.away='port';
+  miniRef=null;buildGround();mg=null;fishing=null;drops=[];dropKeys();warp(PT_PIER[0],PT_PIER[1]-2,[0,-1]);syncPlace(); /* 아래로 누른 채 들어와도 곧장 되나가지 않게 누른 키를 비우고 잔교 끝에서 두 칸 안쪽에 선다 */S.min=Math.min(1380,S.min+20);hud();
+  const first=!S.seenPort;S.seenPort=1;if(first)addXp(50);bdToday('pt');touch();
+  if(S.tips.port)toast('바닷길 나루예요');
+  tip('port','바닷길 나루예요. 역관이 오늘 시세를 알려 줘요. 잔교 끝에서 배에 올라요');
+}
+function leavePort(quiet){
+  if(scene!=='wild'||wz!==6)return;
+  scene='sea';wz=0;useMap(SEA);beasts=[];S.pickups=S.spick||seaPickups();S.away='sea';if(seaDay!==S.day)seaShoals();
+  miniRef=null;buildGround();mg=null;fishing=null;drops=[];dropKeys();if(!quiet)warp(17,H-4,[0,-1]);syncPlace();hud();
+}
 function traderTalk(k){
-  const f=BD_FOLK.find(q=>q.k===k),R=bdRates(),B=bdToday();
+  const M=MKT[mkNow()],f=M.folk.find(q=>q.k===k);if(!f)return;
+  if(f.say){dialog({who:f.n,text:f.say});return}
+  const R=bdRates(),B=bdToday();
   if(k==='guide'){
     const best=Object.keys(R.want).sort((a,b)=>R.want[b]/ITEMS[b].p-R.want[a]/ITEMS[a].p).slice(0,2).map(id=>ITEMS[id].n+' '+won(R.want[id])).join(', ');
     const cheap=Object.keys(R.buy).sort((a,b)=>R.buy[a]/ITEMS[a].p-R.buy[b]/ITEMS[b].p)[0];
-    dialog({who:f.n,role:'조선 사역원',text:'어서 오시오. 저쪽 상인들 말은 내가 옮겨 드리리다.\n· 오늘 찾는 것: '+ITEMS[R.hot].n+'\n· 값 좋은 것: '+best+'\n· 싸게 살 것: '+ITEMS[cheap].n+' '+won(R.buy[cheap])+'\n· 더 팔 수 있는 값: '+won(Math.max(0,bdCap()-B.sold))});
+    dialog({who:f.n,role:M.role,text:'어서 오시오. 저쪽 상인들 말은 내가 옮겨 드리리다.\n· 오늘 찾는 것: '+ITEMS[R.hot].n+'\n· 값 좋은 것: '+best+'\n· 싸게 살 것: '+ITEMS[cheap].n+' '+won(R.buy[cheap])+'\n· 더 팔 수 있는 값: '+won(Math.max(0,bdCap()-B.sold))});
     return;
   }
-  if(k==='fur'){openBdSell();return}
+  if(f.buy){openBdSell();return}
   openBdBuy(k);
 }
 function openBdBuy(k){
-  const f=BD_FOLK.find(q=>q.k===k),R=bdRates(),B=bdToday();
+  const M=MKT[mkNow()],f=M.folk.find(q=>q.k===k),R=bdRates(),B=bdToday();
   openModal(f.n,body=>{
     body.appendChild(el('p','note','가진 돈 '+won(S.coins)+' · 물건은 날마다 조금씩만 들어와요'));
-    for(const id in BD_SELL){if(BD_SELL[id].s!==k)continue;const p=R.buy[id],left=B.left[id]|0;
-      row(body,icon('item',id),ITEMS[id].n,['남은 것 '+left+'/'+BD_SELL[id].n+' · 가진 것 '+have(id),(EAT[id]?'기력 +'+EAT[id]+' · ':'')+'만물상 값 '+sellPrice(id)+'냥'],[[won(p),()=>{if(S.coins<p||B.left[id]<1)return;B.left[id]--;addCoins(-p);gain(id,1);sfx('coin');openBdBuy(k)},S.coins<p||left<1]]);}
+    for(const id in M.sell){if(M.sell[id].s!==k)continue;const p=R.buy[id],left=B.left[id]|0;
+      row(body,icon('item',id),ITEMS[id].n,['남은 것 '+left+'/'+M.sell[id].n+' · 가진 것 '+have(id),(EAT[id]?'기력 +'+EAT[id]+' · ':'')+'만물상 값 '+sellPrice(id)+'냥'],[[won(p),()=>{if(S.coins<p||B.left[id]<1)return;B.left[id]--;addCoins(-p);gain(id,1);sfx('coin');openBdBuy(k)},S.coins<p||left<1]]);}
   });
 }
 function openBdSell(){
-  const R=bdRates(),B=bdToday(),room=()=>Math.max(0,bdCap()-B.sold);
-  openModal('큰 상인',body=>{
+  const M=MKT[mkNow()],R=bdRates(),B=bdToday(),room=()=>Math.max(0,bdCap()-B.sold);
+  openModal(M.folk.find(q=>q.buy).n,body=>{
     body.appendChild(el('p','note','오늘 더 팔 수 있는 값 '+won(room())+' · 찾는 것: '+ITEMS[R.hot].n));
     const ids=Object.keys(R.want).filter(id=>have(id)>0);
-    if(!ids.length)body.appendChild(el('p',null,'팔 물건이 없어요. 산삼·더덕·털가죽·사슴뿔·전복을 가져와요.'));
+    if(!ids.length)body.appendChild(el('p',null,'팔 물건이 없어요. '+M.hint+' 같은 것을 가져와요.'));
     for(const id of ids){const p=R.want[id],n=have(id),can=Math.min(n,Math.floor(room()/p));
       const sell=q=>{if(q<1)return;gain(id,-q);addCoins(p*q);B.sold+=p*q;addXp(Math.min(20,2*q));sfx('coin');touch();openBdSell()};
       row(body,icon('item',id),ITEMS[id].n+(id===R.hot?' ★':''),[n+'개 · 개당 '+won(p),'만물상 '+sellPrice(id)+'냥'+(can<n?' · 오늘은 '+can+'개까지':'')],[['1개',()=>sell(1),can<1],['모두',()=>sell(can),can<2]]);}
@@ -6185,7 +6335,7 @@ function ladderAct(o){
   enterCave(cave.floor+1);
 }
 // 같이 하기에서 서로 보이는 곳의 번호: 동굴은 층마다 다른 번호를 쓴다
-const sceneNo=()=>scene==='cave'&&cave?100+cave.floor:scene==='wild'&&wz?(wz===2?7:wz===3?9:wz===5?11:6):scene==='home'&&S.inQ?8:SCENE_NO[scene]||0; /* 깊은 산은 6, 금원은 7, 궁궐 처소는 8, 눈고개는 9 */
+const sceneNo=()=>scene==='cave'&&cave?100+cave.floor:scene==='wild'&&wz?(wz===2?7:wz===3?9:wz===5?11:wz===6?12:6):scene==='home'&&S.inQ?8:SCENE_NO[scene]||0; /* 깊은 산은 6, 금원은 7, 궁궐 처소는 8, 눈고개는 9 */
 // ───────── 명절 ─────────
 const festOf=day=>day>1?FESTS.find(f=>f.s===seasonOf(day)&&f.d===(day-1)%7+1)||null:null; // 첫날(1일째)은 설날로 치지 않는다
 const fest=()=>S?festOf(S.day):null;
@@ -8139,6 +8289,7 @@ function nextDay(forced){
   const wakeQ=!forced&&scene==='home'&&!!S.inQ; /* 궁궐 처소의 침대에서 잠들었으면 다음 날도 처소에서 눈을 뜬다 */
   const stay=!forced&&scene==='resort'?stayAt:null;stayAt=null; /* 운종가의 주막이나 별서에서 묵었으면 다음 날 그 문 앞에서 눈을 뜬다 */
   if(S.inQ)leaveQuarter(true);
+  if(scene==='wild'&&wz===6)leavePort(true);
   if(scene==='sea')leaveSea(true);
   S.spick=null;
   if(scene==='cave')leaveCave(true);
@@ -8279,6 +8430,7 @@ const told=(k,r)=>(S.lore['n'+k]|0)>=r;
 const tell=(k,r)=>{if((S.lore['n'+k]|0)<r){S.lore['n'+k]=r;touch()}};
 // 소문: [무슨 이야기, 들려주는 이웃, 때가 됐는지, 하는 말]. 이웃과 이야기할 때 한 번씩 나온다
 const RUMORS=[
+  ['pt','eunha',()=>workDone('boat')&&S.level>=8,'먼바다 남쪽 끝까지 가 보셨어요? 그 너머에 섬나라 상인들의 나루가 있대요. 구리며 칠기, 후추를 팔고, 우리 산삼이랑 대륙 비단을 비싸게 사 간대요.'],
   ['bd','eunha',()=>S.level>=SNOW_LV,'눈고개 동쪽 끝까지 가 보셨어요? 그 너머에 국경 장터가 선대요. 대륙에서 온 상인들이 비단이며 찻잎, 청화 자기를 팔고, 우리 산삼이랑 털가죽은 값을 곱절로 쳐준다지 뭐예요. 수문장에게 통행 문서를 받아야 지나갈 수 있대요.'],
   ['gl','dami',()=>S.level>=2||S.day>=2,'풀숲에서 뭔가 반짝이는 거 본 적 있어? 그 위에 서서 행동을 세 번 누르면 파낼 수 있어! 사냥터 깊은 숲이랑 먼바다 섬, 동굴 바닥에는 더 귀한 게 묻혀 있대.'],
   ['pal','eunha',()=>S.level>=2||S.day>=3,'마을 북쪽 길 끝까지 가 봤어요? 그 길로 쭉 올라가면 한양 궁궐이에요. 궁 안 사람들도 인사는 받아 준답니다.'],
@@ -8391,7 +8543,7 @@ function rollGlints(){
   const far=TOWN.GRASS.filter(([x,y])=>!(x>=FARM[0]&&x<=FARM[2]&&y>=FARM[1]&&y<=FARM[3])&&Math.abs(x-SPAWN[0])+Math.abs(y-SPAWN[1])>8&&!BLD.some(b=>Math.abs(x-b.door[0])+Math.abs(y-b.door[1])<3)&&!STALLS.some(s=>s.x===x&&s.y===y)); /* 좌판이 서는 칸은 뺀다 */
   S.glints={day:S.day,town:take(far,1),wild:take(WILD.GRASS.filter(q=>q[0]>14&&!(Math.abs(q[0]-HUNT_AT[0])<2&&Math.abs(q[1]-HUNT_AT[1])<3)),2),sea:take(SEA.SAND,2),deep:take(DEEP.GRASS.filter(q=>q[0]>12),2),snow:take(SNOW.GRASS.filter(q=>q[0]>10),2),royal:take(GEUMWON.GRASS.filter(q=>q[1]<H-8),2)};
 }
-const glintKey=()=>scene==='wild'&&wz?(wz===2?'royal':wz===3?'snow':wz===5?'border':'deep'):scene; /* 깊은 산과 금원의 반짝이는 곳은 따로 둔다 (나오는 것은 사냥터와 같다) */
+const glintKey=()=>scene==='wild'&&wz?(wz===2?'royal':wz===3?'snow':wz===5?'border':wz===6?'port':'deep'):scene; /* 깊은 산과 금원의 반짝이는 곳은 따로 둔다 (나오는 것은 사냥터와 같다) */
 const glintsNow=()=>scene==='cave'?(cave&&cave.glint?[cave.glint]:[]):(S.glints&&S.glints[glintKey()])||[];
 function glintHere(){const g=glintsNow();for(let i=0;i<g.length;i++)if(g[i][0]===P.x&&g[i][1]===P.y)return i;return-1}
 let dig=null;
@@ -10185,7 +10337,7 @@ function openMap(town){
   fogStep(); /* 막 들어온 곳이라 안개를 아직 못 읽었을 수도 있으니 먼저 맞춘다 */
   /* v92: 마을 밖에서는 지금 있는 곳(사냥터·궁궐·운종가·먼바다·동굴)의 큰 지도를 먼저 보여 준다. 거기서 "마을 지도 보기"로 넘어간다 */
   if(!town&&scene!=='town'&&scene!=='home'){
-    const nm={wild:['사냥터 숲','깊은 산','금원','눈고개','서쪽 들판','국경 장터'][wz]||'사냥터',palace:'한양 궁궐',sea:'먼바다',resort:'운종가',cave:'동굴'}[scene]||'지금 있는 곳';
+    const nm={wild:['사냥터 숲','깊은 산','금원','눈고개','서쪽 들판','국경 장터','바닷길 나루'][wz]||'사냥터',palace:'한양 궁궐',sea:'먼바다',resort:'운종가',cave:'동굴'}[scene]||'지금 있는 곳';
     openModal('지도 · '+nm,body=>{
       const m=el('canvas');m.style.cssText='display:block;width:100%;max-width:540px;margin:0 auto 8px;border-radius:10px;border:1.5px solid var(--line);image-rendering:pixelated';
       drawMini(m,10,null,[P.x,P.y],{tile,objAt},fogArr&&fogRef===tile?fogArr:null);body.appendChild(m);
@@ -10747,6 +10899,9 @@ window.addEventListener('keydown',e=>{
   if(e.code==='KeyZ')undoTill();
 });
 // 방향 입력 하나(방향키든 터치 방향판이든). 놀이 가운데 몇은 방향이 걷기가 아니라 동작 입력이다
+/* dropKeys(v118): 누르고 있던 방향을 비우고, 새로 누를 때까지 누른 채 반복되는 신호도 받지 않는다. 길 끝에서 다른 곳으로 넘어간 직후, 같은 방향을 누른 채라 곧장 되돌아가는 일을 막는다 */
+let keyWait=false;
+function dropKeys(){keys.length=0;P.path=[];keyWait=true}
 function dirDown(code,rep){
   const q=KEYDIR[code],di=()=>DIRS.findIndex(v=>v[0]===q[0]&&v[1]===q[1]);
   if(mg&&mg.kind==='rite'){if(!rep)ritePress(di());return}
@@ -10755,8 +10910,8 @@ function dirDown(code,rep){
   if(mg&&mg.kind==='study'){studyMove(q[0],q[1]);return}
   if(mg&&mg.kind==='eye'){if(!rep&&q[0])eyePick(q[0]<0?0:1);return}
   // 새로 누른 방향이 언제나 맨 뒤(=지금 가는 방향)로 온다. 떼는 신호를 놓쳐 목록에 남아 있던 키를 다시 눌러도 그쪽으로 간다
-  if(!rep){const i=keys.indexOf(code);if(i>=0)keys.splice(i,1);keys.push(code);tapDir=code;tapT=performance.now()}
-  else if(!keys.includes(code))keys.push(code);
+  if(!rep){keyWait=false;const i=keys.indexOf(code);if(i>=0)keys.splice(i,1);keys.push(code);tapDir=code;tapT=performance.now()}
+  else if(!keyWait&&!keys.includes(code))keys.push(code);
   if(fishing){fishing=null;toast('낚시를 그만뒀어요')}if(mg)mgEnd();
 }
 window.addEventListener('keyup',e=>{const i=keys.indexOf(e.code);if(i>=0)keys.splice(i,1)});
