@@ -58,6 +58,11 @@ button.chip{font:inherit;color:inherit;cursor:pointer;line-height:inherit}
 .toast{background:var(--surface);color:var(--ink);border:1.5px solid var(--wood);border-radius:8px;padding:5px 14px;
   font-family:var(--display);font-size:15px;max-width:100%;animation:pop .25s ease-out;box-shadow:0 3px 0 var(--shade)}
 .toast.out{opacity:0;transition:opacity .4s}
+.toast.morn{pointer-events:auto;cursor:pointer;text-align:left;padding:7px 14px 9px;font-size:14px;line-height:1.5;max-width:min(100%,340px)}
+.toast.morn b{display:block;font-weight:400;font-size:15.5px;margin-bottom:2px}
+.toast.morn span{display:block;padding-left:.8em;text-indent:-.8em}
+.toast.morn span::before{content:'· '}
+.toast.morn i{display:block;font-style:normal;color:var(--muted);font-size:12.5px;margin-top:3px}
 @keyframes pop{from{transform:translateY(-8px);opacity:0}to{transform:none;opacity:1}}
 #actBtn{position:absolute;right:10px;bottom:10px;width:54px;height:54px;border-radius:50%;border:2.5px solid var(--accent-ink);padding:0;
   background:var(--accent);color:var(--accent-ink);font-family:var(--display);font-size:13.5px;line-height:1.08;white-space:pre-line;cursor:pointer;box-shadow:0 3px 0 var(--shade);
@@ -170,6 +175,8 @@ ul.help{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
   #stage{min-height:200px;border-radius:14px}
   #bar{gap:4px} #bar .btn{font-size:13px;padding:5px 8px;border-radius:10px} #bar .sp{margin-left:0}
   #dlgText{font-size:15px} .btn{padding:6px 10px}
+  .row{flex-wrap:wrap;row-gap:4px} .row .grow{flex:1 1 150px} .row .acts{margin-left:auto} /* 좁은 화면: 글이 단추에 눌려 서너 줄로 접히지 않게, 자리가 모자라면 단추가 아랫줄로 내려간다 */
+  .toast{font-size:13.5px;padding:4px 10px;line-height:1.4} .toast.morn{font-size:13px} .toast.morn b{font-size:14.5px}
   #modal,#title{padding:8px} #title .sheet{padding:14px 14px 12px}
 }
 /* 휴대폰 가로: 높이가 모자라니 위아래 띠를 한 줄씩으로 줄이고, 도구 단추는 옆으로 밀어 본다 */
@@ -1346,6 +1353,10 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:117,d:'11월 26일',t:'아침 소식 한 장으로',l:[
+    '아침에 알림이 줄줄이 뜨지 않아요. 쪽지 한 장에 모아서 보여 주고, 누르면 모두 볼 수 있어요.',
+    '휴대폰에서 읽기 쉽게 아침 글과 국경 장터의 글을 줄이고, 목록의 단추가 글을 누르지 않게 했어요.'
+  ]},
   {v:116,d:'11월 26일',t:'북쪽 국경 장터',l:[
     '눈고개의 동쪽 길 끝 너머에 국경 장터가 열렸어요. 대륙 상인들이 드나드는 곳이라 가게도 사람도 차림이 달라요. 끝이 치켜 올라간 기와지붕에 붉은 기둥, 붉은 등롱이 걸려 있어요.',
     '들어가려면 수문장에게 통행 문서를 받아야 해요(800냥, 상인의 길 둘째 자리부터는 삯 없음). 한 번 받으면 계속 쓸 수 있어요.',
@@ -3835,7 +3846,7 @@ function bgmTick(){
 function toast(msg){
   const box=$('toasts'),t=el('div','toast',msg);box.appendChild(t);
   while(box.children.length>4)box.firstChild.remove();
-  setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),450)},2800);
+  setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),450)},Math.min(7000,2800+Math.max(0,String(msg).length-18)*70)); /* 긴 글은 읽을 틈을 더 준다 */
 }
 function float(txt,x,y,col){floats.push({txt:jz(txt),x:x!=null?x:(P.x+.5)*T,y:y!=null?y:P.y*T-20,t:0,col})}
 // 다쳤을 때의 모습(v81): 짐승에게 물리거나 맞붙다 맞으면 알림 글 대신 화면으로 보여 준다. 화면이 잠깐 흔들리고 가장자리가 붉어지며,
@@ -5138,7 +5149,7 @@ function borderGate(){
   if(S.pass){enterBorder();return}
   const free=!!(S.merch&&S.merch.rank>=1),fee=free?0:BD_PASS;
   warp(W-2,SNOW_Y,[-1,0]);
-  dialog({who:'국경 수문장',text:'멈추시오. 이 너머는 나라의 경계, 대륙 상인들이 드나드는 국경 장터요. 통행 문서가 있어야 지날 수 있소.\n'+(free?'객주 이상의 상인이구려. 문서를 바로 써 주겠소.':'문서 삯은 '+won(fee)+'이오. (상인의 길에서 둘째 자리에 오르면 삯을 받지 않소.) · 가진 돈 '+won(S.coins)),
+  dialog({who:'국경 수문장',text:'멈추시오. 이 너머는 국경 장터요. 통행 문서가 있어야 지날 수 있소.\n'+(free?'객주 이상이구려. 문서를 바로 써 주겠소.':'문서 삯은 '+won(fee)+'이오. (객주 이상은 삯 없음)'),
     choices:[[free?'통행 문서 받기':S.coins>=fee?'통행 문서 받기 ('+won(fee)+')':'돈이 모자라요',S.coins>=fee?()=>{if(fee)addCoins(-fee);S.pass=1;sfx('level');float('통행 문서를 받았어요');saveAll()}:null],['돌아가기',null]]});
 }
 function enterBorder(){
@@ -5147,7 +5158,7 @@ function enterBorder(){
   miniRef=null;buildGround();mg=null;fishing=null;drops=[];warp(1,BD_Y,[1,0]);syncPlace();hud();
   const first=!S.seenBorder;S.seenBorder=1;if(first)addXp(50);bdToday();touch();
   if(S.tips.border)toast('국경 장터에 들어왔어요. 서쪽 길로 나가면 눈고개예요'); /* 처음에는 아래 도움말 하나만 띄운다 */
-  tip('border','대륙 상인들이 드나드는 국경 장터예요. 들머리의 역관에게 오늘 시세를 묻고, 북쪽 가게의 상인들과 물건을 사고팔아요');
+  tip('border','국경 장터예요. 들머리의 역관이 오늘 시세를 알려 줘요');
 }
 function leaveBorder(quiet){
   if(scene!=='wild'||wz!==5)return;
@@ -5157,9 +5168,9 @@ function leaveBorder(quiet){
 function traderTalk(k){
   const f=BD_FOLK.find(q=>q.k===k),R=bdRates(),B=bdToday();
   if(k==='guide'){
-    const best=Object.keys(R.want).sort((a,b)=>R.want[b]/ITEMS[b].p-R.want[a]/ITEMS[a].p).slice(0,3).map(id=>ITEMS[id].n+' '+won(R.want[id])).join(', ');
+    const best=Object.keys(R.want).sort((a,b)=>R.want[b]/ITEMS[b].p-R.want[a]/ITEMS[a].p).slice(0,2).map(id=>ITEMS[id].n+' '+won(R.want[id])).join(', ');
     const cheap=Object.keys(R.buy).sort((a,b)=>R.buy[a]/ITEMS[a].p-R.buy[b]/ITEMS[b].p)[0];
-    dialog({who:f.n,role:'조선 사역원',text:'어서 오시오. 나는 이곳에서 말을 옮겨 주는 역관이오. 저쪽 상인들의 말은 내가 다 전해 드리리다.\n오늘 큰 상인이 유난히 찾는 것은 '+ITEMS[R.hot].n+'이오. 값 좋은 것: '+best+'.\n사 갈 만한 것은 '+ITEMS[cheap].n+'이 오늘 싸오 ('+won(R.buy[cheap])+').\n오늘 팔 수 있는 값의 한도는 '+won(bdCap())+' 가운데 '+won(Math.max(0,bdCap()-B.sold))+' 남았소.'});
+    dialog({who:f.n,role:'조선 사역원',text:'어서 오시오. 저쪽 상인들 말은 내가 옮겨 드리리다.\n· 오늘 찾는 것: '+ITEMS[R.hot].n+'\n· 값 좋은 것: '+best+'\n· 싸게 살 것: '+ITEMS[cheap].n+' '+won(R.buy[cheap])+'\n· 더 팔 수 있는 값: '+won(Math.max(0,bdCap()-B.sold))});
     return;
   }
   if(k==='fur'){openBdSell();return}
@@ -5168,20 +5179,20 @@ function traderTalk(k){
 function openBdBuy(k){
   const f=BD_FOLK.find(q=>q.k===k),R=bdRates(),B=bdToday();
   openModal(f.n,body=>{
-    body.appendChild(el('p','note','(역관이 말을 옮겨 줘요.) "먼 길 오셨소. 좋은 물건만 골라 왔으니 천천히 보시오." · 가진 돈 '+won(S.coins)+' · 물건은 날마다 조금씩만 들어와요.'));
+    body.appendChild(el('p','note','가진 돈 '+won(S.coins)+' · 물건은 날마다 조금씩만 들어와요'));
     for(const id in BD_SELL){if(BD_SELL[id].s!==k)continue;const p=R.buy[id],left=B.left[id]|0;
-      row(body,icon('item',id),ITEMS[id].n,[(EAT[id]?'먹으면 기력 +'+EAT[id]+' · ':'')+'남은 것 '+left+'/'+BD_SELL[id].n+'개 · 가진 것 '+have(id)+'개','마을 만물상에 팔면 개당 '+sellPrice(id)+'냥쯤'],[[won(p),()=>{if(S.coins<p||B.left[id]<1)return;B.left[id]--;addCoins(-p);gain(id,1);sfx('coin');openBdBuy(k)},S.coins<p||left<1]]);}
+      row(body,icon('item',id),ITEMS[id].n,['남은 것 '+left+'/'+BD_SELL[id].n+' · 가진 것 '+have(id),(EAT[id]?'기력 +'+EAT[id]+' · ':'')+'만물상 값 '+sellPrice(id)+'냥'],[[won(p),()=>{if(S.coins<p||B.left[id]<1)return;B.left[id]--;addCoins(-p);gain(id,1);sfx('coin');openBdBuy(k)},S.coins<p||left<1]]);}
   });
 }
 function openBdSell(){
   const R=bdRates(),B=bdToday(),room=()=>Math.max(0,bdCap()-B.sold);
   openModal('큰 상인',body=>{
-    body.appendChild(el('p','note','(역관이 말을 옮겨 줘요.) "조선 물건이라면 값을 넉넉히 치르겠소." · 오늘 더 팔 수 있는 값 '+won(room())+' / '+won(bdCap())+' · 오늘 유난히 찾는 것: '+ITEMS[R.hot].n));
+    body.appendChild(el('p','note','오늘 더 팔 수 있는 값 '+won(room())+' · 찾는 것: '+ITEMS[R.hot].n));
     const ids=Object.keys(R.want).filter(id=>have(id)>0);
-    if(!ids.length)body.appendChild(el('p',null,'큰 상인이 찾는 물건이 없어요. 산삼·가죽·여우 털·사슴뿔·전복·더덕 같은 것을 가져와요.'));
+    if(!ids.length)body.appendChild(el('p',null,'팔 물건이 없어요. 산삼·더덕·털가죽·사슴뿔·전복을 가져와요.'));
     for(const id of ids){const p=R.want[id],n=have(id),can=Math.min(n,Math.floor(room()/p));
       const sell=q=>{if(q<1)return;gain(id,-q);addCoins(p*q);B.sold+=p*q;addXp(Math.min(20,2*q));sfx('coin');touch();openBdSell()};
-      row(body,icon('item',id),ITEMS[id].n+(id===R.hot?' ★':''),['가진 것 '+n+'개 · 개당 '+won(p)+' (만물상 '+sellPrice(id)+'냥)',can<n?'오늘 한도로는 '+can+'개까지':''].filter(Boolean),[['1개',()=>sell(1),can<1],['팔 수 있는 만큼',()=>sell(can),can<2]]);}
+      row(body,icon('item',id),ITEMS[id].n+(id===R.hot?' ★':''),[n+'개 · 개당 '+won(p),'만물상 '+sellPrice(id)+'냥'+(can<n?' · 오늘은 '+can+'개까지':'')],[['1개',()=>sell(1),can<1],['모두',()=>sell(can),can<2]]);}
   });
 }
 /* 목장(v110): 들판의 울타리 친 풀밭. 어귀의 푯말에서 가축을 풀어 놓으면(S.graze=그날) 그날은 사료를 주지 않아도 배불리 먹은 것으로 치고(dayStock), 가축들과 조금 가까워진다. 하루에 한 번 */
@@ -7756,9 +7767,9 @@ function dayStock(msgs){
     for(let y=p.y-1;y<=p.y+2;y++)for(let x=p.x-1;x<=p.x+2;x++)if(grazeOk(x,y)&&!S.pickups.some(q=>q.x===x&&q.y===y))spots.push([x,y]);
     while(n>0&&spots.length){const [x,y]=spots.splice(Math.floor(Math.random()*spots.length),1)[0];S.pickups.push({x,y,id:'egg'});n--}
     if(n>0)gain('egg',n);
-    msgs.push('닭장 둘레에 달걀이 '+eggs+'개 놓여 있어요');
+    msgs.push('달걀 '+eggs+'개');
   }
-  if(S.stock.some(a=>a.milk))msgs.push('젖이 찬 소가 있어요. 쓰다듬고 젖을 짜요');
+  if(S.stock.some(a=>a.milk))msgs.push('젖이 찬 소가 있어요');
   if(hungry)msgs.push('어제 먹이를 못 먹은 가축이 있어요');
   spawnHerd();
 }
@@ -7985,12 +7996,12 @@ function kidsMorning(msgs){
     S.baby=null;
     if(S.kids.length<2){
       S.kids.push({n:'',sex:Math.random()<.5?'f':'m',born:S.day,love:0,gift:null,care:0,fed:0});born=S.kids.length-1;sfx('level');
-      msgs.push('삼신할머니가 아이를 점지해 주셨어요! 집에 아기가 왔어요'+(pid?' · '+jo(NPCS[pid].name,'이','가')+' 기뻐서 어쩔 줄 몰라요':''));
+      msgs.push('삼신할머니가 아이를 점지해 주셨어요!');
     }
   }
   for(const k of S.kids){
     const age=kidAge(k),h=kidHearts(k),nm=kidNm(k);
-    if(!k.gift){if(age===7)msgs.push('오늘은 '+nm+'의 돌이에요. 집에서 아이에게 말을 걸어 돌잡이를 해요');continue}
+    if(!k.gift){if(age===7)msgs.push('오늘은 '+nm+'의 돌이에요 · 집에서 돌잡이');continue}
     if(k.gift==='thread'||Math.random()>.3+h*.12)continue;
     if(k.gift==='brush'){const x=10+h*3;addXp(x);msgs.push(jo(nm,'이','가')+' 서당에서 배운 글을 들려줬어요 · 경험치 +'+x)}
     else if(k.gift==='coin'){const n=20+h*10;S.coins+=n;msgs.push(jo(nm,'이','가')+' 심부름으로 번 '+n+'냥을 내밀어요')}
@@ -8107,6 +8118,26 @@ function campTalk(){
   dialog({who:'짚자리',text:S.diy?'움막을 짓는 중이에요. ('+S.diy.step+'/3 단계) 다 지을 때까지는 여기서 자요.'
     :'집도 없이 맨땅에 짚을 깔아 만든 잠자리예요. 누우면 하루가 가요. 한데서 자면 기력이 덜 차요.'+(S.lore.hut?'\n(나무 '+HUT_WOOD+'개를 모아 모루에게 가면 움막을 지을 수 있어요. 가진 나무 '+have('wood')+'개)':''),choices:ch});
 }
+/* 아침 소식 쪽지(v117, 사용자 의견: 아침마다 알림이 계속 떠서 정신없다): 아침에 알릴 것을 하나씩 띄우지 않고 쪽지 한 장에 모은다.
+   첫 줄(날짜·날씨)을 머리로, 꼭 알아야 할 것(MORN_HOT)을 앞세워 넉 줄까지만 보이고 나머지는 "그 밖에 N가지"로 접는다. 쪽지를 누르면 모두 보인다.
+   그날 치는 mornLast에 두어 철 안내 창에서 다시 볼 수 있다(저장하지 않음). 아침 글은 휴대폰 한 줄에 들어가게 짧게 쓴다 */
+let mornLast=null;
+const MORN_HOT=/완성|점지|돌이에요|옥에서|옥사에서|깜빡|^오늘은|까마귀|편지|다 자란|다 자랐|익었|가뭄|무지개|바람이|달걀|젖이|처소/;
+function mornCard(msgs){
+  const rest=msgs.slice(1),lines=rest.filter(m=>MORN_HOT.test(m)).concat(rest.filter(m=>!MORN_HOT.test(m)));
+  mornLast={day:S.day,head:msgs[0],lines};
+  const box=$('toasts');for(const o of [...box.children])o.remove();
+  const t=el('div','toast morn'),show=lines.slice(0,4);t.appendChild(el('b',null,msgs[0]));
+  for(const m of show)t.appendChild(el('span',null,m));
+  if(lines.length>show.length)t.appendChild(el('i',null,'그 밖에 '+(lines.length-show.length)+'가지 · 눌러서 모두 보기'));
+  t.onclick=()=>{t.remove();if(lines.length>show.length)openMorn()};
+  box.appendChild(t);
+  setTimeout(()=>{t.classList.add('out');setTimeout(()=>t.remove(),450)},4500+show.length*1100);
+}
+function openMorn(){
+  if(!mornLast)return;
+  openModal('아침 소식',body=>{body.appendChild(el('p','sub',mornLast.head));const ul=el('ul','help');for(const m of mornLast.lines)ul.appendChild(el('li',null,m));if(!mornLast.lines.length)body.appendChild(el('p','note','오늘 아침에는 따로 알릴 일이 없었어요.'));body.appendChild(ul)});
+}
 function sleep(forced){
   if(sleeping)return;sleeping=true;closeDlg();closeModal();fishing=null;mg=null;drops=[];P.path=[];P.after=null;keys.length=0;
   $('fade').classList.add('on');
@@ -8152,62 +8183,61 @@ function nextDay(forced){
   comer=null;comeCool=rnd(30,70);S.cameN=0;
   for(const id of NPC_IDS){S.npcs[id].talk=false;S.npcs[id].gift=false;S.npcs[id].came=false;const a=NPCS[id].anchor,n=N[id];n.x=n.fx=a[0];n.y=n.fy=a[1];n.t=1;n.hold=0;n.emo=null;n.path=null;n.spot=null;n.stay=null}
   const sea=season(),msgs=[SEASONS[sea]+' '+((S.day-1)%7+1)+'일 아침, '+(S.weather==='rain'?(sea===3?'눈이 내려요':'비가 내려요'):'날이 맑아요')];
-  if((S.day-1)%7===0)msgs.push(SEASONS[sea]+'이 왔어요! 심을 작물과 낚이는 물고기, 주울 것이 바뀌어요. 위의 계절 칩을 누르면 볼 수 있어요');
-  if(campNight)msgs.push(campNight===2?'비를 맞으며 자서 몸이 무거워요. 지붕이 있으면 좋겠어요':'짚자리에서 자서 기력이 조금 덜 찼어요');
+  if(campNight)msgs.push(campNight===2?'비를 맞고 자서 몸이 무거워요':'짚자리라 기력이 덜 찼어요');
   if(sea!==was){
     buildGround();
-    msgs.push(['봄이 왔어요. 꽃이 피고 딸기를 심을 수 있어요','여름이에요. 수박 철이고 민물에 메기가 올라와요','가을이에요. 밤을 줍고 호박을 심어요. 꿩도 보여요','겨울이에요. 밭과 과일나무는 쉬고, 민물에서 빙어가 잡혀요'][sea]);
+    msgs.push(['오늘은 봄의 첫날 · 딸기 심는 철','오늘은 여름의 첫날 · 수박 철, 메기 철','오늘은 가을의 첫날 · 밤 줍고 호박 심기','오늘은 겨울의 첫날 · 밭은 쉬고 빙어 철'][sea]);
   }
-  if(S.wx==='rainbow')msgs.push('비 갠 하늘에 무지개가 떴어요. 오늘은 경험치를 25% 더 얻어요');
-  if(S.wx==='drought')msgs.push('가뭄이 들었어요. 물 주기가 두 배로 힘들고(우물이 있으면 괜찮아요), 물을 못 준 작물은 시들어요');
-  if(S.wx==='wind')msgs.push('바람이 세게 불어요. 과일나무 밑에 열매가 떨어져 있어요');
-  if(pecked)msgs.push('어제 까마귀가 밭 '+pecked+'칸을 쪼아 먹었어요');
-  if(crowN)msgs.push('까마귀가 밭에 내려앉았어요! 다가가서 쫓아요. 허수아비를 세우면 얼씬도 못 해요');
+  if(S.wx==='rainbow')msgs.push('무지개가 떴어요 · 오늘 경험치 +25%');
+  if(S.wx==='drought')msgs.push('가뭄이에요 · 물 못 준 작물은 시들어요');
+  if(S.wx==='wind')msgs.push('바람이 세요 · 과일나무 밑에 열매');
+  if(pecked)msgs.push('까마귀가 밭 '+pecked+'칸을 쪼아 먹었어요');
+  if(crowN)msgs.push('까마귀가 밭에 앉았어요 · 다가가서 쫓기');
   applyMarket();applyFest();
-  {const f=fest(),nx=festOf(S.day+1);if(f)msgs.push('오늘은 '+jo(f.n,'이에요','예요')+'! 만물상 동쪽 마당에서 잔치가 열려요');else if(nx)msgs.push('내일은 '+jo(nx.n,'이에요','예요')+'. 잔치 마당에서 놀이가 열려요')}
-  if(isMarket())msgs.push('오늘은 닷새에 한 번 서는 장날이에요. 만물상 동쪽 마당에 보부상과 객주가 왔어요');else if(marketIn()===1)msgs.push('내일은 장날이에요. 팔 물건을 모아 두세요');
-  if(cupMsg){msgs.push('어제 사냥 대회의 셈이 끝났어요: '+cupMsg);sendMail('mujin','{name} 보시오.\n어제 사냥 대회의 셈을 마쳤소. 그대는 '+cupMsg.split(' · ').slice(0,2).join(', ')+'이었소. 상은 이미 보냈으니 살펴보시오. 다음 대회에서 또 겨룹시다.\n— 무진')}
-  {const n=morningMail(),all=mailNew();if(all)msgs.push(n?'우편함에 편지가 왔어요. 집 문 앞에서 읽어요 (새 편지 '+all+'통)':'우편함에 아직 읽지 않은 편지가 '+all+'통 있어요')}
+  {const f=fest(),nx=festOf(S.day+1);if(f)msgs.push('오늘은 '+f.n+' · 동쪽 마당에서 잔치');else if(nx)msgs.push('내일은 '+jo(nx.n,'이에요','예요'))}
+  if(isMarket())msgs.push('오늘은 장날 · 동쪽 마당에 보부상');else if(marketIn()===1)msgs.push('내일은 장날이에요');
+  if(cupMsg){msgs.push('사냥 대회 셈: '+cupMsg);sendMail('mujin','{name} 보시오.\n어제 사냥 대회의 셈을 마쳤소. 그대는 '+cupMsg.split(' · ').slice(0,2).join(', ')+'이었소. 상은 이미 보냈으니 살펴보시오. 다음 대회에서 또 겨룹시다.\n— 무진')}
+  {const n=morningMail(),all=mailNew();if(all)msgs.push(n?'새 편지 '+all+'통 · 집 문 앞 우편함':'안 읽은 편지 '+all+'통')}
   // 가꾼 마을: 놓은 것이 여섯을 넘으면 아침마다 기분이 좋고, 열둘을 넘으면 사흘에 한 번 이웃들도 좋아한다
-  if(S.yard.length>=6){const x=Math.min(20,Math.floor(S.yard.length/3));addXp(x);msgs.push('가꾼 마을을 둘러보니 기분이 좋아요 · 경험치 +'+x);
-    if(S.yard.length>=12&&S.day%3===0){for(const id of FOLK)addFriend(id,3);msgs.push('이웃들이 예뻐진 마을을 보고 좋아해요')}}
+  if(S.yard.length>=6){const x=Math.min(20,Math.floor(S.yard.length/3));addXp(x);msgs.push('가꾼 마을 · 경험치 +'+x);
+    if(S.yard.length>=12&&S.day%3===0){for(const id of FOLK)addFriend(id,3);msgs.push('이웃들이 예뻐진 마을을 좋아해요')}}
   // 나쁜 길: 불탄 집은 그을린 채 며칠 가고, 때가 되면 이웃들이 고쳐 놓는다. 수배는 하루에 하나씩 풀리고, 왈패부터는 자릿세가 들어온다
   {let fixed=0;for(const id in S.ruin){const R=S.ruin[id];if(R.k==='fire')R.k='burnt';if(S.day>=R.until){delete S.ruin[id];fixed++}}
-    if(fixed)msgs.push('이웃들이 상한 집 '+fixed+'채를 고쳐 놓았어요');
+    if(fixed)msgs.push('이웃들이 상한 집 '+fixed+'채를 고쳤어요');
     S.pee=[];cop=null;if(S.wanted>0)S.wanted--;
-    if(S.rogue&&ROGUE.rent[S.rogue.rank]){const r=Math.round(ROGUE.rent[S.rogue.rank]*mainMul('rogue'));S.coins+=r;msgs.push('이웃들이 겁이 나서 자릿세 '+r+'냥을 문 앞에 놓고 갔어요')}}
-  if(S.lore.pal||S.seenPal){if(cupDay())msgs.push('오늘은 임금의 사냥 대회 날이에요! 궁궐 궐문의 무진에게 이름을 올리고 사냥터로 가요');else if(cupOn(S.day+1))msgs.push('내일은 임금의 사냥 대회 날이에요. 기력을 아껴 두세요')}
+    if(S.rogue&&ROGUE.rent[S.rogue.rank]){const r=Math.round(ROGUE.rent[S.rogue.rank]*mainMul('rogue'));S.coins+=r;msgs.push('자릿세 +'+r+'냥')}}
+  if(S.lore.pal||S.seenPal){if(cupDay())msgs.push('오늘은 임금의 사냥 대회 · 궐문의 무진에게');else if(cupOn(S.day+1))msgs.push('내일은 임금의 사냥 대회')}
   S.wild=sea===2?5:4;spawnBeasts();dayStock(msgs);
   if(S.merch)rollOrder();
   if(S.spouse)mateMorning(msgs);
-  {const n=guideOpen().length;if(n&&S.day%3===0)msgs.push('레벨이 올라 할 수 있게 된 일이 '+n+'가지 남아 있어요. 아래 "기록"의 "길잡이"에서 볼 수 있어요')}
+  {const n=guideOpen().length;if(n&&S.day%3===0)msgs.push('새로 할 수 있는 일 '+n+'가지 · 기록의 길잡이')}
   // 궁궐 처소: 왕실의 배필이 머리맡을 챙겨 주고, 처소가 새로 생기거나 넓어지면 알려 준다
   if(wakeQ&&courtMate()){const id=courtMate();gain('flower',1);addFriend(id,3);msgs.push(jo(NPCS[id].name,'이','가')+' 머리맡에 꽃을 두고 갔어요')}
-  {const t=quarterTier();if(t>(S.qTier|0)){msgs.push(S.qTier?'궁궐의 내 처소가 더 넓어졌어요':'궁궐에 내 처소가 마련됐어요! 큰길 서쪽의 전각이에요. 북서쪽 담의 작은 문도 이제 열어 준대요');S.qTier=t}}
+  {const t=quarterTier();if(t>(S.qTier|0)){msgs.push(S.qTier?'궁궐의 내 처소가 더 넓어졌어요':'궁궐에 내 처소가 생겼어요 · 큰길 서쪽 전각');S.qTier=t}}
   const born=kidsMorning(msgs);
-  if(workDone('sot'))msgs.push('솟대의 새가 알려 줘요: 내일은 '+(S.wNext==='rain'?(seasonOf(S.day+1)===3?'눈이 와요':'비가 와요'):'맑아요'));
+  if(workDone('sot'))msgs.push('솟대: 내일은 '+(S.wNext==='rain'?(seasonOf(S.day+1)===3?'눈이 와요':'비가 와요'):'맑아요'));
   // 장독대: 하루씩 익는다
-  {let ripe=0;for(const j of S.jars)if(j&&j.d>0&&--j.d===0)ripe++;if(ripe)msgs.push('장독대에서 '+ripe+'독이 다 익었어요')}
-  {let pay=0;for(const k in TRACKS)if(S[k]&&S[k].rank>=1)pay+=Math.round(TRACKS[k].stipend[S[k].rank]*mainMul(k));if(pay){S.coins+=pay;msgs.push('나라에서 녹봉 '+pay+'냥을 보내왔어요')}}
-  if(S.court&&S.court.rank>=1){const p=Math.round(COURT.stipend[S.court.rank]*mainMul('court'));S.coins+=p;msgs.push('왕실에서 내탕금 '+p+'냥을 보내왔어요')}
+  {let ripe=0;for(const j of S.jars)if(j&&j.d>0&&--j.d===0)ripe++;if(ripe)msgs.push('장독 '+ripe+'독이 다 익었어요')}
+  {let pay=0;for(const k in TRACKS)if(S[k]&&S[k].rank>=1)pay+=Math.round(TRACKS[k].stipend[S[k].rank]*mainMul(k));if(pay){S.coins+=pay;msgs.push('녹봉 +'+pay+'냥')}}
+  if(S.court&&S.court.rank>=1){const p=Math.round(COURT.stipend[S.court.rank]*mainMul('court'));S.coins+=p;msgs.push('내탕금 +'+p+'냥')}
   const jailed=forced&&jailNight,jailAt=jailed&&!!S.seenPal;jailNight=false; /* 붙잡힌 밤: 궁궐을 가 본 사람은 궁궐 옥사 앞에서 풀려난다 */
   if(jailed)S.jailed=(S.jailed|0)+1;
-  if(forced)msgs.push(jailed?(jailAt?'궁궐 옥사에서 하룻밤을 보내고 풀려났어요. 다시는 그러지 말라는 호통을 들었어요':'옥에서 하룻밤을 보내고 풀려났어요. 다시는 그러지 말라는 호통을 들었어요'):'깜빡 졸아서 집에 돌아와 잠들었어요');
-  if(S.build){S.house=S.build;S.build=0;msgs.push('새 집 완성! '+HOUSES[S.house-1].n+' · 방이 넓어졌어요');sfx('level')}
+  if(forced)msgs.push(jailed?(jailAt?'궁궐 옥사에서 하룻밤 살고 풀려났어요':'옥에서 하룻밤 살고 풀려났어요'):'깜빡 졸아 집에서 잠들었어요');
+  if(S.build){S.house=S.build;S.build=0;msgs.push('새 집 완성! '+HOUSES[S.house-1].n);sfx('level')}
   /* v74 균형: 아늑함이 주는 아침 경험치는 50까지는 두 배, 그 위로는 절반씩만 는다. 가구를 겹쳐 놓고 가짓수도 늘어서 아늑함이 백을 쉽게 넘게 됐기 때문이다 */
   const cozyXp=v=>v<=50?v*2:100+Math.round((v-50)*.5);
-  if(stay==='villa'){S.stayDay=S.day;S.en=maxEn();addXp(60);msgs.push('연못가 별서에서 푹 쉬었어요 · 경험치 +60 · 오늘 하루 '+FX_TXT.en(STAY_FX.en)+', '+FX_TXT.xp(STAY_FX.xp))}
-  else if(stay){addXp(15);msgs.push('주막 봉놋방에서 하룻밤 묵었어요. 순덕이 아침 국밥을 내줬어요 · 경험치 +15')}
-  const cf=stay?0:wakeQ?S.q.placed.reduce((a,f)=>a+FURN[f.id].c,0):comfort();if(cf>0){addXp(cozyXp(cf));msgs.push('아늑한 '+(wakeQ?'처소':'집')+'에서 푹 잤어요 · 경험치 +'+cozyXp(cf))}
-  if(perk('sol')){gain('bread',1);msgs.push('문 앞에 솔이의 빵이 놓여 있어요')}
-  const ripe=Object.values(S.farm).filter(p=>p.c&&p.g>=CROPS[p.c].days).length;if(ripe)msgs.push('밭에 다 자란 작물이 '+ripe+'개 있어요');
+  if(stay==='villa'){S.stayDay=S.day;S.en=maxEn();addXp(60);msgs.push('별서에서 푹 쉬었어요 · 경험치 +60, 오늘 하루 덤')}
+  else if(stay){addXp(15);msgs.push('주막에서 묵었어요 · 경험치 +15')}
+  const cf=stay?0:wakeQ?S.q.placed.reduce((a,f)=>a+FURN[f.id].c,0):comfort();if(cf>0){addXp(cozyXp(cf));msgs.push('푹 잤어요 · 경험치 +'+cozyXp(cf))}
+  if(perk('sol')){gain('bread',1);msgs.push('문 앞에 솔이의 빵')}
+  const ripe=Object.values(S.farm).filter(p=>p.c&&p.g>=CROPS[p.c].days).length;if(ripe)msgs.push('다 자란 작물 '+ripe+'개');
   setDeco(false);
   // 집이 있으면 방에서, 아직 없으면 마을의 짚자리 앞에서 눈을 뜬다
   if(wakeQ&&quarterTier()){enterPalace(true);enterQuarter(true)} /* 궁궐 처소에서 잔 날 */
   else if(stay)wakeResort(stay); /* 운종가에서 묵은 날 */
   else if(jailAt){enterPalace(true);const d=PBLD.find(b=>b.id==='jail').door;warp(d[0],d[1]+1,[0,1]);$('bDeco').hidden=true;syncPlace()}
   else if(S.camp){scene='town';useMap(TOWN);const d=BLD[0].door;warp(d[0],d[1],[0,1]);$('bDeco').hidden=true;syncPlace()}else enterHome(true);
-  msgs.forEach((m,i)=>setTimeout(()=>toast(m),i*1000));
+  mornCard(msgs); /* v117: 알림을 줄줄이 띄우지 않고 쪽지 한 장에 모은다 */
   // 오늘 온 아기는 잠에서 깬 뒤 바로 이름을 짓는다 (닫아 버려도 요람에 말을 걸면 다시 지을 수 있다)
   if(born>=0)setTimeout(()=>{if(S&&scene==='home'&&S.kids[born]&&!S.kids[born].n&&$('modal').hidden&&$('dlg').hidden)kidName(born)},1500);
   hud();saveAll();
@@ -9594,6 +9624,7 @@ function openSeason(){
   const sea=season(),d=(S.day-1)%7+1,left=7-d,nx=(sea+1)%4;
   openModal('철 안내',body=>{
     body.appendChild(el('p','note','지금은 '+SEASONS[sea]+' '+d+'일이에요 ('+(Math.floor((S.day-1)/28)+1)+'년째, 모두 '+S.day+'일째). 한 철은 7일이고, '+(left?left+'일 뒤에 ':'내일 ')+SEASONS[nx]+'이 와요.'));
+    if(mornLast&&mornLast.day===S.day){const b=el('button','btn','오늘 아침 소식 다시 보기');b.type='button';b.style.margin='6px 0';b.onclick=openMorn;body.appendChild(b)}
     const grid=(title,ids,known,sub)=>{
       if(!ids.length)return;body.appendChild(el('p','sub',title));const g=el('div','grid');
       for(const k of ids){const ok=known(k),c=el('div','cell'+(ok?'':' unk'));c.appendChild(icon('item',k));c.appendChild(el('b',null,ok?ITEMS[k].n:'???'));c.appendChild(el('small',null,sub(k)));g.appendChild(c)}
@@ -9858,14 +9889,15 @@ function openAsk(keep){
 // 소식 창. fresh: 들어올 때 저절로 뜨는 창(아직 못 본 것 가운데 가장 새로운 두 묶음만). 도구줄의 "소식"은 전부 보여 준다
 function syncNews(){$('bSet').textContent=S&&S.news<VER?'설정 ●':'설정'}
 function openNews(fresh){
-  const from=S.news|0,list=fresh?NEWS.filter(n=>n.v>from).slice(0,2):NEWS;
+  const from=S.news|0,unseen=NEWS.filter(n=>n.v>from),list=fresh?unseen.slice(0,1):NEWS; /* v117: 새 소식 창은 가장 새것 하나만 풀어 보이고 나머지는 제목만(휴대폰에서 글이 너무 길었다) */
   openModal(fresh?'새 소식':'소식',body=>{
-    body.appendChild(el('p','note',fresh?'마을이 조금 달라졌어요. 이 창은 판이 바뀔 때 한 번만 떠요. 아래 "설정"의 "소식"에서 언제든 다시 볼 수 있어요.':'판이 바뀔 때마다 달라진 점을 여기에 적어요. 맨 위가 가장 새로운 소식이에요.'));
+    body.appendChild(el('p','note',fresh?'마을이 조금 달라졌어요. "설정"의 "소식"에서 다시 볼 수 있어요.':'맨 위가 가장 새로운 소식이에요.'));
     for(const n of list){
       const h=el('p','sub',n.t);h.style.marginTop='12px';body.appendChild(h);
       const d=el('p','note',n.d);d.style.marginBottom='4px';body.appendChild(d);
       const ul=el('ul','help');for(const s of n.l)ul.appendChild(el('li',null,s));body.appendChild(ul);
     }
+    if(fresh&&unseen.length>1){const p=el('p','note','그 밖에 달라진 것: '+unseen.slice(1,5).map(n=>n.t).join(', ')+(unseen.length>5?' 등':''));p.style.marginTop='10px';body.appendChild(p)}
     const r=el('div','tabs');r.style.marginTop='14px';
     const ok=el('button','btn pri','확인');ok.type='button';ok.onclick=closeModal;r.appendChild(ok);
     if(fresh&&NEWS.length>list.length){const b=el('button','btn','지난 소식 보기');b.type='button';b.onclick=()=>openNews(false);r.appendChild(b)}
