@@ -1,10 +1,12 @@
 # 공개 주소(GitHub 페이지 등)에서 "문의"로 보낸 글을 읽는 스크립트. PowerShell 7 이상.
 #
 # 게임은 문의 글을 운영자 공개 열쇠로 잠가 공개 Nostr 중계 서버에 올린다(원본의 ASK_PUB, ASK_RELAYS, ASK_KIND).
-# 이 스크립트는 운영자 열쇠 파일로 그 글을 풀어서 보여 준다. 읽기만 하고 아무것도 올리지 않는다.
+# 이 스크립트는 운영자 열쇠 파일로 그 글을 풀어서 보여 준다. -Done을 주지 않으면 읽기만 하고 아무것도 올리지 않는다.
 #
 #   ./tools/asks.ps1            받은 글을 표로
 #   ./tools/asks.ps1 -Json      받은 글을 JSON으로 (다른 도구가 읽을 때)
+#   ./tools/asks.ps1 -Done 0e087129              그 글(id 앞 여덟 자)을 "처리함"으로 표시 (게임의 "처리함"과 같은 글을 중계 서버에 올린다)
+#   ./tools/asks.ps1 -Done 0e087129 -Reply "…"   답글을 달면서 처리함으로 표시 (보낸 사람만 풀 수 있게 잠가 올린다)
 #   ./tools/asks.ps1 -NewKey    운영자 열쇠를 새로 만들어 파일에 적고 공개 열쇠만 보여 준다 (원본의 ASK_PUB에 넣는다)
 #
 # 운영자 열쇠 파일은 저장소 바깥에 둔다(기본: 저장소 폴더의 바로 위). 절대 저장소에 넣지 않는다.
@@ -15,6 +17,8 @@ param(
   [string]$Source = (Join-Path $PSScriptRoot '..\src\doran-village.html'),
   [switch]$NewKey,
   [switch]$Json,
+  [string]$Done = '',
+  [string]$Reply = '',
   [int]$TimeoutSec = 6
 )
 $ErrorActionPreference = 'Stop'
@@ -78,6 +82,31 @@ public static class DvAsk {
     using (var g = new AesGcm(key, 16)) g.Decrypt(iv, ct, tag, pt);
     return Encoding.UTF8.GetString(pt);
   }
+  // 답글 잠그기(Open의 반대): 게임이 풀 수 있게 base64(iv 12 || 암호문 || 꼬리표 16)
+  public static string Seal(byte[] sk, string otherPubX, string json){
+    var key = SHA256.HashData(SharedX(sk, otherPubX)); var iv = RandomNumberGenerator.GetBytes(12);
+    var pt = Encoding.UTF8.GetBytes(json); var ct = new byte[pt.Length]; var tag = new byte[16];
+    using (var g = new AesGcm(key, 16)) g.Encrypt(iv, pt, ct, tag);
+    var raw = new byte[28 + ct.Length]; Buffer.BlockCopy(iv, 0, raw, 0, 12); Buffer.BlockCopy(ct, 0, raw, 12, ct.Length); Buffer.BlockCopy(tag, 0, raw, 12 + ct.Length, 16);
+    return Convert.ToBase64String(raw);
+  }
+  static byte[] Tagged(string t, params byte[][] parts){
+    var th = SHA256.HashData(Encoding.UTF8.GetBytes(t)); var len = 64; foreach (var p in parts) len += p.Length;
+    var all = new byte[len]; Buffer.BlockCopy(th, 0, all, 0, 32); Buffer.BlockCopy(th, 0, all, 32, 32); var o = 64;
+    foreach (var p in parts) { Buffer.BlockCopy(p, 0, all, o, p.Length); o += p.Length; }
+    return SHA256.HashData(all);
+  }
+  // 서명(BIP-340 Schnorr): 중계 서버가 받아 주려면 글마다 운영자 열쇠의 서명이 있어야 한다
+  public static string Sign(byte[] sk, byte[] msg32){
+    var G = new[]{ Gx, Gy }; var d0 = Num(sk); var pt = Mul(d0, G); var d = pt[1].IsEven ? d0 : N - d0; var px = To32(pt[0]);
+    var t = To32(d); var ha = Tagged("BIP0340/aux", RandomNumberGenerator.GetBytes(32)); for (int i = 0; i < 32; i++) t[i] ^= ha[i];
+    var k0 = Num(Tagged("BIP0340/nonce", t, px, msg32)) % N; if (k0.IsZero) throw new Exception("nonce");
+    var R = Mul(k0, G); var k = R[1].IsEven ? k0 : N - k0; var rx = To32(R[0]);
+    var e = Num(Tagged("BIP0340/challenge", rx, px, msg32)) % N;
+    var sig = new byte[64]; Buffer.BlockCopy(rx, 0, sig, 0, 32); Buffer.BlockCopy(To32((k + e * d) % N), 0, sig, 32, 32);
+    return ToHex(sig);
+  }
+  public static string Sha256Hex(string s){ return ToHex(SHA256.HashData(Encoding.UTF8.GetBytes(s))); }
   public static string NewPass(){
     const string A = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"; var b = RandomNumberGenerator.GetBytes(20); var sb = new StringBuilder();
     for (int i = 0; i < 20; i++) { if (i > 0 && i % 4 == 0) sb.Append('-'); sb.Append(A[b[i] & 31]); }
@@ -137,6 +166,43 @@ foreach ($relay in $relays) {
 }
 
 $tagOf = { param($e, $n) foreach ($t in $e.tags) { if ($t.Count -ge 2 -and $t[0] -eq $n) { return [string]$t[1] } } return '' }
+
+# -Done: 받은 글 하나를 처리함으로 표시한다(답글이 있으면 함께). 게임의 askEdit과 같은 글을 만들어 서명해서 중계 서버마다 올린다
+if ($Done) {
+  if ($Done -notmatch '^[0-9a-f]{6,64}$') { throw "-Done에는 글의 id(앞 여섯 자 이상)를 주세요." }
+  $app = [regex]::Match($src, "ASK_APP='([^']+)'").Groups[1].Value
+  if ($app -notmatch '^[A-Za-z0-9._:-]+$') { throw "원본에서 ASK_APP을 찾지 못했습니다." }
+  $hit = @($byId.Values | Where-Object { $_.pubkey -ne $pub -and $_.pubkey -match '^[0-9a-f]{64}$' -and (& $tagOf $_ 'p') -eq $pub -and $_.id.StartsWith($Done) })
+  if ($hit.Count -ne 1) { throw "그 id로 시작하는 받은 글이 $($hit.Count)건입니다. 하나만 가리키게 더 길게 적어 주세요." }
+  $q = $hit[0]
+  $body = [ordered]@{ re = $(if ($Reply.Length -gt 500) { $Reply.Substring(0, 500) } else { $Reply }); done = 1 } | ConvertTo-Json -Compress
+  $content = [DvAsk]::Seal($sk, [string]$q.pubkey, $body)
+  $tags = '[["d","' + $app + ':re:' + $q.id + '"],["p","' + $q.pubkey + '"],["e","' + $q.id + '"]]'
+  $at = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+  $id = [DvAsk]::Sha256Hex('[0,"' + $pub + '",' + $at + ',' + $kind + ',' + $tags + ',"' + $content + '"]')
+  $sig = [DvAsk]::Sign($sk, [DvAsk]::FromHex($id))
+  $msg = '["EVENT",{"id":"' + $id + '","pubkey":"' + $pub + '","created_at":' + $at + ',"kind":' + $kind + ',"tags":' + $tags + ',"content":"' + $content + '","sig":"' + $sig + '"}]'
+  $okN = 0
+  foreach ($relay in $relays) {
+    $ws = [System.Net.WebSockets.ClientWebSocket]::new(); $cts = [System.Threading.CancellationTokenSource]::new([TimeSpan]::FromSeconds($TimeoutSec))
+    try {
+      $null = $ws.ConnectAsync([Uri]"wss://$relay", $cts.Token).GetAwaiter().GetResult()
+      $bytes = [Text.Encoding]::UTF8.GetBytes($msg)
+      $null = $ws.SendAsync([ArraySegment[byte]]::new($bytes), 'Text', $true, $cts.Token).GetAwaiter().GetResult()
+      $buf = [byte[]]::new(65536)
+      while ($ws.State -eq 'Open') {
+        $ms = [IO.MemoryStream]::new()
+        do { $r = $ws.ReceiveAsync([ArraySegment[byte]]::new($buf), $cts.Token).GetAwaiter().GetResult(); $ms.Write($buf, 0, $r.Count) } while (-not $r.EndOfMessage)
+        if ($r.MessageType -eq 'Close') { break }
+        $m = $null; try { $m = ConvertFrom-Json -InputObject ([Text.Encoding]::UTF8.GetString($ms.ToArray())) -Depth 4 -NoEnumerate } catch { continue }
+        if ($m -is [array] -and $m.Count -ge 3 -and $m[0] -eq 'OK' -and $m[1] -eq $id) { if ($m[2] -eq $true) { $okN++ } else { Write-Verbose "${relay}: 거절 $($m[3])" }; break }
+      }
+    } catch { Write-Verbose "${relay}: $($_.Exception.Message)" } finally { try { $ws.Dispose() } catch { } }
+  }
+  "글 $($q.id.Substring(0,8))을(를) 처리함으로 표시했습니다: 중계 서버 $(@($relays).Count)곳 중 ${okN}곳이 받음" + $(if ($Reply) { ' (답글 포함)' } else { '' })
+  if (-not $okN) { throw "어느 서버도 받지 않았습니다. -Verbose로 까닭을 보세요." }
+  return
+}
 $cut = { param($s, $n) $s = [string]$s; if ($s.Length -gt $n) { $s.Substring(0, $n) } else { $s } }
 # 내가 단 답글: 어느 글(e)에 달았는지별로 가장 새것만
 $replies = @{}
