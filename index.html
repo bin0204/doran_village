@@ -1323,6 +1323,14 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:111,d:'11월 26일',t:'돌담과 풀숲',l:[
+    '마을과 사냥터, 들판 둘레의 숲 가장자리를 바꿨어요. 나무 대신 키 큰 풀과 억새가 우거진 풀숲이 둘러싸고, 뭍과 닿는 쪽에는 막돌로 쌓은 낮은 돌담이 이어져요.',
+    '가을에는 풀숲이 누렇게 물들고, 겨울에는 마른 억새에 눈이 앉아요.',
+    '둔덕의 옆 비탈과 남쪽 벼랑이 끊김 없이 이어지게 고쳤고, 목장 울타리는 통나무 가로대와 굵은 말뚝으로 다시 그렸어요.',
+    '쑥과 냉이가 버섯처럼 보이던 것을 고쳤어요. 쑥은 갈라진 잎이 뻗은 포기, 냉이는 땅에 납작 퍼진 잎 방석과 작은 흰 꽃이에요.',
+    '길을 막고 선 이웃에게 말을 걸면 "비켜 달라고 밀기"가 나와요. 고르면 그 사람이 한 칸 물러나요.',
+    '연장을 든 팔이 몸에서 이어져 보이게 고쳤어요. 어깨가 둥글게 붙고, 팔꿈치에서 한 번 굽고, 손 앞에 소맷부리가 보여요.'
+  ]},
   {v:110,d:'11월 26일',t:'들판의 밭과 목장',l:[
     '서쪽 들판 북서쪽에 너른 밭터가 생겼어요. 점선 안의 땅은 마을의 내 땅처럼 갈고, 심고, 물 주고, 거둘 수 있어요. 마을 밭보다 훨씬 넓어요.',
     '들판 밭은 까마귀와 가뭄이 닿지 않아요. 대신 물은 직접 가서 줘야 해요(비 오는 날은 저절로 젖어요).',
@@ -2081,8 +2089,10 @@ function drawCore(c,id){
   case 't_bow':c.strokeStyle='#8a5a34';c.lineWidth=3;c.beginPath();c.arc(-3,0,10,-1.15,1.15);c.stroke();line(c,1,-9,1,9,'#dfe9ee',1.5);line(c,-9,0,8,0,'#6b4a2a',2);poly(c,[11,0,6,-3.5,6,3.5],'#9aa3a8');break;
   case 'giftbox':rr(c,-9,-5,18,14,2,'#c8392f');rr(c,-10,-8,20,5,2,'#d9503f');c.fillStyle='#f7d24a';c.fillRect(-1.5,-8,3,17);c.fillRect(-9,0,18,2.5);ell(c,-4,-10,4,2.6,'#f7d24a');ell(c,4,-10,4,2.6,'#f7d24a');circ(c,0,-9,1.8,'#e9b930');break;
   /* 나물과 열매 */
-  case 'ssuk':line(c,0,10,0,-2,'#5c8a4a',1.6);for(const s of [-1,1]){poly(c,[0,4,s*8,1,s*9,-4,s*4,-2,0,-1],'#8fb87a');poly(c,[0,-1,s*6,-6,s*5,-10,s*2,-6],'#7aa868')}poly(c,[-2.5,-5,0,-11,2.5,-5],'#8fb87a');break;
-  case 'naengi':line(c,0,1,0,10,'#f3ead6',2.6);line(c,0,6,-3,10,'#e6dcc0',1.2);for(const s of [-1,1]){ell(c,s*5.5,-1,5.5,2,'#5cab4a');ell(c,s*4,-5,4.5,1.8,'#4f9d48')}line(c,0,1,0,-8,'#4f9d48',1.2);circ(c,0,-9,1.8,'#ffffff');break;
+  /* v111(사용자 의견: 약초가 다 버섯처럼 보인다): 쑥은 깊게 갈라진 잿빛 풀잎이 세 줄기로 뻗은 포기, 냉이는 땅에 납작 퍼진 톱니 잎 방석과 가운데의 작은 흰 꽃대로 다시 그렸다. 굵은 흰 뿌리(버섯 대처럼 보이던 것)는 뺐다 */
+  case 'ssuk':for(const [dx,ty] of [[-6,-7],[0,-11],[6,-7]]){line(c,0,10,dx,ty,'#6f9a5c',1.6);for(let k=0;k<3;k++){const u=.35+k*.25,mx=dx*u,my=10+(ty-10)*u;for(const s of [-1,1])poly(c,[mx,my,mx+s*5,my-3,mx+s*4.5,my-6,mx+s*1.5,my-3],k%2?'#9cc08a':'#b4d0a2')}poly(c,[dx-2,ty+1,dx,ty-4,dx+2,ty+1],'#b4d0a2')}break;
+  case 'naengi':for(let k=0;k<7;k++){const a=k*.9+.3,cx2=Math.cos(a),sy2=Math.sin(a)*.62,col=k%2?'#4f9248':'#63a858';poly(c,[0,3,cx2*4-sy2*3,3+sy2*4+cx2*1.5,cx2*11,3+sy2*11,cx2*4+sy2*3,3+sy2*4-cx2*1.5],col);for(const u of [.45,.7]){c.fillStyle=col;c.fillRect(cx2*11*u-1.5,3+sy2*11*u-2.2,3,1.6)}line(c,0,3,cx2*9,3+sy2*9,'#8fc47e',.8)}
+    line(c,0,3,1,-8,'#5a9a48',1.2);for(const q of [[1,-9],[-1.5,-7],[3,-6.5]])circ(c,q[0],q[1],1.5,'#ffffff');circ(c,1,-9,.6,'#f2c531');break;
   case 'sanddalgi':poly(c,[-2,-6,-9,-9,-5,-3],'#4f9a3e');poly(c,[2,-6,9,-9,5,-3],'#5cab4a');for(const q of [[-3.5,-1],[3.5,-1],[0,-4],[-2,4],[3,4],[0.5,0.5],[0,8]])circ(c,q[0],q[1],3.4,'#d9304a');for(const q of [[-4,-2],[3,-2],[0,-5],[-2.5,3]])circ(c,q[0],q[1],1,'#f5928a');break;
   case 'deodeok':line(c,0,-6,4,-11,'#5c9a3e',1.5);ell(c,6,-10,3.5,2,'#5cab4a');poly(c,[-5,-6,5,-6,3,5,0,11,-3,5],'#c9a57a');for(const y of [-3,0,3,6])line(c,-4+y*.25,y,4-y*.25,y,'#a8854a',1);line(c,-2,8,-5,11,'#c9a57a',1.4);break;
   case 'dotori':ell(c,0,2.5,5.8,7.5,'#b9853a');ell(c,-2,1,1.6,3.6,'#d9a85a');c.fillStyle='#6e4a26';c.beginPath();c.arc(0,-2.5,6.6,Math.PI,0);c.closePath();c.fill();line(c,0,-9,1,-12,'#5e3f24',1.8);break;
@@ -2523,16 +2533,19 @@ function buildGround(){
         /* 뒤·옆 가장자리: 흙 턱 위로 둥글게 솟은 풀 둔덕과 덤불 */
         /* v110(사용자 의견: 둔덕 느낌이 하나도 안 난다): 덤불 테두리를 없애고 높이가 읽히게 다시 그렸다. 옆 가장자리는 바깥쪽으로 흙 비탈이 내려가고(아래로 갈수록 어둡다),
            뒤 가장자리는 얇은 턱과 밝은 테, 위의 풀밭은 더 밝다. 남쪽 벼랑은 위에서 따로 그린다 */
-        const sw=oL||oR?13:0,sh=oU?7:0,r=[oL&&oU?14:0,oR&&oU?14:0,oR&&oD?14:0,oL&&oD?14:0];
-        const ix=px+(oL?sw:0),iy=py+sh,iw=T-(oL?sw:0)-(oR?sw:0),ih=T-sh;
-        if(oL||oR){const ex=oL?px+2:px+T-sw-2;rr(c,ex,py+(oU?5:0),sw+2,T-(oU?5:0),oL?[oU?12:0,0,0,oD?12:0]:[0,oU?12:0,oD?12:0,0],'#8a7658');
-          for(let j=0;j<5;j++){c.fillStyle=j%2?'#9a8566':'#7a684c';const yy=py+(oU?9:3)+j*6;if(yy<py+T-2)c.fillRect(ex+(oL?1:3),yy,sw-3,2)}
-          c.fillStyle='rgba(50,35,20,.28)';c.fillRect(oL?px+2:px+T-5,py+(oU?10:0),3,T-(oU?10:0))}
-        if(oU){rr(c,ix-1,py+2,iw+2,sh+4,[r[0],r[1],0,0],'#7a684c')}
-        rr(c,ix,iy,iw,ih,[r[0]?10:0,r[1]?10:0,0,0],(x+y)%2?G[0]:G[1]);rr(c,ix,iy,iw,ih,[r[0]?10:0,r[1]?10:0,0,0],'rgba(255,255,230,.2)');
-        c.fillStyle='rgba(255,255,235,.5)';if(oU)c.fillRect(ix+(r[0]?8:0),iy,iw-(r[0]?8:0)-(r[1]?8:0),2);if(oL)c.fillRect(ix,iy+(r[0]?8:0),2,ih-(r[0]?8:0));
-        c.fillStyle='rgba(40,60,30,.25)';if(oR)c.fillRect(ix+iw-2,iy+(r[1]?8:0),2,ih-(r[1]?8:0));
-        if(oD&&!front){c.fillStyle='#8a7658';c.fillRect(ix,py+T-12,iw,12);c.fillStyle='rgba(50,35,20,.3)';c.fillRect(ix,py+T-5,iw,5)}
+        /* v111(사용자 의견: 둔덕의 이어지는 부분이 부자연스럽다): 가장자리 칸마다 따로 그리던 흙 조각을 없애고, 흙 비탈을 한 덩어리로 깔고 그 위에 풀밭을 얹는다.
+           풀밭은 바깥쪽으로 옆 13 · 뒤 7만큼 들어가고 남쪽 줄은 위 5픽셀만(남쪽 벼랑 칸과 같은 높이) → 옆 칸과 끊김 없이 이어진다 */
+        const r=[oL&&oU?14:0,oR&&oU?14:0,oR&&oD?12:0,oL&&oD?12:0];
+        rr(c,px+(oL?2:0),py+(oU?3:0),T-(oL?2:0)-(oR?2:0),T-(oU?3:0)-(oD?2:0),r,'#8a7658');
+        for(let j=0;j<5;j++){c.fillStyle=j%2?'#9a8566':'#7a684c';const yy=py+(oU?10:4)+j*6;if(yy<py+T-4)for(let i=oL?5:0;i<T-(oR?5:0);i+=6)if(hash(x*6+i,y*5+j)>.3)c.fillRect(px+i,yy+Math.round(hash(x+i,j)*2),5,2)}
+        if(oD){c.fillStyle='rgba(50,35,20,.18)';c.fillRect(px+(oL?4:0),py+14,T-(oL?4:0)-(oR?4:0),T-16);c.fillStyle='rgba(50,35,20,.3)';c.fillRect(px+(oL?6:0),py+T-8,T-(oL?6:0)-(oR?6:0),6)}
+        if(oL){c.fillStyle='rgba(50,35,20,.22)';c.fillRect(px+2,py+(oU?12:0),4,T-(oU?12:0)-(oD?10:0))}
+        if(oR){c.fillStyle='rgba(50,35,20,.3)';c.fillRect(px+T-6,py+(oU?12:0),4,T-(oU?12:0)-(oD?10:0))}
+        const ix=px+(oL?13:0),iy=py+(oU?7:0),iw=T-(oL?13:0)-(oR?13:0),ih=oD?5-(oU?7:0):T-(oU?7:0),gr=[oL&&oU?9:0,oR&&oU?9:0,0,0];
+        if(ih>0){rr(c,ix,iy,iw,ih,gr,(x+y)%2?G[0]:G[1]);rr(c,ix,iy,iw,ih,gr,'rgba(255,255,230,.2)');
+          c.fillStyle='rgba(255,255,235,.5)';if(oU)c.fillRect(ix+(gr[0]?7:0),iy,iw-(gr[0]?7:0)-(gr[1]?7:0),2);if(oL)c.fillRect(ix,iy+(gr[0]?7:0),2,ih-(gr[0]?7:0));
+          c.fillStyle='rgba(40,60,30,.25)';if(oR)c.fillRect(ix+iw-2,iy+(gr[1]?7:0),2,ih-(gr[1]?7:0));
+          if(oD){c.fillStyle=G[2];for(let i=0;i<iw;i+=4)c.fillRect(ix+i,iy+ih-1,2,2+Math.round(hash(x*9+i,y)*3))}}
       }
     }
     if(t===14){
@@ -2599,22 +2612,33 @@ function buildGround(){
     c.strokeStyle='rgba(120,85,45,.5)';c.lineWidth=2;c.setLineDash([8,6]);c.strokeRect(fr[0]*T+1,fr[1]*T+1,(fr[2]-fr[0]+1)*T-2,(fr[3]-fr[1]+1)*T-2);c.setLineDash([]);
     for(const [a,b] of [[fr[0],fr[1]],[fr[2]+1,fr[1]],[fr[0],fr[3]+1],[fr[2]+1,fr[3]+1]]){rr(c,a*T-3,b*T-12,6,14,2,'#7a5230');rr(c,a*T-2,b*T-11,2,12,1,'#9a6a3e')}
     const x0=ps[0]*T,y0=ps[1]*T,x1=(ps[2]+1)*T,y1=(ps[3]+1)*T,gx=FPAST_GATE[0]*T;
-    c.fillStyle='#8a5a34';for(const yy of [y0-6,y0-1,y1-6,y1-1]){c.fillRect(x0,yy,gx-T-x0,2.5);c.fillRect(gx+T*2,yy,x1-gx-T*2,2.5);if(yy>y0+T)c.fillRect(gx-T,yy,T*3,2.5)}
-    for(const xx of [x0-1,x1-2])for(const dy of [0,5]){c.fillRect(xx+dy-2,y0-6,2.5,y1-y0+6)}
-    c.fillStyle='#6b4a2a';for(let xx=x0;xx<=x1;xx+=T){if(xx>gx-T&&xx<gx+T*2)continue;c.fillRect(xx-2,y0-12,4,14);c.fillRect(xx-2,y1-12,4,14)}for(let yy=y0;yy<=y1;yy+=T){c.fillRect(x0-2,yy-12,4,14);c.fillRect(x1-2,yy-12,4,14)}
+    /* v111(사용자 요청: 울타리에 나무 느낌을): 통나무 가로대 두 줄(위는 밝고 아래는 어둡게, 나뭇결과 옹이)과 굵은 말뚝(왼쪽은 빛, 오른쪽은 그늘, 비스듬히 깎은 머리) */
+    const railH=(xa,yy,ww)=>{if(ww<=0)return;c.fillStyle='#5e3f24';c.fillRect(xa,yy,ww,5);c.fillStyle='#a8763f';c.fillRect(xa,yy,ww,3.5);c.fillStyle='#c79a66';c.fillRect(xa,yy,ww,1.2);c.fillStyle='#7a5230';for(let i=6;i<ww-4;i+=11)c.fillRect(xa+i+((yy|0)%7),yy+1.6,4,1)};
+    const railV=(xa,ya,hh)=>{c.fillStyle='#5e3f24';c.fillRect(xa,ya,5,hh);c.fillStyle='#a8763f';c.fillRect(xa,ya,3.5,hh);c.fillStyle='#c79a66';c.fillRect(xa,ya,1.2,hh)};
+    const post=(xa,yb)=>{rr(c,xa-4,yb-17,8,19,2,'#4a3020');rr(c,xa-3,yb-16,6,17,1.5,'#8a5a34');c.fillStyle='#b98a5a';c.fillRect(xa-3,yb-15,2,15);c.fillStyle='#6b4526';c.fillRect(xa+1.5,yb-15,1.5,15);poly(c,[xa-3,yb-16,xa+3,yb-16,xa+1,yb-19,xa-2,yb-19],'#c79a66');c.fillStyle='#5e3f24';c.fillRect(xa-1,yb-9,2,1.5)};
+    for(const yb of [y0,y1])for(const dy of [-12,-6]){railH(x0,yb+dy,(yb===y0?gx-T:x1)-x0);if(yb===y0)railH(gx+T*2,yb+dy,x1-gx-T*2)}
+    for(const xa of [x0-2,x1-3])for(let yy=y0-8;yy<y1-10;yy+=T)railV(xa,yy,T);
+    for(let xx=x0;xx<=x1;xx+=T){if(!(xx>gx-T&&xx<gx+T*2))post(xx,y0+1);post(xx,y1+1)}for(let yy=y0+T;yy<y1;yy+=T){post(x0,yy+1);post(x1,yy+1)}
     {const sx=gx+T/2,sy=FPAST_GATE[1]*T+T;rr(c,sx-2,sy-24,4,22,1,'#6b4a2a');rr(c,sx-13,sy-30,26,13,2,'#9a6a3e');rr(c,sx-11,sy-28,22,9,1,'#e9d8a8');c.fillStyle='#6b4a2a';c.fillRect(sx-7,sy-25,14,1.5);c.fillRect(sx-7,sy-22,9,1.5)}
   }
   for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(tile[y][x]===6){
     const px=x*T,py=y*T,h=hash(x,y);
-    /* v109(사용자 의견: 동글동글한 나무 덩어리가 마음에 안 든다): 숲 가장자리를 빽빽한 침엽수 숲으로. 어두운 덤불 바탕 위에 뾰족한 나무를 세 줄로 엇갈려 세운다 */
-    c.fillStyle=F[1];c.fillRect(px-2,py-2,T+4,T+4);
-    for(let r=0;r<3;r++)for(let k=0;k<2;k++){
-      const tx=px+(k?24:8)+(r%2?-8:0)+Math.round((hash(x*3+k+r*5,y*7+r)-.5)*6),ty=py+13+r*10,col=F[(r+k+x+y)%2?0:2],hi=sea===3?F[3]:F[3];
-      poly(c,[tx-10,ty,tx+10,ty,tx,ty-14],col);poly(c,[tx-8,ty-7,tx+8,ty-7,tx,ty-19],col);poly(c,[tx-5,ty-14,tx+5,ty-14,tx,ty-24],col);
-      poly(c,[tx-6,ty-1,tx-1,ty-1,tx-3,ty-8],hi);poly(c,[tx-4,ty-9,tx,ty-9,tx-2,ty-15],hi);
-      c.fillStyle='rgba(0,0,0,.18)';c.fillRect(tx+2,ty-6,5,5);
-      if(sea===3){poly(c,[tx-3,ty-18,tx+3,ty-18,tx,ty-24],'#f4f8fb');c.fillStyle='#f4f8fb';c.fillRect(tx-6,ty-8,5,2);c.fillRect(tx+2,ty-2,6,2)}
+    /* v111(사용자 결정: 둥근 나무도 침엽수도 마음에 안 든다 → 낮은 돌담과 풀숲): 지도 가장자리는 키 큰 풀과 억새가 우거진 풀숲이고, 뭍과 닿는 쪽에는 막돌로 쌓은 낮은 담이 이어진다. 나무는 그리지 않는다 */
+    const lnd=(a,b)=>a>=0&&b>=0&&a<W&&b<H&&tile[b][a]!==6;
+    c.fillStyle=sea===3?'#b9b08c':sea===2?'#9a8a4e':'#5f8348';c.fillRect(px,py,T,T);
+    for(let i=0;i<22;i++){
+      const a=hash(x*7+i*3+1,y*5+i),b=hash(y*9+i*5+2,x*3+i*7),gx=px+a*30,gy=py+6+b*26,hgt=7+Math.round(hash(x+i,y*2+i)*8);
+      c.fillStyle=sea===3?(i%3?'#a89c72':'#d9d2b4'):sea===2?(i%3?'#877a40':'#b8a85c'):(i%3===0?'#4a6e38':i%3===1?'#7aa257':'#557c3f');
+      c.fillRect(Math.round(gx),Math.round(gy-hgt),2,hgt);if(i%4===0)c.fillRect(Math.round(gx)+2,Math.round(gy-hgt)+2,2,hgt-3);
     }
+    for(let i=0;i<3;i++){ /* 억새 이삭 */
+      const a=hash(x*11+i*7+3,y*3+i),b=hash(y*13+i*3+5,x*5+i),gx=Math.round(px+4+a*24),gy=Math.round(py+12+b*18);
+      c.fillStyle=sea===3?'#8a7f5a':'#6b8a4a';c.fillRect(gx,gy-14,1.5,14);c.fillStyle=sea===3?'#f4f8fb':sea===2?'#f1e6c2':'#e6e0c0';c.fillRect(gx-1,gy-20,3.5,7);c.fillRect(gx+1,gy-22,2,3);
+    }
+    /* 뭍과 닿는 쪽의 낮은 돌담 */
+    const wallH=(wx,wy,ww)=>{for(let i=0,n=0;i<ww;i+=7,n++){const s=Math.min(6,ww-i);c.fillStyle='#6f685e';c.fillRect(wx+i,wy,s+1,9);c.fillStyle=n%2?'#b0a799':'#9a9185';c.fillRect(wx+i,wy,s,4);c.fillStyle=n%2?'#8d8478':'#a39a8c';c.fillRect(wx+i+(n%2?3:0),wy+4,Math.min(s,ww-i-(n%2?3:0)),4)}c.fillStyle='rgba(255,255,255,.2)';c.fillRect(wx,wy,ww,1.5)};
+    const wallV=(wx,wy,wh)=>{for(let i=0,n=0;i<wh;i+=6,n++){const s=Math.min(5,wh-i);c.fillStyle='#6f685e';c.fillRect(wx,wy+i,9,s+1);c.fillStyle=n%2?'#b0a799':'#9a9185';c.fillRect(wx,wy+i,5,s);c.fillStyle=n%2?'#8d8478':'#a39a8c';c.fillRect(wx+4,wy+i,5,s)}};
+    if(lnd(x,y+1))wallH(px,py+T-9,T);if(lnd(x,y-1))wallH(px,py,T);if(lnd(x+1,y))wallV(px+T-9,py,T);if(lnd(x-1,y))wallV(px,py,T);
   }
   // 씨앗으로 지은 마을은 내 땅이 어디인지 마을마다 다르다. 둘레에 말뚝을 박아 알려 준다 (길이나 물에 걸리는 자리는 건너뛴다)
   if(tile===TOWN.tile&&townSeed){
@@ -6657,10 +6681,17 @@ function drawShots(c){
 /* 발걸음 빠르기(v101): 걷는 빠르기 덤(신발·전문 갈래 등 gearFx('spd'))이 클수록 발도 빨리 놀린다. 최대 1.8배 */
 const stepPace=()=>1+Math.min(.8,Math.max(0,gearFx('spd'))*2.5);
 function drawArm(c,hp){
-  const h=hp||handAt(),L=playerLook(),px=(rx(P)+.5)*T,py=(ry(P)+.9)*T,sx=px+(P.dir[0]?P.dir[0]*3:P.dir[1]>0?6:-6),sy=py-25;
-  c.lineCap='round';line(c,sx,sy,h[0],h[1],'#3a2a22',6.4);line(c,sx,sy,h[0],h[1],L.shirt,4.2);
-  line(c,sx,sy+1.2,h[0],h[1]+1.2,shade(L.shirt,.8),1.4);c.lineCap='butt';
-  circ(c,h[0],h[1],3.4,'#3a2a22');circ(c,h[0],h[1],2.4,L.skin);
+  /* v111(사용자 의견: 팔이 몸에서 이어지지 않고 툭 튀어나온 것 같다): 어깨는 몸의 소매 자리에 두고 둥근 어깨를 덧그려 몸과 잇는다. 팔은 어깨-팔꿈치-손 두 마디로 굽히고,
+     굵기와 테두리·그늘을 몸의 소매와 맞춘다. 손 앞에는 소맷부리 한 줄. 도트가 어긋나 보이지 않게 좌표는 정수로 맞춘다 */
+  const h0=hp||handAt(),L=playerLook(),px=(rx(P)+.5)*T,py=(ry(P)+.9)*T,side=P.dir[0],q=Math.round;
+  const sx=q(px+(side?side*2:P.dir[1]>0?9:-9)),sy=q(py-24),hx=q(h0[0]),hy=q(h0[1]);
+  const dx=hx-sx,dy=hy-sy,len=Math.hypot(dx,dy)||1,bend=Math.max(0,11-len)*.5+2.5,ex=q((sx+hx)/2-dy/len*bend*(side||1)*.6),ey=q((sy+hy)/2+bend);
+  const arm=(col,w)=>{c.strokeStyle=col;c.lineWidth=w;c.lineCap='round';c.lineJoin='round';c.beginPath();c.moveTo(sx,sy);c.lineTo(ex,ey);c.lineTo(hx,hy);c.stroke();c.lineCap='butt';c.lineJoin='miter'};
+  circ(c,sx,sy,4.2,'#3a2a22');arm('#3a2a22',6.6);
+  circ(c,sx,sy,3.2,L.shirt);arm(L.shirt,4.6);
+  c.strokeStyle=shade(L.shirt,.8);c.lineWidth=1.4;c.beginPath();c.moveTo(sx,sy+1.6);c.lineTo(ex,ey+1.6);c.lineTo(hx,hy+1.6);c.stroke();
+  {const ux=(hx-ex)/(Math.hypot(hx-ex,hy-ey)||1),uy=(hy-ey)/(Math.hypot(hx-ex,hy-ey)||1);line(c,hx-ux*3-uy*2.4,hy-uy*3+ux*2.4,hx-ux*3+uy*2.4,hy-uy*3-ux*2.4,'#f3ead6',1.6)}
+  circ(c,hx,hy,3.3,'#3a2a22');circ(c,hx,hy,2.3,L.skin);
 }
 function drawBow(c,x,y,a,pull,col){
   c.save();c.translate(x,y);c.rotate(a);c.lineCap='round';
@@ -8816,6 +8847,15 @@ function openStats(){
     })();
   });
 }
+/* 이웃 밀기(v111, 사용자 요청: 이웃이 길을 막을 때 손으로 밀고 싶다): 말을 건 뒤 "비켜 달라고 밀기"를 고르면 그 사람이 나와 반대쪽(막혔으면 옆)으로 한 칸 물러나 잠깐 서 있는다. 친밀도는 변하지 않는다 */
+function npcPush(id){
+  const n=N[id],dx=Math.sign(n.x-P.x),dy=Math.sign(n.y-P.y),f=dx&&dy?[dx,0]:[dx,dy];
+  const to=[f,[f[1],f[0]],[-f[1],-f[0]],[-f[0],-f[1]]].map(q=>[n.x+q[0],n.y+q[1]]).find(q=>(q[0]!==n.x||q[1]!==n.y)&&walkable(q[0],q[1])&&!npcOn(q[0],q[1])&&!(q[0]===P.x&&q[1]===P.y)&&!herdOn(q[0],q[1]));
+  useStart(n.x,n.y,'hand');
+  if(!to){toast(jo(NPCS[id].name,'이','가')+' 비켜설 자리가 없어요');return}
+  n.dir=[Math.sign(to[0]-n.x),Math.sign(to[1]-n.y)];n.fx=n.x;n.fy=n.y;n.x=to[0];n.y=to[1];n.t=0;n.wait=4;n.hold=0;n.path=null;sfx('pick');
+  toast(jo(NPCS[id].name,'이','가')+' 한 칸 비켜 줬어요');
+}
 function talk(id){
   const d=NPCS[id],st=S.npcs[id],n=N[id];
   n.hold=1;n.dir=[Math.sign(P.x-n.x),Math.sign(P.y-n.y)];if(n.dir[0]&&n.dir[1])n.dir[1]=0;
@@ -8833,6 +8873,7 @@ function talk(id){
   else text=S.spouse===id&&Math.random()<.7?pick(d.wed.lines):S.weather==='rain'&&Math.random()<.35?d.rain:S.min>=1200&&Math.random()<.4?d.night:pick(d.lines[h>=4?2:h>=2?1:0]);
   touch();tutMark('talk');
   const ch=[],q=S.quests.find(q=>q.npc===id&&!q.done);
+  ch.push(['비켜 달라고 밀기',()=>npcPush(id)]); /* 길을 막고 선 이웃을 손으로 살짝 민다(v111) */
   if(q)ch.push(['부탁 듣기',()=>questTalk(id,q)]);
   ch.push(['선물하기',()=>openGift(id)]);
   if(id==='bau'){ch.push(['다리·우리·시설',bauTalk]);ch.push(['화약통 빚기',bombTalk])}
