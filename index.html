@@ -510,7 +510,8 @@ const HOUSES=[
   {n:'초가삼간',cost:900,wood:10,stone:0,room:[6,5],plots:6},
   {n:'너른 초가집',cost:4000,wood:20,stone:10,room:[8,6],plots:8},
   {n:'기와집',cost:12000,wood:40,stone:25,room:[10,7],plots:10},
-  {n:'솟을대문 기와집',cost:30000,wood:60,stone:50,room:[12,8],plots:12}
+  {n:'솟을대문 기와집',cost:30000,wood:60,stone:50,room:[12,8],plots:12},
+  {n:'이층 누각집',cost:60000,wood:90,stone:80,room:[13,9],plots:12} /* v106(사용자 요청): 지붕 위로 2층 누각이 올라간다. 방은 13×9 */
 ];
 const TITLES=['새내기 주민','동네 일꾼','마을 살림꾼','든든한 이웃','마을의 자랑','고을의 일꾼','고을의 기둥','이름난 재주꾼','온 고을의 자랑','나라가 아는 이름','살아 있는 전설'],TITLE_LV=[1,2,3,4,5,8,11,14,18,22,26];
 // 연장: 모루의 대장간에서 세 번까지 벼린다. d[단계]=그 단계의 쓸모, FORGE[다음 단계]=드는 값과 재료
@@ -1282,6 +1283,10 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:106,d:'11월 26일',t:'이층 누각집',l:[
+    '내 집에 여섯째 단계가 생겼어요. 솟을대문 기와집 다음에 "이층 누각집"으로 올릴 수 있어요. 지붕 위로 붉은 기둥과 난간을 두른 2층 누각이 올라가요.',
+    '60,000냥과 나무 90개, 돌 80개가 들고, 방이 13×9칸으로 넓어져요. 목수 모루에게 "짓기·고치기"로 청해요.'
+  ]},
   {v:105,d:'11월 26일',t:'세밀해진 집들',l:[
     '초가지붕에 짚의 결과 겹겹이 얹은 이엉 줄, 지붕을 누르는 새끼줄 그물이 생겼어요. 처마 끝에는 짚이 삐죽삐죽 나와요.',
     '기와지붕은 기와 골마다 밝은 등과 어두운 고랑이 지고, 처마 끝에 둥근 막새가 줄지어 달렸어요.',
@@ -2528,13 +2533,20 @@ function drawHome(c,b,night){
   }else{
     ell(c,mx,by,w/2+4,6,'rgba(0,0,0,.18)');
     // 2 초가삼간 · 3 너른 초가집 · 4 기와집 · 5 솟을대문 기와집
-    const cfg=[0,0,{wall:'#d9c39a',kind:'thatch',top:0},{wall:'#efe4c8',kind:'thatch',top:8},{wall:'#f6efdc',kind:'tile',top:10},{wall:'#f6efdc',kind:'tile',top:30,flag:1}][L];
+    const cfg=[0,0,{wall:'#d9c39a',kind:'thatch',top:0},{wall:'#efe4c8',kind:'thatch',top:8},{wall:'#f6efdc',kind:'tile',top:10},{wall:'#f6efdc',kind:'tile',top:30,flag:1},{wall:'#f6efdc',kind:'tile',top:30,flag:1,loft:1}][L];
     const ty=y-4-cfg.top;
     rr(c,x+2,ty,w-4,by-ty,4,cfg.wall);
     c.fillStyle='#6b4a2a';c.fillRect(x+2,ty,4,by-ty);c.fillRect(x+w-6,ty,4,by-ty);c.fillStyle='#9a9a94';c.fillRect(x-2,by-4,w+4,4);
-    if(L===5){c.fillStyle='#e9b930';c.fillRect(x+2,ty+cfg.top+4,w-4,3)}
+    if(L>=5){c.fillStyle='#e9b930';c.fillRect(x+2,ty+cfg.top+4,w-4,3)}
     if(cfg.chim)rr(c,x+w-28,ty-34,10,24,1,'#a8553f');
     roof(c,x,w,ty,cfg.kind,S.roof||null);
+    if(cfg.loft){ /* 6단계: 지붕 위의 2층 누각. 붉은 기둥과 난간, 창 둘, 제 기와지붕 */
+      const lw=w-36,lx=mx-lw/2,ly=ty-58;
+      rr(c,lx,ly,lw,34,2,cfg.wall);c.fillStyle='#a8402e';c.fillRect(lx,ly,4,34);c.fillRect(lx+lw-4,ly,4,34);c.fillRect(mx-2,ly,4,34);
+      drawWindow(c,lx+lw/4+1,ly+8,night);drawWindow(c,lx+lw*3/4-1,ly+8,night);
+      c.fillStyle='#8a5a34';c.fillRect(lx-4,ly+28,lw+8,3);for(let i=lx-2;i<lx+lw+2;i+=5)c.fillRect(i,ly+22,1.5,7);c.fillRect(lx-4,ly+21,lw+8,2);
+      roof(c,lx,lw,ly,'tile',S.roof||null);
+    }
     drawDoor(c,dx,by);drawWindow(c,x+16,by-38,night);drawWindow(c,x+w-16,by-38,night);
     if(cfg.top>=26){drawWindow(c,x+16,ty+14,night);drawWindow(c,mx,ty+14,night);drawWindow(c,x+w-16,ty+14,night)}
     if(cfg.flag){line(c,mx,ty-28,mx,ty-48,'#6b4a2a',2);poly(c,[mx,ty-48,mx+12,ty-44,mx,ty-40],S.color)}
@@ -2549,7 +2561,8 @@ function drawHome(c,b,night){
 // 아래 drawXxx는 미리 구워 둔 도트 그림을 찍기만 한다. 실제 그림은 xxxArt가 그린다
 function drawBld(c,b,night){
   const x=b.x*T,y=b.y*T,key='h'+b.id+(night?1:0)+(b.jail?'j'+jailToday().length:'')+(b.id==='home'?S.house+'|'+S.build+S.color+(S.diy?'d'+S.diy.step:'')+(S.roof||'')+(S.camp?'c':''):'');
-  blit(c,spr(key,()=>bake(b.w*T+44,b.h*T+94,18,86,x,y,c2=>bldArt(c2,b,night))),x,y);
+  const up=(b.id==='home'&&S.house>=6)||b.id==='moru'?140:86; /* 2층이 있는 집은 위로 더 넉넉히 굽는다(안 그러면 지붕이 잘린다) */
+  blit(c,spr(key,()=>bake(b.w*T+44,b.h*T+8+up,18,up,x,y,c2=>bldArt(c2,b,night))),x,y);
 }
 function drawTree(c,o){
   const sea=viewSea(),fr=o.k!=='pine'&&sea!==3&&S.trees[o.i].d<=S.day?1:0,bx=o.x*T+16,y=o.y*T+28;
