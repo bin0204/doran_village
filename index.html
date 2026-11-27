@@ -153,6 +153,7 @@ button.chip{font:inherit;color:inherit;cursor:pointer;line-height:inherit}
 .sheet h2{font-family:var(--display);font-weight:400;font-size:20px;margin:0;margin-right:auto;color:var(--ink);display:flex;align-items:center;gap:8px}
 .sheet h2::before{content:"";width:11px;height:11px;border-radius:2.5px;background:var(--accent);flex:none}
 #mBody{padding:12px 14px;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;display:flex;flex-direction:column;gap:10px;min-width:0} /* v176(사용자 의견: 휴대폰에서 창을 내리다 보면 옆으로 밀린다): 창 안은 위아래로만 움직인다 */
+#mBody *{touch-action:pan-y}#mBody>*{max-width:100%}html,body{overscroll-behavior-x:none}.sheet{overflow:clip}.doll{max-width:100%;box-sizing:border-box} /* v177(사용자 의견: 신분 창이 아직 양옆으로 밀린다): 창 안의 단추·그림에서 시작한 손짓도 위아래로만 */
 @media (max-width:520px){.doll{grid-template-columns:74px 92px 74px;gap:40px 12px}.doll.trn{gap:34px 14px}.doll .slot{width:74px;height:74px}.doll .slot.rnd{width:66px;height:66px}.doll .slot small{left:-9px;right:-9px;font-size:12px}.dollme{width:92px;height:138px}.doll .slot canvas{max-width:56px;max-height:56px}}
 .tabs{display:flex;gap:6px}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px}
@@ -1496,6 +1497,8 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:177,d:'11월 27일',t:'창 밀림 고침',l:[
+    '신분 창이 양옆으로 밀리던 것을 한 번 더 막았어요.']},
   {v:176,d:'11월 27일',t:'머슴의 낚시',l:[
     '머슴에게 낚시를 맡길 수 있어요. 아침마다 민물고기를 잡아 와요.',
     '휴대폰에서 창을 내릴 때 옆으로 밀리지 않게 했어요.']},
