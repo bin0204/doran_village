@@ -1481,6 +1481,9 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:167,d:'11월 27일',t:'비스듬히 걷기',l:[
+    '가로 글쇠와 세로 글쇠를 함께 누르면 비스듬히 걸어요.',
+    '모서리는 끼고 돌지 못해요. 옆 칸이 막혀 있으면 한쪽으로만 가요.']},
   {v:166,d:'11월 27일',t:'가운데 단추 줄과 글쇠',l:[
     'PC의 단추 줄이 작아져 가운데 아래로 갔어요. 마우스를 올리면 또렷해져요.',
     '단추마다 글쇠가 생겼어요: I 가방 · E 스탯 · K 기술 · N 나 · L 기록.',
@@ -2568,7 +2571,7 @@ function updGuards(dt){
   const party=guardParty(),home=party?0:guardHome(),n=party||home;
   if(!n){gTrail.length=0;gMen.length=0;return}
   if(party){
-    if(gTrail.length&&Math.abs(gTrail[0][0]-P.x)+Math.abs(gTrail[0][1]-P.y)>1){gTrail.length=0;for(const g of gMen){g.m=0;g.foe=null}} /* 문을 드나들거나 멀리 옮겨졌으면 줄을 새로 선다 */
+    if(gTrail.length&&Math.max(Math.abs(gTrail[0][0]-P.x),Math.abs(gTrail[0][1]-P.y))>1){gTrail.length=0;for(const g of gMen){g.m=0;g.foe=null}} /* 문을 드나들거나 멀리 옮겨졌으면 줄을 새로 선다 */
     if(!gTrail.length||gTrail[0][0]!==P.x||gTrail[0][1]!==P.y){gTrail.unshift([P.x,P.y]);if(gTrail.length>3+n*2)gTrail.length=3+n*2}
   }else gTrail.length=0;
   const us=gUsable(),ros=gRoster();for(let i=gMen.length-1;i>=0;i--)if(!us.includes(gMen[i].ri))gMen.splice(i,1); /* v153: 사병마다 명부의 한 사람이다(ri). 곁을 떠난 사람은 뺀다 */
@@ -2628,7 +2631,7 @@ function drawGuards(c,list,labels){
     const g=gMen[i];let gx,gy,d,mv;
     if(g.m===0){
       const j=1+i*2,q=party?gTrail[j]:null;if(!q)continue;
-      const pv=gTrail[j+1],nx=gTrail[j-1];mv=t<1&&!!pv&&Math.abs(pv[0]-q[0])+Math.abs(pv[1]-q[1])===1;
+      const pv=gTrail[j+1],nx=gTrail[j-1];mv=t<1&&!!pv&&Math.max(Math.abs(pv[0]-q[0]),Math.abs(pv[1]-q[1]))===1;
       gx=mv?lerp(pv[0],q[0],t):q[0];gy=mv?lerp(pv[1],q[1],t):q[1];d=mv?[q[0]-pv[0],q[1]-pv[1]]:[Math.sign(nx[0]-q[0]),Math.sign(nx[1]-q[1])];
     }else{gx=lerp(g.fx,g.x,g.t);gy=lerp(g.fy,g.y,g.t);d=g.dir;mv=g.t<1}
     const dd=d[0]&&d[1]?[d[0],0]:d[0]||d[1]?d:[0,1],L=g.lunge>0?5:0,cx=(gx+.5)*T+dd[0]*L,fy=(gy+.9)*T+dd[1]*L-bridgeRise(gx,gy);
@@ -5797,10 +5800,14 @@ let tapDir=null,tapT=0,padWait=false,pushAt=0,pushWho=null,pushT0=0,pushSeen=0;
 function updPlayer(dt){
   // 조작키를 눌렀는데 그 순간 막혀 있었으면(대화가 막 닫히는 중 등) 풀리자마자 받아 준다
   if(padWait&&padCode&&!busy()&&!((mg||fishing)&&performance.now()<guardUntil)){padWait=false;dirDown(padCode,false)}
-  if(P.t<1){P.t=Math.min(1,P.t+dt*WALK*(1+gearFx('spd'))*(scene!=='home'&&bridgeAt(rx(P),ry(P))?BRIDGE_SLOW:1));if(P.t<1)return;P.fx=P.x;P.fy=P.y;arrive();if(busy())return}
+  if(P.t<1){P.t=Math.min(1,P.t+dt*WALK*(P.diag?.74:1)*(1+gearFx('spd'))*(scene!=='home'&&bridgeAt(rx(P),ry(P))?BRIDGE_SLOW:1));if(P.t<1)return;P.fx=P.x;P.fy=P.y;P.diag=0;arrive();if(busy())return}
   if(moorOff&&P.t>=1){moor=null;moorOff=false}
   if(moorT>0){moorT-=dt;if(moorT<=0&&moorGo){const g=moorGo;moorGo=null;if(scene==='sea'){if(g.land)moor=[P.x,P.y];else moorOff=true;P.dir=[Math.sign(g.x-P.x),Math.sign(g.y-P.y)];stepTo(g.x,g.y);sfx('pick')}}return}
   if(fishing||(mg&&mg.kind!=='hunt'))return; /* v155: 맞붙어 싸우는 동안에는 걸어서 자리를 옮길 수 있다 */
+  /* v167(사용자 요청: 대각선 이동): 가로 글쇠와 세로 글쇠를 함께 누르고 있으면 비스듬히 한 칸 간다. 모서리를 끼고 돌지 않게 옆 칸 둘이 모두 비어 있어야 한다.
+     바라보는 쪽(P.dir)은 가로 쪽으로 둔다(겨누기·말 걸기가 네 방향이라). 비스듬한 걸음은 조금 느리다(P.diag) */
+  if(keys.length>1&&!tapDir){let hx=0,vy=0;for(const k of keys){const q=KEYDIR[k];if(!q)continue;if(q[0])hx=q[0];else vy=q[1]}
+    if(hx&&vy&&canStep(P.x+hx,P.y+vy)&&canStep(P.x+hx,P.y)&&canStep(P.x,P.y+vy)){P.path=[];P.after=null;P.dir=[hx,0];stepTo(P.x+hx,P.y+vy);P.diag=1;return}}
   let d=keys.length?KEYDIR[keys[keys.length-1]]:null;
   if(tapDir){if(performance.now()-tapT<450)d=KEYDIR[tapDir];tapDir=null}
   /* 이웃 밀기(v114, 사용자 요청: 말로 비켜 달라는 게 아니라 그냥 손으로 밀기): 걸어가려는 칸에 이웃이 서 있으면 그쪽으로 걸음을 떼는 것만으로 손을 뻗어 한 칸 민다(0.45초에 한 번) */
