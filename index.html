@@ -1407,6 +1407,9 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:134,d:'11월 27일',t:'끊기던 가락 고침',l:[
+    '휴대폰에서 다른 앱에 다녀오면 배경 가락이 안 나오던 것을 고쳤어요. 화면을 한 번 누르면 다시 나와요.',
+    '소리와 가락은 열 때마다 꺼져 있어요. "설정"에서 켜요.']},
   {v:133,d:'11월 27일',t:'레벨과 이름을 한 줄로',l:[
     '머리 위에 레벨과 이름이 함께 보여요. 예: "Lv.12 새싹".',
     '같이 하는 친구도 같아요. 발밑에 따로 뜨던 이름은 없앴어요.']},
@@ -4684,7 +4687,7 @@ const sfxNoise=()=>{if(!sfxNz){sfxNz=actx.createBuffer(1,Math.floor(actx.sampleR
 function sfx(k){
   if(!S||!S.sound)return;
   try{
-    actx=actx||new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume();
+    actx=actx||new (window.AudioContext||window.webkitAudioContext)();if(actx.state!=='running')actx.resume();
     if(SFX2[k]){sfx2(k);return}
     let t=actx.currentTime;
     for(const [f,d] of SFX[k]||[[440,.08]]){const o=actx.createOscillator(),g=actx.createGain();o.type=k==='chop'?'square':'triangle';o.frequency.value=f;
@@ -4757,7 +4760,7 @@ function bgmStop(){
 function bgmTick(){
   if(!S||!S.bgm||!started){if(bgm)bgmStop();return}
   try{
-    actx=actx||new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume();
+    actx=actx||new (window.AudioContext||window.webkitAudioContext)();if(actx.state!=='running')actx.resume();
     const t0=actx.currentTime;
     if(bgm&&t0>bgm.t+.8)bgmStop(); /* 가려져 있다가 돌아왔으면 처음부터 */
     if(!bgm){const out=actx.createGain();out.gain.value=.7;out.connect(actx.destination);bgm={k:bgmKey(),u:0,t:t0+.12,out}}
@@ -11664,6 +11667,9 @@ setInterval(()=>{
   else{hiddenAt=0;if(t-lastInput>300000)goAway('idle')}
 },5000);
 for(const ev of ['keydown','pointerdown'])window.addEventListener(ev,()=>{lastInput=performance.now();if(p2pAway)comeBack()},true);
+/* v134(사용자 질문: 친구 방에 다녀오면 가락이 안 나올 때가 있나): 휴대폰에서 다른 앱(초대 주소 보내기·전화·화면 잠금)에 다녀오면 소리 장치가 멈춘 채로 남는다.
+   브라우저는 손이 닿은 순간에만 소리를 다시 틀어 주므로, 화면을 누르거나 키를 누를 때 깨운다(전에는 화면 그리는 차례에만 깨워서, 효과음을 꺼 둔 휴대폰에서는 가락이 돌아오지 않았다) */
+for(const ev of ['pointerdown','touchend','keydown'])window.addEventListener(ev,()=>{if(actx&&actx.state!=='running'&&S&&(S.bgm||S.sound)){try{actx.resume()}catch(e){}}},true);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){hiddenAt=0;lastInput=performance.now();if(p2pAway&&awayWhy!=='kick'&&awayWhy!=='tab')comeBack()}});
 const peerIdle=p=>{const v=PV[p.peer];return v?Math.max(0,Math.round((Date.now()-v.act)/1000)):0};
 const idleText=s=>s<20?'방금 움직였어요':s<90?s+'초째 가만히 있어요':Math.round(s/60)+'분째 가만히 있어요';
