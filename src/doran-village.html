@@ -75,6 +75,7 @@ button.chip{font:inherit;color:inherit;cursor:pointer;line-height:inherit}
 #actBtn.fight{width:74px;height:74px;font-size:18px}
 /* 장비 칸과 단련 판(v165): 가운데 내 모습, 둘레에 한지 칸 */
 .doll{display:grid;grid-template-columns:84px 112px 84px;grid-template-rows:repeat(3,84px);grid-template-areas:"w me h" "t me a" ". me s";gap:44px 18px;justify-content:center;margin:14px auto 44px}
+.doll.trn{grid-template-rows:repeat(2,84px);grid-template-areas:"w me h" "t me a";gap:36px 26px;margin:22px auto 40px}
 .dollme{grid-area:me;width:112px;height:168px;align-self:center;image-rendering:pixelated;background:var(--bg);border:2px solid var(--wood);border-radius:14px}
 .slot{position:relative;width:84px;height:84px;padding:0;border:3px solid var(--wood);border-radius:12px;background:var(--bg);box-shadow:inset 0 0 0 2px var(--surface),0 2px 0 var(--shade);cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:12.5px;color:var(--muted);touch-action:manipulation}
 .slot:hover{border-color:var(--wood-dk)}.slot b{position:absolute;right:3px;bottom:1px;font-size:13px;color:var(--accent);background:var(--surface);border-radius:6px;padding:0 3px}.slot em{position:absolute;left:6px;top:-10px;font-style:normal;font-size:11px;line-height:1.3;padding:0 6px;border-radius:6px;background:var(--wood);color:var(--surface)}.slot small{position:absolute;left:-14px;right:-14px;top:100%;margin-top:4px;font-size:13px;line-height:1.2;color:var(--ink);text-align:center;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -1482,7 +1483,8 @@ function rollQuests(s){
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
   {v:170,d:'11월 27일',t:'단련 그림',l:[
-    '단련 판에 팔·몸통·손·다리 그림이 생겼어요.']},
+    '단련 판에 팔·몸통·손·다리 그림이 생겼어요.',
+    '단련 판의 동그라미와 내 모습을 가운데로 맞췄어요.']},
   {v:169,d:'11월 27일',t:'장비 칸 또렷하게',l:[
     '장비 칸과 그림을 키우고, 등급은 칸 테두리 빛깔로 보여 줘요.',
     '칸 이름은 위에 꼬리표로, 장비 이름은 크게 적었어요.',
@@ -9632,7 +9634,7 @@ function openSkills(){
     body.appendChild(el('p','note','남은 기술 점수 '+left+' · 레벨마다 1점 · 기술 다섯 단계 · 단련 열 단계'));
     body.appendChild(el('p','note','갈래의 둘째 기술은 싸울 때 단추로 써요 · 컴퓨터는 1·2·3 키 · 기력 2'));
     /* v165(사용자 요청: 가운데 캐릭터, 단련을 눌러 올리는 느낌): 단련 판. 힘·몸·손 동그라미를 누르면 한 단계 오른다 */
-    {const d=el('div','doll'),q=S.cls.charAt(0),sp=charSprite(playerLook(),'front',0),m=el('canvas');m.width=16;m.height=24;m.getContext('2d').drawImage(sp,0,0);m.className='dollme';
+    {const d=el('div','doll trn'),q=S.cls.charAt(0),sp=charSprite(playerLook(),'front',0),m=el('canvas');m.width=16;m.height=24;m.getContext('2d').drawImage(sp,0,0);m.className='dollme';
       const mk=(n,ch,nm,area)=>{const id=q+'_t'+n,lv=S.sk[id]|0,b=el('button','slot rnd');b.type='button';b.style.gridArea=area;b.appendChild(trnIcon(n));b.appendChild(el('b',null,String(lv)));b.appendChild(el('small',null,nm+' '+lv+'/10'));
         b.disabled=lv>=10||left<1;b.onclick=()=>{if(skLeft()<1||(S.sk[id]|0)>=10)return;S.sk[id]=(S.sk[id]|0)+1;sfx('level');saveAll();openSkills()};return b};
       d.appendChild(mk(1,'힘','힘 기르기','w'));d.appendChild(mk(4,'다리','다리 기르기','t'));d.appendChild(m);d.appendChild(mk(2,'몸','몸 다지기','h'));d.appendChild(mk(3,'손','손 익히기','a'));body.appendChild(d)}
