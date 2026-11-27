@@ -78,7 +78,7 @@ button.chip{font:inherit;color:inherit;cursor:pointer;line-height:inherit}
 .dollme{grid-area:me;width:104px;height:156px;align-self:center;image-rendering:pixelated;background:var(--bg);border:2px solid var(--wood);border-radius:14px}
 .slot{position:relative;width:68px;height:68px;padding:0;border:2px solid var(--wood);border-radius:12px;background:var(--bg);box-shadow:inset 0 0 0 2px var(--surface),0 2px 0 var(--shade);cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:12.5px;color:var(--muted);touch-action:manipulation}
 .slot:hover{border-color:var(--wood-dk)}.slot b{position:absolute;right:4px;top:1px;font-size:11.5px;color:var(--accent)}.slot small{position:absolute;left:-10px;right:-10px;top:100%;margin-top:2px;font-size:11px;line-height:1.15;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
-.slot.rnd{border-radius:50%}.slot.rnd i{font-style:normal;font-size:19px;color:var(--ink)}.slot.rnd:disabled{opacity:.55;cursor:default}
+.slot.rnd{border-radius:50%}.slot.rnd i{font-style:normal;font-size:17px;color:var(--ink)}.slot.rnd:disabled{opacity:.55;cursor:default}
 #stage.ghost{border-color:#2a2440;box-shadow:0 0 0 1.5px #15121f,inset 0 0 26px rgba(90,60,170,.6)} /* v161: 귀신골에 있는 동안 놀이판 테두리가 검보랏빛으로 */
 #skPad button{position:absolute;width:48px;height:48px;border-radius:50%;border:2px solid var(--wood);background:linear-gradient(to top,rgba(74,46,24,.34) calc(var(--cd,0)*100%),transparent 0),var(--surface);color:var(--ink);font-family:var(--display);font-size:12px;line-height:1.05;padding:0;cursor:pointer;box-shadow:0 2px 0 var(--shade);touch-action:manipulation}
 #skPad button:nth-child(1){right:92px;bottom:10px}#skPad button:nth-child(2){right:78px;bottom:66px}#skPad button:nth-child(3){right:20px;bottom:94px}
@@ -1481,6 +1481,8 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:168,d:'11월 27일',t:'다리 기르기',l:[
+    '단련에 "다리 기르기"가 생겼어요. 단계마다 걸음이 2% 빨라져요(열 단계).']},
   {v:167,d:'11월 27일',t:'비스듬히 걷기',l:[
     '가로 글쇠와 세로 글쇠를 함께 누르면 비스듬히 걸어요.',
     '모서리는 끼고 돌지 못해요. 옆 칸이 막혀 있으면 한쪽으로만 가요.']},
@@ -9436,11 +9438,11 @@ const SKILLS={ /* v156: 갈래마다 첫째는 늘 붙는 힘, 둘째는 단추�
   dosa:[['뇌법',[['d_bolt','벼락','늘 · 부적의 힘 +1(3단계 +2)'],['d_chain','연쇄 벼락','단추 · 겨눈 짐승에 2~3, 둘레에 1씩']]],['부적',[['d_bind','결박','늘 · 묶는 시간이 늘어요(3단계: 둘레 세 칸)'],['d_ward','호신부','단추 · 2~3초 동안 다치지 않아요']]],['선술',[['d_far','축지부','늘 · 부적 사거리 +1칸씩'],['d_heal','치유부','단추 · 기력을 되찾아요(하루 세 번)']]]]};
 /* v163(사용자 요청: 직업 쪽 성장을 더 다양하게 · 그쪽 스탯을 늘리게): 기술은 다섯 단계까지, 점수는 레벨마다 1점. 직업마다 "단련" 갈래(힘·몸·손, 열 단계)를 더했다 —
    힘 기르기 trn(1): 두 단계마다 모든 공격의 힘 +1 · 몸 다지기 trn(2): 단계마다 3% 덜 다침 · 손 익히기 trn(3): 단계마다 공격이 3% 빨라짐 */
-for(const k in SKILLS){const q=k.charAt(0);SKILLS[k].push(['단련',[[q+'_t1','힘 기르기','늘 · 두 단계마다 모든 공격의 힘 +1'],[q+'_t2','몸 다지기','늘 · 단계마다 3% 덜 다쳐요'],[q+'_t3','손 익히기','늘 · 단계마다 공격이 3% 빨라져요']]])}
+for(const k in SKILLS){const q=k.charAt(0);SKILLS[k].push(['단련',[[q+'_t1','힘 기르기','늘 · 두 단계마다 모든 공격의 힘 +1'],[q+'_t2','몸 다지기','늘 · 단계마다 3% 덜 다쳐요'],[q+'_t3','손 익히기','늘 · 단계마다 공격이 3% 빨라져요'],[q+'_t4','다리 기르기','늘 · 단계마다 걸음이 2% 빨라져요']]])} /* v168(사용자 요청: 다리도 늘리게 — 속도): trn(4) */
 const skMax=id=>/_t\d$/.test(id)?10:SK_MAX,trn=n=>S&&S.cls?sk(S.cls.charAt(0)+'_t'+n):0;
 const SK_MAX=5,sk=id=>S&&S.cls&&S.sk&&id.charAt(0)===S.cls.charAt(0)?S.sk[id]|0:0,isCls=k=>!!S&&S.cls===k;
 const skTotal=()=>S.level|0,skUsed=()=>Object.keys(S.sk||{}).reduce((a,k)=>a+(S.sk[k]|0),0),skLeft=()=>Math.max(0,skTotal()-skUsed());
-const clsFx=k=>(k==='aim'?(isCls('gung')?1.5+.7*sk('g_aim'):isCls('musa')?-1.5:0):k==='spd'?(isCls('hyeop')?.04:0)+(skOn('h_step')?.45:0):0)+(k==='aim'?.6*sk('h_throw'):0);
+const clsFx=k=>(k==='aim'?(isCls('gung')?1.5+.7*sk('g_aim'):isCls('musa')?-1.5:0):k==='spd'?(isCls('hyeop')?.04:0)+(skOn('h_step')?.45:0)+.02*trn(4):0)+(k==='aim'?.6*sk('h_throw'):0);
 const clsHurt=()=>Math.max(.35,(isCls('musa')?.85:isCls('hyeop')?1.1:isCls('dosa')?1.2:1)-.05*sk('m_guard')-.03*trn(2));
 const bowRange=()=>isCls('dosa')?5+sk('d_far'):4+tl('bow')+(isCls('gung')?1+Math.ceil(sk('g_far')/2):0);
 const bujeokDmg=()=>1+Math.floor(sv('lore')/14)+Math.ceil(sk('d_bolt')/2),shotDmg=()=>(isCls('dosa')?bujeokDmg():isCls('gung')?2:1)+gearFx('dmg')+Math.floor(trn(1)/2); /* v158 밸런스: 궁사는 화살 힘 +1(평타가 가장 약했다), 도사는 학식 14마다 +1(전에는 7마다라 한 장에 6까지 나왔다) */ /* v155: 무기는 직업 것만 걸치므로 도사도 제 무기(지팡이)의 힘을 받는다 */
@@ -9627,7 +9629,7 @@ function openSkills(){
     {const d=el('div','doll'),q=S.cls.charAt(0),sp=charSprite(playerLook(),'front',0),m=el('canvas');m.width=16;m.height=24;m.getContext('2d').drawImage(sp,0,0);m.className='dollme';
       const mk=(n,ch,nm,area)=>{const id=q+'_t'+n,lv=S.sk[id]|0,b=el('button','slot rnd');b.type='button';b.style.gridArea=area;b.appendChild(el('i',null,ch));b.appendChild(el('b',null,String(lv)));b.appendChild(el('small',null,nm+' '+lv+'/10'));
         b.disabled=lv>=10||left<1;b.onclick=()=>{if(skLeft()<1||(S.sk[id]|0)>=10)return;S.sk[id]=(S.sk[id]|0)+1;sfx('level');saveAll();openSkills()};return b};
-      d.appendChild(mk(1,'힘','힘 기르기','w'));d.appendChild(m);d.appendChild(mk(2,'몸','몸 다지기','h'));d.appendChild(mk(3,'손','손 익히기','s'));body.appendChild(d)}
+      d.appendChild(mk(1,'힘','힘 기르기','w'));d.appendChild(mk(4,'다리','다리 기르기','t'));d.appendChild(m);d.appendChild(mk(2,'몸','몸 다지기','h'));d.appendChild(mk(3,'손','손 익히기','a'));body.appendChild(d)}
     for(const [rn,list] of SKILLS[S.cls]){
       body.appendChild(el('p','sub',rn+' 갈래'));
       list.forEach(([id,n,d],i)=>{const lv=S.sk[id]|0,lock=rn!=='단련'&&i>0&&!(S.sk[list[i-1][0]]|0);
