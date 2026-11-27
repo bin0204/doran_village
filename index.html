@@ -56,6 +56,7 @@ button.chip{font:inherit;color:inherit;cursor:pointer;line-height:inherit}
 #fade{position:absolute;inset:0;background:#0b1410;opacity:0;pointer-events:none;transition:opacity .5s}
 #fade.on{opacity:1}
 #toasts{position:absolute;top:10px;left:10px;right:10px;display:flex;flex-direction:column;align-items:center;gap:6px;pointer-events:none}
+#toasts.low{top:auto;bottom:132px;flex-direction:column-reverse}
 .toast{background:var(--surface);color:var(--ink);border:1.5px solid var(--wood);border-radius:8px;padding:5px 14px;
   font-family:var(--display);font-size:15px;max-width:100%;animation:pop .25s ease-out;box-shadow:0 3px 0 var(--shade)}
 .toast.out{opacity:0;transition:opacity .4s}
@@ -1407,6 +1408,15 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:136,d:'11월 27일',t:'움직이는 사냥감과 싸우는 사병',l:[
+    '활을 겨누는 동안에도 짐승이 움직여요. 줄에서 벗어나면 다시 자리를 잡아요.',
+    '화살에 맞은 순한 짐승은 달아나고, 사나운 짐승은 달려들어요.',
+    '사병이 짐승에게 걸어가 창으로 싸워요. 물리면 다치고, 많이 다치면 그날은 쉬어요.',
+    '사병을 두고 다니면 집 앞을 지켜요. 산적이 쳐들어오면 눈앞에서 맞서 싸워요.',
+    '데리고 나가 마을을 비운 날은 사병이 습격을 못 막아요.',
+    '내가 화면 위쪽에 있으면 알림이 아래로 내려가요.',
+    '양반 인사 글은 이웃마다 처음 한 번만 보여요.',
+    '닭과 소가 제자리에 굳어 있던 것을 고쳤어요. 우리 둘레를 돌아다녀요.']},
   {v:135,d:'11월 27일',t:'밭은 한 칸씩',l:[
     '밭은 이제 한 번에 한 칸만 갈아요. 괭이를 벼려도 같아요.',
     '대신 괭이를 벼릴수록 기력이 덜 들어요(3→2→2→1).',
@@ -2263,27 +2273,103 @@ function innChat(g){float('"'+INN_SAY[(S.day+g.i*3+Math.floor(now/7))%INN_SAY.le
 // 식읍(S.fief 0~3): 양반이 호조에서 사는 고을. 철이 바뀌는 날 세곡이 들어온다. 고을마다 지킬 사병(g)이 모자라면 산적에게 반을 털린다. 세곡의 15%는 세금
 // 상의원 일(S.star): 별좌가 된 사람이 하루에 한 번 한 좌랑에게 기물 재료를 대고 수고비와 공, 학식을 얻는다. 열두 번 지으면 재주로 양반 교지를 받을 수 있다
 const GUARD_LOOK={skin:'#e0b48c',hair:'#2e2a2a',shirt:'#22304f',bot:'#3a3a40',rib:'#c8392f',sex:'m',hat:'jeonrip'};
-let gTrail=[],gHit=0;
+let gTrail=[],gHit=0,gMen=[];
 const guardParty=()=>S&&S.hh&&S.hh.out&&scene!=='home'&&scene!=='sea'&&scene!=='cave'?guardsOn():0;
+/* v136(사용자 요청: 사병이 가까이 가서 싸우게 · 두고 가면 마을을 지키는 모습이 보이게 · 나처럼 걷게): 사병은 저마다 움직이는 사람이다(gMen, 저장하지 않는다).
+   m 0 따라오기(자리는 내 발자국 줄이 정한다) · 1 싸우기(상대 곁으로 걸어가 창으로 친다) · 2 제자리로 돌아오기 · 3 집 앞 지키기(두고 다닐 때 마을에서, 가끔 둘레를 돈다).
+   상대: 나를 덮치려는 사나운 짐승·산적, 내 화살에 맞아 다친 짐승(b.wound), 마을에 쳐들어온 산적(b.raid). 한 번 치면 기운 1, 2.6초에 한 번.
+   사병도 물린다: 버티는 힘 3(레벨 12가 넘는 짐승에게는 한 번에 2). 다 닳으면 다쳐서 물러나고 그날은 쉰다(S.hh.hurt·hurtDay → guardsOn). 사병과 붙은 짐승은 그동안 나를 물지 못한다(b.gf) */
+const guardHome=()=>S&&S.hh&&!S.hh.out&&scene==='town'?guardsOn():0;
+const guardPost=i=>{const d=BLD[0].door;return townSpot(d[0]+[-2,2,-3][i%3],d[1]+1)};
+function guardPick(g,home){
+  let best=null,bd=99;
+  for(const b of beasts){
+    const D=BEASTS[b.k];if(b.hp<=0||g.skip===b||(mg&&mg.mel&&mg.b===b))continue;
+    const dp=Math.abs(b.x-P.x)+Math.abs(b.y-P.y),dg=Math.abs(b.x-g.x)+Math.abs(b.y-g.y),fierce=!!D.bite&&(!D.mild||b.mad)&&b.flee<=0;
+    if(!(b.raid||(home?fierce&&dg<=5:(fierce&&dp<=(b.rage>0?7:3))||(b.wound&&dp<=9))))continue;
+    const sc=dg+(gMen.some(o=>o!==g&&o.foe===b)?6:0); /* 되도록 서로 다른 상대를 맡는다 */
+    if(sc<bd){bd=sc;best=b}
+  }
+  return best;
+}
+function guardStep(g,goal){
+  /* 길 찾기는 이웃·짐승·가축을 비켜 가고, 첫 걸음이 나나 다른 사병에게 막혀 있으면 옆으로 한 칸 비켜 본다 */
+  const free=(x,y)=>walkable(x,y)&&!beastOn(x,y)&&!npcOn(x,y)&&!herdOn(x,y)&&!(x===P.x&&y===P.y)&&!gMen.some(o=>o!==g&&o.m!==0&&o.x===x&&o.y===y);
+  const p=findPath(g.x,g.y,goal,true)||findPath(g.x,g.y,goal,false);if(!p||!p.length)return false;
+  let s=p[0];
+  if(Math.abs(s[0]-g.x)+Math.abs(s[1]-g.y)!==1||!free(s[0],s[1])){
+    const e=p[p.length-1],o=DIRS.map(([dx,dy])=>[g.x+dx,g.y+dy]).filter(q=>free(q[0],q[1])&&!(q[0]===g.fx&&q[1]===g.fy)).sort((a,b)=>Math.abs(a[0]-e[0])+Math.abs(a[1]-e[1])-Math.abs(b[0]-e[0])-Math.abs(b[1]-e[1]))[0];
+    if(!o)return false;s=o;
+  }
+  g.dir=[s[0]-g.x,s[1]-g.y];g.fx=g.x;g.fy=g.y;g.x=s[0];g.y=s[1];g.t=0;return true;
+}
 function updGuards(dt){
-  const n=guardParty();if(!n){gTrail.length=0;return}
-  if(gTrail.length&&Math.abs(gTrail[0][0]-P.x)+Math.abs(gTrail[0][1]-P.y)>1)gTrail.length=0; /* v135: 문을 드나들거나 멀리 옮겨졌으면 줄을 새로 선다(전에는 앞 장면의 자리에 서 있었다) */
-  if(!gTrail.length||gTrail[0][0]!==P.x||gTrail[0][1]!==P.y){gTrail.unshift([P.x,P.y]);if(gTrail.length>9)gTrail.length=9}
-  gHit-=dt;if(gHit>0||scene==='palace'||scene==='resort')return;
-  const foe=beasts.filter(b=>{const D=BEASTS[b.k];return D.bite&&(!D.mild||b.mad)&&b.flee<=0&&!(mg&&mg.b===b)&&Math.abs(b.x-P.x)+Math.abs(b.y-P.y)<=2}).sort((a,b)=>a.hp-b.hp)[0];
-  if(!foe){gHit=.4;return}
-  gHit=4/n;foe.hp-=1;foe.stun=1.2;sfx('sword');float('사병이 '+jo(BEASTS[foe.k].n,'을','를')+' 쳤어요',foe.x*T+16,foe.y*T-14);
-  if(foe.hp<=0)huntKill(foe,true);
+  const party=guardParty(),home=party?0:guardHome(),n=party||home;
+  if(!n){gTrail.length=0;gMen.length=0;return}
+  if(party){
+    if(gTrail.length&&Math.abs(gTrail[0][0]-P.x)+Math.abs(gTrail[0][1]-P.y)>1){gTrail.length=0;for(const g of gMen){g.m=0;g.foe=null}} /* 문을 드나들거나 멀리 옮겨졌으면 줄을 새로 선다 */
+    if(!gTrail.length||gTrail[0][0]!==P.x||gTrail[0][1]!==P.y){gTrail.unshift([P.x,P.y]);if(gTrail.length>9)gTrail.length=9}
+  }else gTrail.length=0;
+  while(gMen.length<n){const p=home?guardPost(gMen.length):[P.x,P.y];gMen.push({m:home?3:0,x:p[0],y:p[1],fx:p[0],fy:p[1],t:1,dir:[0,1],foe:null,skip:null,cd:0,bt:0,hp:3,hurt:0,lunge:0,pw:rnd(3,8),st:0,away:null})}
+  gMen.length=n;
+  const peace=scene==='palace'||scene==='resort';gHit-=dt;const look=gHit<=0&&!peace;if(gHit<=0)gHit=.4;
+  const engage=(g,f)=>{g.m=1;g.foe=f;g.cd=.5;g.bt=1.3;g.st=0;g.away=null};
+  for(let i=0;i<gMen.length;i++){
+    const g=gMen[i],slot=party?gTrail[1+i*2]:null;
+    if(g.hurt>0)g.hurt-=dt;if(g.lunge>0)g.lunge-=dt;
+    if(party&&g.m===3)g.m=2;if(home&&g.m===0)g.m=2; /* 데리고 다니기를 켜고 끄면 걸어서 자리를 옮긴다 */
+    if(g.m===0){
+      if(slot){g.x=g.fx=slot[0];g.y=g.fy=slot[1];g.t=1}
+      if(slot&&look){const f=guardPick(g,false);if(f)engage(g,f)}
+      continue;
+    }
+    if(g.t<1){g.t=Math.min(1,g.t+dt*WALK*(g.m===3?.5:1.1));if(g.t>=1){g.fx=g.x;g.fy=g.y}continue}
+    if(g.m===1){
+      const b=g.foe;
+      if(!b||b.hp<=0||!beasts.includes(b)||peace||(party&&!b.raid&&Math.abs(b.x-P.x)+Math.abs(b.y-P.y)>12)){g.m=2;g.foe=null;g.st=0;continue}
+      if(Math.abs(b.x-g.x)+Math.abs(b.y-g.y)===1){
+        const D=BEASTS[b.k];g.st=0;g.dir=[b.x-g.x,b.y-g.y];b.gf=.35;g.cd-=dt;
+        if(g.cd<=0){
+          g.cd=2.6;g.lunge=.2;b.hp-=1;b.mad=1;sfx('spear');shots.push({x0:0,y0:0,x1:rx(b)*T+16,y1:ry(b)*T+12,t:.14,hit:true});
+          if(b.hp<=0){if(mg&&mg.b===b)mg=null;huntKill(b,true);g.m=2;g.foe=null;continue}
+        }
+        if(D.bite){g.bt-=dt;if(g.bt<=0){
+          const dm=D.lv>=12?2:1;g.bt=2.6;g.hp-=dm;g.hurt=.5;sfx('hurt');float('-'+dm,(g.x+.5)*T,g.y*T-22,'#ff7a5a');
+          if(g.hp<=0){S.hh.hurt=(S.hh.hurtDay===S.day?S.hh.hurt|0:0)+1;S.hh.hurtDay=S.day;float('사병이 다쳐 물러났어요',(g.x+.5)*T,g.y*T-36,'#ff7a5a');gMen.splice(i,1);touch();return}
+        }}
+      }else if(!guardStep(g,(x,y)=>Math.abs(x-b.x)+Math.abs(y-b.y)===1)){g.st+=dt;if(g.st>1.5){g.skip=b;g.m=2;g.foe=null;g.st=0}}else g.st=0;
+      continue;
+    }
+    if(look){const f=guardPick(g,!!home);if(f){engage(g,f);continue}}
+    if(g.m===3){
+      const po=guardPost(i);g.pw-=dt;
+      if(g.pw<=0){g.pw=rnd(4,9);g.away=!g.away&&Math.random()<.6?[po[0]+ri(-2,2),po[1]+ri(0,2)]:null}
+      const tg=g.away||po;
+      if(g.x!==tg[0]||g.y!==tg[1]){if(!guardStep(g,(x,y)=>x===tg[0]&&y===tg[1])){if(g.away)g.away=null;else{g.x=g.fx=po[0];g.y=g.fy=po[1]}}}else if(!g.away)g.dir=[0,1];
+      continue;
+    }
+    /* 돌아오기 */
+    const tg=party?slot:guardPost(i);
+    if(!tg){g.m=party?0:3;continue}
+    const d=Math.abs(tg[0]-g.x)+Math.abs(tg[1]-g.y);
+    if(d===0){g.m=party?0:3;g.st=0;continue}
+    if(d>16||!guardStep(g,(x,y)=>x===tg[0]&&y===tg[1])){g.st+=d>16?9:dt;if(g.st>1.2){g.x=g.fx=tg[0];g.y=g.fy=tg[1];g.t=1;g.m=party?0:3;g.st=0}}else g.st=0;
+  }
 }
 function drawGuards(c,list,labels){
-  /* v135(사용자 의견: 사병이 탁탁 끊겨 따라온다): 전에는 칸에서 칸으로 뚝뚝 옮겨 그렸다. 이제 내가 한 칸 딛는 동안(P.t) 사병도 제 뒤 칸에서 앞 칸으로 함께 걸어온다.
-     걷는 동안은 가는 쪽을, 멈추면 앞사람 쪽을 본다. 자리가 아직 없는 사병(막 문을 나섰을 때)은 내가 걸음을 떼는 대로 하나씩 따라 나온다 */
-  const n=guardParty(),t=P.t<1?P.t:1;
-  for(let i=0;i<n;i++){
-    const j=1+i*2,q=gTrail[j];if(!q)continue;
-    const pv=gTrail[j+1],nx=gTrail[j-1],mv=t<1&&!!pv&&Math.abs(pv[0]-q[0])+Math.abs(pv[1]-q[1])===1;
-    const gx=mv?lerp(pv[0],q[0],t):q[0],gy=mv?lerp(pv[1],q[1],t):q[1],d=mv?[q[0]-pv[0],q[1]-pv[1]]:[Math.sign(nx[0]-q[0]),Math.sign(nx[1]-q[1])],cx=(gx+.5)*T,fy=(gy+.9)*T;
-    list.push([gy+.05,()=>{drawChar(c,cx,fy,GUARD_LOOK,d[0]&&d[1]?[d[0],0]:d[0]||d[1]?d:[0,1],mv,now*stepPace()+i*.37);line(c,cx+8,fy-10,cx+11,fy-36,'#7a5230',1.6);poly(c,[cx+9.5,fy-36,cx+11,fy-43,cx+12.5,fy-36],'#cfd6dc')}]);
+  /* v135(사용자 의견: 사병이 탁탁 끊겨 따라온다): 따라올 때는 내가 한 칸 딛는 동안(P.t) 사병도 제 뒤 칸에서 앞 칸으로 함께 걸어온다. 걷는 동안은 가는 쪽을, 멈추면 앞사람 쪽을 본다.
+     자리가 아직 없는 사병(막 문을 나섰을 때)은 내가 걸음을 떼는 대로 하나씩 따라 나온다. 싸우거나 돌아오거나 지킬 때는 제 걸음으로 걷는다. 다리 위에서는 나처럼 솟는다 */
+  const t=P.t<1?P.t:1,party=guardParty();
+  for(let i=0;i<gMen.length;i++){
+    const g=gMen[i];let gx,gy,d,mv;
+    if(g.m===0){
+      const j=1+i*2,q=party?gTrail[j]:null;if(!q)continue;
+      const pv=gTrail[j+1],nx=gTrail[j-1];mv=t<1&&!!pv&&Math.abs(pv[0]-q[0])+Math.abs(pv[1]-q[1])===1;
+      gx=mv?lerp(pv[0],q[0],t):q[0];gy=mv?lerp(pv[1],q[1],t):q[1];d=mv?[q[0]-pv[0],q[1]-pv[1]]:[Math.sign(nx[0]-q[0]),Math.sign(nx[1]-q[1])];
+    }else{gx=lerp(g.fx,g.x,g.t);gy=lerp(g.fy,g.y,g.t);d=g.dir;mv=g.t<1}
+    const dd=d[0]&&d[1]?[d[0],0]:d[0]||d[1]?d:[0,1],L=g.lunge>0?5:0,cx=(gx+.5)*T+dd[0]*L,fy=(gy+.9)*T+dd[1]*L-bridgeRise(gx,gy);
+    list.push([gy+.05,()=>{if(g.hurt>0&&Math.floor(now*16)%2)c.globalAlpha=.45;drawChar(c,cx,fy,GUARD_LOOK,dd,mv,now*(g.m===3?.6:stepPace())+i*.37);line(c,cx+8,fy-10,cx+11,fy-36,'#7a5230',1.6);poly(c,[cx+9.5,fy-36,cx+11,fy-43,cx+12.5,fy-36],'#cfd6dc');c.globalAlpha=1}]);
+    if(g.m===1&&g.hp<3&&!mg)labels.push(()=>label(c,cx,fy-52,'♥'.repeat(Math.max(1,g.hp))));
   }
 }
 const FIEFS=[null,{n:'작은 마을',cost:200000,pay:20000,g:1},{n:'고을',cost:600000,pay:70000,g:2},{n:'큰 고을',cost:1500000,pay:180000,g:3}];
@@ -2423,7 +2509,7 @@ const storyLeft=id=>STORY[id].length-(S.story[id]|0),STORY_ALL=Object.values(STO
 //   못 물리친 산적은 밤사이 이웃집을 하나씩 부수고(S.ruin에 raid:1, 저절로 고쳐지지 않는다) 내 돈을 턴다. 부서진 집은 목수 모루에게 삯을 주고 고친다(repairTalk)
 const HAND_PAY=120,GUARD_PAY=250,HAND_TILES=12,RAID_LV=8,RAID_FIX=2500;
 const handMax=()=>S.camp?0:Math.max(0,S.house-2),guardMax=()=>isNoble()?3:0;
-const guardsOn=()=>S.hh&&S.hhOff!==S.day?S.hh.guard|0:0;
+const guardsOn=()=>S.hh&&S.hhOff!==S.day?Math.max(0,(S.hh.guard|0)-(S.hh.hurtDay===S.day?S.hh.hurt|0:0)):0; /* v136: 싸우다 다친 사병은 그날 쉰다 */
 const raidPals=()=>TOWN_IDS.filter(id=>hearts(id)>=3&&!S.ruin[id]);
 function openHousehold(){
   openModal('가솔',body=>{
@@ -2432,9 +2518,9 @@ function openHousehold(){
     const set=(k,d)=>()=>{H[k]=Math.max(0,H[k]+d);sfx(d>0?'coin':'pick');saveAll();openHousehold()};
     row(body,el('span','badge','머'),'머슴 '+H.hand+'/'+hm+'명',['아침마다 심어 둔 작물에 물을 줘요 · 한 사람이 밭 '+HAND_TILES+'칸 (마을 밭과 들판 밭터)','품삯 하루 '+won(HAND_PAY)+(hm?'':' · 너른 초가집부터 둘 수 있어요(집이 클수록 한 사람씩 더)')],
       [['들이기',set('hand',1),H.hand>=hm],['내보내기',set('hand',-1),H.hand<1]]);
-    row(body,el('span','badge','병'),'사병 '+H.guard+'/'+(gm||3)+'명',['산적이 마을을 덮칠 때 한 사람이 산적 하나를 막아요 · 내가 덮쳐질 때 한 사람마다 1할씩 덜 다쳐요','품삯 하루 '+won(GUARD_PAY)+(gm?'':' · 양반만 사병을 둘 수 있어요(궁궐의 한 좌랑에게 "신분 일")')],
+    row(body,el('span','badge','병'),'사병 '+H.guard+'/'+(gm||3)+'명',['산적이 쳐들어오면 맞서 싸워요 · 내가 덮쳐질 때 한 사람마다 1할씩 덜 다쳐요'+(H.hurtDay===S.day&&H.hurt?' · 오늘 다쳐서 쉬는 사병 '+H.hurt+'명':''),'품삯 하루 '+won(GUARD_PAY)+(gm?'':' · 양반만 사병을 둘 수 있어요(궁궐의 한 좌랑에게 "신분 일")')],
       [['들이기',set('guard',1),H.guard>=gm],['내보내기',set('guard',-1),H.guard<1]]);
-    if(H.guard>0)row(body,el('span','badge','行'),'사병 데리고 다니기: '+(H.out?'켬':'끔'),['켜면 사병들이 뒤를 따라와요. 사냥터와 산에서, 또 마을이 습격받을 때 나를 덮치는 짐승과 산적을 함께 쳐요','데리고 나간 날은 품삯을 반 더 줘요(한 사람 하루 '+won(Math.round(GUARD_PAY*1.5))+')'],[[H.out?'두고 다니기':'데리고 다니기',()=>{H.out=H.out?0:1;sfx('pick');saveAll();openHousehold()}]]);
+    if(H.guard>0)row(body,el('span','badge','行'),'사병 데리고 다니기: '+(H.out?'켬':'끔'),['켜면 뒤를 따라오며, 덮치는 짐승과 내가 맞힌 짐승에게 달려가 싸워요','끄면 집 앞을 지켜요 · 데리고 나가 마을을 비우면 습격을 못 막아요','데리고 나간 날은 품삯을 반 더 줘요(한 사람 하루 '+won(Math.round(GUARD_PAY*1.5))+')'],[[H.out?'두고 다니기':'데리고 다니기',()=>{H.out=H.out?0:1;sfx('pick');saveAll();openHousehold()}]]);
     body.appendChild(el('p','sub','마을 지키기'));
     const R=S.raid,pals=raidPals().map(id=>NPCS[id].name);
     body.appendChild(el('p','note',S.level<RAID_LV?'레벨 '+RAID_LV+'부터는 가끔 산적 떼가 마을을 노려요.':R&&R.day===S.day&&!R.won?(R.up?'산적 '+R.left+'명이 마을에 남아 있어요! 활로 쏘거나 맞붙어 물리쳐요.':'오늘 저녁 6시쯤 산적 '+R.n+'명쯤이 쳐들어온다는 소문이에요. 그때 마을에 있어야 막을 수 있어요.'):'산적 떼는 엿새에서 아흐레에 한 번쯤 와요. 아침 쪽지에 소문이 적혀요.'));
@@ -2443,12 +2529,12 @@ function openHousehold(){
 }
 function raidWatch(){const R=S.raid;if(R&&R.day===S.day&&!R.up&&S.min>=1080&&scene==='town'&&!mg&&!fishing&&P.t>=1)raidStart()}
 function raidStart(){
-  const R=S.raid,pals=raidPals(),g=guardsOn(),auto=Math.min(R.n-2,pals.length+g);R.up=1;R.left=R.n-auto;
+  const R=S.raid,pals=raidPals(),g=guardsOn(),auto=Math.min(R.n-2,pals.length);R.up=1;R.left=R.n-auto; /* v136: 사병은 셈으로 막지 않고 눈앞에서 싸운다 */
   const road=[];for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++)if(TOWN.tile[y][x]===1&&canStep(x,y)){const d=Math.abs(x-P.x)+Math.abs(y-P.y);if(d>=7&&d<=13)road.push([x,y])}
   for(let i=0;i<R.left&&road.length;i++){const q=road.splice(Math.floor(Math.random()*road.length),1)[0],b=mkBeast(i===0&&S.level>=12?'chief':'bandit',q[0],q[1]);b.raid=1;b.mad=1;beasts.push(b)}
-  const who=pals.slice(0,Math.max(0,auto-g)).map(id=>NPCS[id].name),gg=Math.min(g,auto);
+  const who=pals.slice(0,auto).map(id=>NPCS[id].name);
   sfx('err');saveAll();
-  dialog({who:'마을',text:'"산적이다! 산적 떼가 쳐들어왔다!"\n(산적 '+R.n+'명이 마을로 몰려왔어요.'+(who.length?' '+who.join(', ')+jo(who[who.length-1],'이','가').slice(-1)+' 저마다 하나씩 쫓아냈어요.':'')+(gg?' 사병이 '+gg+'명을 막았어요.':'')+' 남은 '+R.left+'명은 내가 물리쳐야 해요. 활로 쏘거나 곁에서 맞붙어요. 자기 전까지 못 물리친 산적은 이웃집을 부수고 돈을 털어 가요.)'});
+  dialog({who:'마을',text:'"산적이다! 산적 떼가 쳐들어왔다!"\n· 산적 '+R.n+'명'+(who.length?' · 이웃이 '+who.length+'명을 쫓아냈어요':'')+'\n'+(g?'· 사병 '+g+'명이 맞서 싸워요\n':'')+'· 남은 '+R.left+'명을 활이나 맞붙기로 물리쳐요\n(자기 전까지 못 막으면 집이 부서지고 돈을 털려요)'});
 }
 function raidWon(){
   const R=S.raid,pay=300*R.n;R.won=1;S.raidWon=(S.raidWon|0)+1;S.coins+=pay;S.merit=(S.merit|0)+2;for(const id of TOWN_IDS)addFriend(id,8);hud();sfx('level');saveAll();
@@ -2458,7 +2544,7 @@ function raidMorning(msgs){
   const R=S.raid;
   if(R&&R.day<S.day){
     if(!R.won){
-      const left=R.up?R.left:Math.max(0,R.n-raidPals().length-(S.hh.guard|0));
+      const left=R.up?R.left:Math.max(0,R.n-raidPals().length-(S.hh.out?0:(S.hh.guard|0))); /* v136: 데리고 나가 마을을 비웠으면 사병도 못 막는다 */
       if(left>0){
         const homes=BLD.map(b=>b.id).filter(id=>NPCS[id]&&!NPCS[id].at&&!S.ruin[id]||id==='hun'&&!S.ruin[id]).sort(()=>Math.random()-.5).slice(0,Math.min(3,left)); /* 한 번에 많아야 세 채 */
         for(const id of homes)S.ruin[id]={k:'broken',until:1e9,raid:1};
@@ -4787,6 +4873,9 @@ function bgmTick(){
     }
   }catch(e){}
 }
+/* v136(사용자 의견: 휴대폰에서 화면 맨 위로 가면 알림에 가려 행동하기 어렵다): 내가 화면 위쪽에 있으면 알림을 아래쪽으로 내린다(#toasts.low). 오르내릴 때 깜빡이지 않게 문턱을 둘로 둔다 */
+let toastLow=false;
+function toastSide(){if(!S||!started)return;const f=((ry(P)+.5)*T-cam.y)/view.h,low=toastLow?f<.46:f<.34;if(low!==toastLow){toastLow=low;$('toasts').classList.toggle('low',low)}}
 function toast(msg){
   const box=$('toasts'),t=el('div','toast',msg);box.appendChild(t);
   while(box.children.length>4)box.firstChild.remove();
@@ -5567,6 +5656,13 @@ function updMg(dt){
     return;
   }
   if(m.kind==='hunt'){
+    { /* v136: 짐승이 움직이므로 겨누는 줄을 틀마다 살핀다. 코앞까지 왔으면 맞붙고, 줄에서 벗어났으면 겨누기를 푼다(아직 한 발도 못 맞혔으면 든 기력을 돌려준다) */
+      const b=m.b,dx=b.x-P.x,dy=b.y-P.y,ad=Math.abs(dx)+Math.abs(dy);
+      if(b.t>=1&&(dx===0||dy===0)&&ad>=1&&ad<=meleeReach()){P.dir=[Math.sign(dx),Math.sign(dy)];startMelee(b);return}
+      let ok=(dx===0)!==(dy===0)&&ad<=4+tl('bow');
+      if(ok){const ux=Math.sign(dx),uy=Math.sign(dy);for(let i=1;i<ad&&ok;i++){const x=P.x+ux*i,y=P.y+uy*i;if(objAt[y][x]||tile[y][x]===6||npcOn(x,y)||herdOn(x,y)||beastOn(x,y))ok=false}if(ok)P.dir=[ux,uy]}
+      if(!ok&&b.t>=1){if(!m.i)S.en=Math.min(maxEn(),S.en+2);mg=null;hud();float(jo(BEASTS[b.k].n,'이','가')+' 자리를 옮겼어요');return}
+    }
     m.ph+=dt*aimSpeed(m);m.t+=dt;
     if(m.t>(BEASTS[m.b.k].look||4.5)){m.b.flee=3;mg=null;huntStreak=0;toast(BEASTS[m.b.k].bite?'머뭇거리는 사이 틈을 놓쳤어요':'머뭇거리는 사이 눈치채고 달아났어요')}
   }else if(m.kind==='build')m.ph+=dt*(2.3+m.i*.4);
@@ -8033,9 +8129,11 @@ function updBeasts(dt){
   if(scene==='home')return;
   for(const b of beasts){
     const D=BEASTS[b.k];
-    if(b.t<1){b.t=Math.min(1,b.t+dt*(b.flee>0?(D.run||4.2):D.bite&&(!D.mild||b.mad)?D.sp:1.6));if(b.t>=1){b.fx=b.x;b.fy=b.y}continue}
+    if(b.rage>0)b.rage-=dt;
+    if(b.t<1){b.t=Math.min(1,b.t+dt*(b.flee>0?(D.run||4.2)*(b.wound?.72:1):D.bite&&(!D.mild||b.mad)?D.sp*(b.rage>0?1.35:1):1.6));if(b.t>=1){b.fx=b.x;b.fy=b.y}continue} /* v136: 다친 짐승은 절뚝이며 달아나고, 화살 맞은 사나운 짐승은 성나서 빨리 달려든다 */
     if(b.stun>0){b.stun-=dt;continue}
-    if(mg&&mg.kind==='hunt'&&mg.b===b)continue;
+    if(b.gf>0){b.gf-=dt;continue} /* v136: 사병과 맞붙은 짐승은 그 자리에서 싸운다(나를 쫓지도 물지도 못한다) */
+    if(mg&&mg.kind==='hunt'&&mg.b===b&&mg.mel)continue; /* v136(사용자 의견: 활을 겨누면 짐승이 그 자리에 굳어 있다): 맞붙을 때만 멈추고, 활을 겨누는 동안에는 평소처럼 움직인다 */
     if(b.flee>0)b.flee-=dt;if(b.calm>0)b.calm-=dt;
     const dist=Math.abs(b.x-P.x)+Math.abs(b.y-P.y);
     // 곰과 대왕 멧돼지는 건드리거나 두 칸 안에 들면 성이 나서 덤빈다
@@ -8045,7 +8143,7 @@ function updBeasts(dt){
     if(fierce){if(b.bite>0)b.bite-=dt;if(dist===1&&b.bite<=0&&b.flee<=0){b.bite=2.5;const hurt=Math.max(2,Math.round(D.bite*(S.level<D.lv?.6:1)*(1-.1*guardsOn())*(relic('c_claw')?.5:1)*(1-Math.min(GUARD_MAX,gearFx('guard')))));S.en=Math.max(0,S.en-hurt);huntStreak=0;hud();hurtMe(hurt); /* 알림 글 대신 다친 모습으로 보여 준다(v81) */
         tip('bite','짐승이 덮치면 기력이 줄어요(머리 위의 붉은 숫자). 그쪽을 보고 행동하면 맞붙어 싸울 수 있어요')}}
     else if(!D.bite&&dist<=Math.max(1,(D.shy||2)-(relic('c_bell')?1:0)))b.flee=Math.max(b.flee,1.2);
-    const chase=fierce&&b.flee<=0&&dist>1&&dist<=D.hunt;
+    const chase=fierce&&b.flee<=0&&dist>1&&dist<=(b.rage>0?12:D.hunt);
     if(b.flee<=0&&!chase){b.wait-=dt;if(b.wait>0||b.calm>0)continue;b.wait=rnd(1.5,5)}
     // 길과 다리는 넘지 않는다
     const opts=DIRS.filter(([dx,dy])=>{const x=b.x+dx,y=b.y+dy;return walkable(x,y)&&tile[y][x]!==1&&tile[y][x]!==5&&!npcOn(x,y)&&!beastOn(x,y)&&!herdOn(x,y)&&!(x===P.x&&y===P.y)});
@@ -8194,7 +8292,10 @@ function shoot(m){
   {const bx=rx(b)*T+16,by=ry(b)*T+14,hit=Math.hypot(o[0],o[1])<=aimRm(m);shotFire(hit?bx:bx+o[0]*1.5,hit?by:by+o[1]*1.5+6,hit)}
   if(Math.hypot(o[0],o[1])>aimRm(m)){b.flee=3;if(D.mild)b.mad=1;mg=null;huntStreak=0;sfx('err');toast('빗나갔어요! '+jo(D.n,'이','가')+(D.bite?' 놀라 물러났어요. 곧 다시 와요':' 달아나요'));return}
   b.hp-=1+gearFx('dmg');sfx('hit');
-  if(b.hp>0){b.stun=2.4;b.mad=1;m.i++;m.t=0;m.cool=.45;m.note='명중! 한 번 더! (남은 기운 '+Math.ceil(b.hp/(1+gearFx('dmg')))+')';return}
+  if(b.hp>0){ /* v136(사용자 의견: 맞아도 그 자리에 굳어 있다): 순한 짐승은 절뚝이며 달아나니 쫓아가 다시 쏘고, 사나운 짐승은 성나서 달려드니 그대로 겨눠 한 번 더 쏘거나 맞붙는다 */
+    b.mad=1;b.wound=1;m.i++;
+    if(D.bite){b.stun=.5;b.rage=4;m.t=0;m.cool=.45;m.note='명중! 달려들어요! (남은 기운 '+Math.ceil(b.hp/(1+gearFx('dmg')))+')';return}
+    b.stun=.3;b.flee=2;mg=null;float('명중! 달아나요 · 쫓아가요',rx(b)*T+16,ry(b)*T-14);return}
   mg=null;huntKill(b);
 }
 /* 짐승을 잡았을 때의 셈: 활로 잡든 맞붙어 잡든(melee) 여기로 온다. 맞붙어 잡으면 경험치가 조금 더 붙는다 */
@@ -8812,10 +8913,14 @@ function updHerd(dt){
     if(a.t<1){a.t=Math.min(1,a.t+dt*(a.st.k==='hen'?3:1.8));if(a.t>=1){a.fx=a.x;a.fy=a.y}continue}
     if(a.hold>0){a.hold-=dt;continue}
     if(night||(mg&&mg.a===a))continue;
-    a.wait-=dt;if(a.wait>0)continue;a.wait=a.st.k==='hen'?rnd(.8,3):rnd(2,6);
+    a.wait-=dt;if(a.wait>0)continue;a.wait=a.st.k==='hen'?rnd(.8,3):rnd(1.5,4.5);
     const k=STOCK[a.st.k].pen;if(!S.pens[k])continue;
-    const [dx,dy]=pick(DIRS),nx=a.x+dx,ny=a.y+dy;
-    if(!penNear(k,nx,ny,3)||!grazeOk(nx,ny)||herdOn(nx,ny)||npcOn(nx,ny)||beastOn(nx,ny)||(nx===P.x&&ny===P.y)||S.pickups.some(q=>q.x===nx&&q.y===ny))continue;
+    /* v136(사용자 의견: 닭이나 소가 움직이지 않는다): 전에는 네 쪽 가운데 하나만 골라 보고 막혀 있으면 그대로 서 있었다. 우리에서 네다섯 칸 떨어져 태어난 가축은
+       둘레가 모두 "우리에서 세 칸 밖"이라 영영 못 움직이기도 했다. 이제 갈 수 있는 쪽 가운데서 고르고, 멀리 나와 있으면 우리 쪽으로는 걸어 들어올 수 있다 */
+    const pp=S.pens[k],far=(x,y)=>Math.max(pp.x-x,0,x-(pp.x+PENS[k].w-1))+Math.max(pp.y-y,0,y-(pp.y+1)),here=far(a.x,a.y);
+    const opts=DIRS.filter(([dx,dy])=>{const nx=a.x+dx,ny=a.y+dy;return (penNear(k,nx,ny,3)||far(nx,ny)<here)&&grazeOk(nx,ny)&&!herdOn(nx,ny)&&!npcOn(nx,ny)&&!beastOn(nx,ny)&&!(nx===P.x&&ny===P.y)&&!S.pickups.some(q=>q.x===nx&&q.y===ny)});
+    if(!opts.length)continue;
+    const [dx,dy]=pick(opts),nx=a.x+dx,ny=a.y+dy;
     if(dx)a.dir=[dx,0];a.fx=a.x;a.fy=a.y;a.x=nx;a.y=ny;a.t=0;
   }
 }
@@ -9508,7 +9613,7 @@ const GUIDE=[
   {k:'snow',lv:SNOW_LV,lore:'snow',t:'눈고개 넘기',d:()=>'깊은 산의 동쪽 길 끝으로 가요. 표범과 스라소니, 담비, 산양이 살고 레벨 '+BEASTS.wtiger.lv+'부터는 가끔 백호가 나타나요',done:()=>!!S.seenSnow},
   {k:'salt',lv:3,t:'소금섬과 굴비 두름',d:()=>'장날 보부상이 팔아요. 소금섬은 천천히 오르내리니 쌀 때 사서 비쌀 때 팔고(상하지 않아요), 굴비는 날마다 6%씩 오르지만 나흘째부터 상할 수 있어요. 장부의 "오늘 시세"에서 값을 봐요',done:()=>!!S.mkDone.salt},
   {k:'fief',lv:12,t:'식읍 받기',d:()=>'양반이 되면 궁궐의 한 좌랑에게 "식읍"을 청해요. 고을을 사 두면 철마다 세곡이 들어와요. 고을마다 지킬 사병이 있어야 온전히 받아요',done:()=>(S.fief|0)>0},
-  {k:'party',lv:RAID_LV,t:'사병 데리고 다니기',d:()=>'"나"의 "가솔"에서 "사병 데리고 다니기"를 켜면 사병들이 뒤를 따라오며 나를 덮치는 짐승과 산적을 함께 쳐요',done:()=>!!(S.hh.out&&S.hh.guard)},
+  {k:'party',lv:RAID_LV,t:'사병 데리고 다니기',d:()=>'"나"의 "가솔"에서 "사병 데리고 다니기"를 켜면 사병들이 뒤를 따라오며 덮치는 짐승과 내가 맞힌 짐승에게 달려가 싸워요. 끄면 집 앞을 지켜요',done:()=>!!(S.hh.out&&S.hh.guard)},
   {k:'bounty',lv:BEASTS.outlaw.lv,t:'현상범 잡기',d:()=>'이레에 한 번(아침 쪽지에 "현상 날"이 뜨는 날) 이름난 도적이 사냥터 숲에 숨어들어요. 잡으면 현상금 2,500냥 넘게와 공 4예요. 눈고개에는 마적이 있어요(레벨 '+BEASTS.raider.lv+'부터)',done:()=>(S.outlawN|0)>0},
   {k:'story',lv:3,t:'이웃의 사연 듣기',d:()=>'이웃과 ♥2·♥3·♥4가 되어 그 집이나 처소에 놀러 가면 사연을 하나씩 들려줘요. 마을 사람은 문을 두드리거나 말을 걸고, 궁궐·운종가 사람은 말을 걸어 \"처소에 놀러 가기\"를 청해요. 임금과 중전은 정전·중궁전에서 들려줘요. 지금까지 들은 이야기 '+Object.values(S.story).reduce((a,b)=>a+b,0)+'/'+STORY_ALL,done:()=>Object.values(S.story).reduce((a,b)=>a+b,0)>=STORY_ALL},
   {k:'caravan',lv:CARAVAN_LV,t:'상단 보내기',d:()=>'은하에게 "상단 보내기"를 청해 밑천을 맡겨요. 송도(3일)·안성(4일)·안동(5일)·동래(7일) 가운데 골라요. 먼 곳일수록 크게 벌거나 밑지고 산적 위험도 커요. 사병을 두면 위험이 줄어요',done:()=>(S.carN|0)>0},
@@ -10463,7 +10568,7 @@ function talk(id){
   else if(h>=5&&!st.m5){st.m5=true;addCoins(500);text=d.m5+'\n(500냥을 받았어요.)';sfx('heart')}
   else if(rumorOf(id)){const ru=rumorOf(id);text=ru[3];hear(ru[0])} /* 때가 된 소문이 있으면 이번 말은 그 이야기 */
   else text=S.spouse===id&&Math.random()<.7?pick(d.wed.lines):S.weather==='rain'&&Math.random()<.35?d.rain:S.min>=1200&&Math.random()<.4?d.night:pick(d.lines[h>=4?2:h>=2?1:0]);
-  if(isNoble()&&!NPCS[id].at&&S.npcs[id].bow!==S.day){S.npcs[id].bow=S.day;text='('+jo(d.name,'이','가')+' 허리를 숙여 인사해요. 양반이 된 뒤로 대하는 품이 한결 공손해졌어요.)\n'+text} /* v130: 양반에게는 하루 한 번 예를 갖춘다 */
+  if(isNoble()&&!NPCS[id].at&&!S.npcs[id].bow){S.npcs[id].bow=1;text='('+jo(d.name,'이','가')+' 허리를 숙여 인사해요.)\n'+text} /* v136(사용자 의견: 대화 창이 너무 커진다): 이웃마다 처음 한 번만 보인다 */
   touch();tutMark('talk');
   const ch=[],q=S.quests.find(q=>q.npc===id&&!q.done);
   if(q)ch.push(['부탁 듣기',()=>questTalk(id,q)]);
@@ -12131,7 +12236,7 @@ let last=0,lastTen=-1,saveT=0,cloudT=0;
 function frame(ts){
   requestAnimationFrame(frame);
   const dt=Math.min(.05,Math.max(0,(ts-last)/1000||0));last=ts;now+=dt;
-  bgmTick();
+  bgmTick();toastSide();
   if(started&&S){
     if(!busy()){updTime(dt);updPlayer(dt);updNpcs(dt);updBeasts(dt);updCop(dt);updHerd(dt);updKids(dt);updFishing(dt);updMg(dt)}
     else if(P.t<1){P.t=Math.min(1,P.t+dt*WALK);if(P.t>=1){P.fx=P.x;P.fy=P.y}}
