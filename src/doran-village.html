@@ -1473,6 +1473,9 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:164,d:'11월 27일',t:'싸울 때는 조용히',l:[
+    '사냥하거나 토벌하는 동안에는 이웃이 먼저 말을 걸지 않아요.',
+    '싸움이 끝나고 조금 지나야, 그리고 짐승이 곁에 없어야 다가와요.']},
   {v:163,d:'11월 27일',t:'더 높은 성장',l:[
     '사람과 무기를 작게 그려 나무·집과 크기가 어울리게 했어요.',
     '스탯을 30까지 올릴 수 있어요. 20 위로는 효과가 절반이에요.',
@@ -9657,7 +9660,7 @@ const fightNear=b=>{const ad=Math.abs(b.x-P.x)+Math.abs(b.y-P.y);return ad>=1&&a
 const fightNew=b=>{if(!b.mhp)b.mhp=Math.max(b.hp,BEASTS[b.k].hp);return{kind:'hunt',b,o:b,cd:.12,sw:0,far:0,i:0,pb:0,mel:'',note:''}};
 function fightHit(b,dmg,o){ /* 기운을 깎고, 번쩍이고, 숫자를 띄운다. 쓰러졌으면 true */
   o=o||{};const bx=rx(b)*T+16,by=ry(b)*T+12;if(!b.mhp)b.mhp=Math.max(b.hp,BEASTS[b.k].hp);
-  b.hp-=dmg;b.mad=1;b.wound=1;b.hit=.16;b.kb=[Math.sign(b.x-P.x),Math.sign(b.y-P.y)];
+  frayT=now+20;b.hp-=dmg;b.mad=1;b.wound=1;b.hit=.16;b.kb=[Math.sign(b.x-P.x),Math.sign(b.y-P.y)];
   float('-'+dmg,bx+ri(-7,7),by-24,o.col||'#fffbe8');sfx(o.sfx||'hit');if(o.big)shakeT=.2;
   if(b.hp<=0){if(mg&&mg.b===b)mg=null;huntKill(b,!!o.mel);return true}
   return false;
@@ -10110,8 +10113,12 @@ function comeTopic(id){
   if(S.rogue&&(S.wanted>0||S.ruin[id]))return'scold';
   return hearts(id)>=1&&Math.random()<.45?'gift':'chat';
 }
+/* v164(사용자 의견: 사냥하고 토벌할 때 마을 사람들이 말을 거는 것이 불편하다): 싸우는 동안과 그 뒤 스무 숨, 습격·왜구가 와 있는 동안, 짐승이 여섯 칸 안에 있는 동안에는 이웃이 먼저 다가오지 않는다. 다가오던 이웃도 돌아선다 */
+let frayT=0;
+const inFray=()=>!!(mg&&mg.kind==='hunt')||now<frayT||!!(S.raid&&S.raid.up&&!S.raid.won)||!!(S.wae&&S.wae.up&&!S.wae.won)||beasts.some(b=>b.raid||Math.abs(b.x-P.x)+Math.abs(b.y-P.y)<=6);
 function updCome(dt){
   if(scene!=='town'||!npcOut()){comer=null;return}
+  if(inFray()){if(comer){N[comer.id].emo=null;comer=null}comeCool=Math.max(comeCool,20);return}
   if(!comer){
     comeCool-=dt;if(comeCool>0||mg||fishing||cop||placing||(S.cameN|0)>=3)return;comeCool=rnd(50,110);
     const c=FOLK.filter(id=>COME[id]&&npcHere(id)&&!S.npcs[id].came&&N[id].t>=1&&comeDist(id)>=3&&comeDist(id)<=7);
