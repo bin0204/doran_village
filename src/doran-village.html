@@ -1407,6 +1407,10 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:146,d:'11월 27일',t:'바위 옮기기',l:[
+    '마을 바위를 바라보면 행동 단추 위에 "바위 옮기기"가 떠요.',
+    '삯 150냥을 내고 빈 풀밭 어디든 옮겨요. 옮긴 바위도 전처럼 캘 수 있어요.',
+    '바닷가의 모래와 물 사이에 그어져 있던 곧은 줄을 없앴어요. 잔교 첫머리는 모래 위로 걸쳐요.']},
   {v:145,d:'11월 27일',t:'운종가 뒷골목',l:[
     '운종가 큰길 가게들 뒤로 뒷골목이 생겼어요. 네거리에서 북쪽 샛길로 올라가요.',
     '시전 도가·고물전·약방이 그 골목에 한 채씩 섰어요.',
@@ -3717,7 +3721,10 @@ function buildGround(){
       let d=0;while(d<4&&y-d-1>=0&&(tile[y-d-1][x]===4||tile[y-d-1][x]===11))d++;
       c.fillStyle=scene==='sea'?'#4aa8dd':['#7fd3ea','#4fb6e2','#2f9ad8','#2384cc','#1c74bd'][d];c.fillRect(px,py,T,T);
       if(!d&&scene!=='sea')for(let i=0;i<T;i+=2){const q=px+i,wv=Math.max(0,Math.round(8+6*Math.sin(q*.037)+5*Math.sin(q*.0131+1.7)));c.fillStyle='#e4d4a4';c.fillRect(px+i,py,2,wv);c.fillStyle='#cfbd88';c.fillRect(px+i,py+wv,2,2);c.fillStyle='#ffffff';c.fillRect(px+i,py+wv+2,2,2+Math.round(hash(x*8+i,y*2+1)*3))}
-      c.fillStyle='#c79a66';c.fillRect(px+3,py,T-6,T);c.fillStyle='#a87a48';for(let i=0;i<4;i++)c.fillRect(px+3,py+i*8,T-6,2);c.fillStyle='#8a5a34';c.fillRect(px+1,py,4,T);c.fillRect(px+T-5,py,4,T)}
+      c.fillStyle='#c79a66';c.fillRect(px+3,py,T-6,T);c.fillStyle='#a87a48';for(let i=0;i<4;i++)c.fillRect(px+3,py+i*8,T-6,2);c.fillStyle='#8a5a34';c.fillRect(px+1,py,4,T);c.fillRect(px+T-5,py,4,T);
+      if(!d&&scene!=='sea'){ /* v146(사용자 의견: 잔교가 이상하다): 첫머리가 물결 한가운데서 뚝 시작하지 않게, 널을 모래 위로 조금 걸치고 양쪽에 말뚝을 박는다 */
+        c.fillStyle='#c79a66';c.fillRect(px+3,py-10,T-6,10);c.fillStyle='#a87a48';c.fillRect(px+3,py-10,T-6,2);c.fillRect(px+3,py-3,T-6,2);
+        c.fillStyle='#8a5a34';c.fillRect(px+1,py-10,4,10);c.fillRect(px+T-5,py-10,4,10);c.fillStyle='#6b4226';c.fillRect(px,py-14,6,6);c.fillRect(px+T-6,py-14,6,6);c.fillStyle='rgba(60,40,20,.22)';c.fillRect(px+1,py-11,T-2,2)}}
     // 동굴: 9는 바위벽(아래가 바닥이면 벽의 앞면이 보인다), 10은 바닥
     if(t===9){
       c.fillStyle='#231d1a';c.fillRect(px,py,T,T);if(h>.5)dot(px+4+h*20,py+6+h2*18,4,2,'#2e2623');
@@ -3850,10 +3857,11 @@ function buildGround(){
       const wl=land(x-1,y),wr=land(x+1,y),wu=land(x,y-1),wd=land(x,y+1),R=t===3?13:0,cTL=R&&wl&&wu,cTR=R&&wr&&wu,cBR=R&&wr&&wd,cBL=R&&wl&&wd;
       /* v112(사용자 요청: 일자로 쭉 뻗은 물가를 살짝 구불거리게): 민물의 곧은 물가는 풀밭이 들쭉날쭉 물 쪽으로 밀려 들어오게 그린다. 들어오는 깊이는 물가를 따라 잰 자리로 정해서 칸이 바뀌어도 이어진다. 걷는 칸은 그대로다 */
       const wav=q=>t===3?Math.max(0,Math.round((Math.sin(q*.19)+Math.sin(q*.071+1.3))*1.7+2.4)):0,gcol=(a,b)=>tile[b]&&tile[b][a]===2?'#e4d4a4':(a+b)%2?G[0]:G[1]; /* v132: 모래밭을 지나는 개울가는 풀빛이 아니라 모래빛으로 */
-      if(wu)for(let i=cTL?R:0;i<T-(cTR?R:0);i+=2){const w=wav(px+i+y*17);if(w){c.fillStyle=gcol(x,y-1);c.fillRect(px+i,py,2,w)}c.fillStyle='rgba(30,80,110,.28)';c.fillRect(px+i,py+w,2,5);c.fillStyle='rgba(255,255,255,.55)';c.fillRect(px+i,py+w,2,2)}
-      if(wl)for(let i=cTL?R:0;i<T-(cBL?R:0);i+=2){const w=wav(py+i+x*23);if(w){c.fillStyle=gcol(x-1,y);c.fillRect(px,py+i,w,2)}c.fillStyle='rgba(255,255,255,.4)';c.fillRect(px+w,py+i,2,2)}
-      if(wr)for(let i=cTR?R:0;i<T-(cBR?R:0);i+=2){const w=wav(py+i+x*31+9);if(w){c.fillStyle=gcol(x+1,y);c.fillRect(px+T-w,py+i,w,2)}c.fillStyle='rgba(255,255,255,.4)';c.fillRect(px+T-w-2,py+i,2,2)}
-      if(wd)for(let i=cBL?R:0;i<T-(cBR?R:0);i+=2){const w=wav(px+i+y*13+5);if(w){c.fillStyle=gcol(x,y+1);c.fillRect(px+i,py+T-w,2,w)}c.fillStyle='rgba(255,255,255,.4)';c.fillRect(px+i,py+T-w-2,2,2)}
+      const edge=t!==4||scene==='sea'; /* v146(사용자 의견: 모래와 물 사이에 줄이 그어져 있다): 마을 바다는 모래 물결이 물가를 그리므로, 뭍과 닿은 변에 긋던 곧은 흰 줄과 그늘 띠는 긋지 않는다(먼바다의 섬 둘레는 그대로) */
+      if(wu&&edge)for(let i=cTL?R:0;i<T-(cTR?R:0);i+=2){const w=wav(px+i+y*17);if(w){c.fillStyle=gcol(x,y-1);c.fillRect(px+i,py,2,w)}c.fillStyle='rgba(30,80,110,.28)';c.fillRect(px+i,py+w,2,5);c.fillStyle='rgba(255,255,255,.55)';c.fillRect(px+i,py+w,2,2)}
+      if(wl&&edge)for(let i=cTL?R:0;i<T-(cBL?R:0);i+=2){const w=wav(py+i+x*23);if(w){c.fillStyle=gcol(x-1,y);c.fillRect(px,py+i,w,2)}c.fillStyle='rgba(255,255,255,.4)';c.fillRect(px+w,py+i,2,2)}
+      if(wr&&edge)for(let i=cTR?R:0;i<T-(cBR?R:0);i+=2){const w=wav(py+i+x*31+9);if(w){c.fillStyle=gcol(x+1,y);c.fillRect(px+T-w,py+i,w,2)}c.fillStyle='rgba(255,255,255,.4)';c.fillRect(px+T-w-2,py+i,2,2)}
+      if(wd&&edge)for(let i=cBL?R:0;i<T-(cBR?R:0);i+=2){const w=wav(px+i+y*13+5);if(w){c.fillStyle=gcol(x,y+1);c.fillRect(px+i,py+T-w,2,w)}c.fillStyle='rgba(255,255,255,.4)';c.fillRect(px+i,py+T-w-2,2,2)}
       for(const [on,cx2,cy2,a0] of [[cTL,px+R,py+R,Math.PI],[cTR,px+T-R,py+R,-Math.PI/2],[cBR,px+T-R,py+T-R,0],[cBL,px+R,py+T-R,Math.PI/2]]){
         if(!on)continue;
         const ex=cx2+(a0===Math.PI||a0===Math.PI/2?-R:R),ey=cy2+(a0===Math.PI||a0===-Math.PI/2?-R:R);
@@ -6389,6 +6397,7 @@ function undoWhat(){
   if(tg&&tg.t==='soil'){const k=tg.x+','+tg.y,p=S.farm[k];if(p&&!p.c)return{cells:[k],en:0,txt:'밭 메우기'};if(p&&p.c&&p.g<CROPS[p.c].days)return{pull:k,txt:'뽑아내기'}}
   /* v141(사용자 요청: 나무는 바우에게 묻지 않고 그 나무에서 바로 옮겨 심게): 마을 나무를 바라보면 작은 단추가 "옮겨 심기"가 된다. 삯은 전과 같이 TREE_FEE(나라에 낸다) */
   if(scene==='town'&&!treeJob&&tg&&tg.t==='tree'&&TOWN.TREES.includes(tg))return{tree:tg,txt:'나무 손보기'};
+  if(scene==='town'&&!treeJob&&tg&&tg.t==='rock'&&TOWN.ROCKS.includes(tg))return{rock:tg,txt:'바위 옮기기'};
   return null;
 }
 /* v132(사용자 요청: 철이 바뀌면 작물이 밭에 박혀 못 뽑는다 · 심은 밭은 없앨 수 없다): 덜 자란 작물은 뽑아낼 수 있다. 뽑으면 빈 밭이 되고, 빈 밭은 "밭 메우기"로 풀밭이 된다.
@@ -6405,6 +6414,7 @@ function pullAsk(k){
 function undoTill(){
   const u=undoWhat();if(!u)return;
   if(u.pull){pullAsk(u.pull);return}
+  if(u.rock){const rc=u.rock;dialog({who:'바위 옮기기',text:'이 바위를 다른 곳으로 옮길까요?\n· 삯 '+ROCK_FEE+'냥(나라에 내요)\n· 옮겨도 전처럼 캘 수 있어요',choices:[['옮기기',()=>{if(!TOWN.ROCKS.includes(rc))return;treeJob={k:'move',o:rc};rc.sh=.3;placing=false;relo=null;syncPlace();toast('놓을 자리를 눌러요 · 화면을 끌면 다른 곳도 보여요')}],['그만',null]]});return}
   if(u.tree){const tr=u.tree; /* v145(사용자 요청: 바우에게 청하던 나무 손보기는 없애고 나무에서 바로): 옮겨 심기와 아주 베어 내기를 여기서 고른다 */
     dialog({who:'나무 손보기',text:'이 나무를 어떻게 할까요?\n· 옮겨 심기: 삯 '+TREE_FEE+'냥(나라에 내요)\n· 베어 내기: 나무를 얻지만 다시 자라지 않아요',choices:[['옮겨 심기',()=>{if(!TOWN.TREES.includes(tr))return;treeJob={k:'move',o:tr};tr.sh=.3;placing=false;relo=null;syncPlace();toast('심을 자리를 눌러요 · 화면을 끌면 다른 곳도 보여요')}],['베어 내기',()=>{if(!TOWN.TREES.includes(tr))return;treeJob={k:'cut',o:null};treeClick(tr.x,tr.y)}],['그만',null]]});return}
   for(const k of u.cells)delete S.farm[k];
@@ -9458,7 +9468,7 @@ function syncPlace(){
   // 가꾸기 단추는 마을에서만 보인다. 마을을 떠나면 가꾸기도 끝난다
   {const y=$('bYard'),on=!!S&&started&&scene==='town';if(!on)garden=null;y.hidden=!on;y.classList.toggle('on',!!garden);y.textContent=garden?'가꾸기 끝':'가꾸기'}
   b.hidden=!show;b.classList.toggle('on',placing||!!relo||!!treeJob);
-  if(show)b.textContent=treeJob?'나무 손보기 그만':relo?'옮기기 그만':placing?'자리 고르기 그만':PENS[k].n+(S.pens[k]?' 옮기기':' 놓기');
+  if(show)b.textContent=treeJob?(treeJob.o&&treeJob.o.t==='rock'?'바위 옮기기 그만':'나무 손보기 그만'):relo?'옮기기 그만':placing?'자리 고르기 그만':PENS[k].n+(S.pens[k]?' 옮기기':' 놓기');
 }
 function stopPlacing(){
   // 옮기려다 그만두면 그대로 둔다. 새로 짓는 우리는 자리를 잡을 때까지 버튼이 남는다
@@ -9586,7 +9596,12 @@ function buildTalk(){
 /* 마을 나무 손보기(v114, 사용자 요청: 나무를 옮겨 심거나 아주 베어 내고 싶다): 바우에게 청한 뒤 마을의 나무를 누른다. 옮겨 심기는 나무를 누르고 이어서 심을 빈 풀밭을 누른다(삯 TREE_FEE).
    베어 내기는 나무를 누르면 바로 없어지고 나무를 얻는다(되돌릴 수 없음). 바뀐 것은 S.treeMv[나무 번호]=[x,y](옮김) 또는 0(벰)에 적고, 마을을 지을 때마다 applyTrees가 다시 얹는다.
    treeJob={k:'move'|'cut',o:고른 나무}. 사냥터·들판의 나무는 풍경이라 손댈 수 없다 */
-const TREE_FEE=100;
+const TREE_FEE=100,ROCK_FEE=150;
+/* 바위 옮기기(v146, 사용자 요청: 바위도 나무처럼): 마을 바위를 바라보면 작은 단추가 "바위 옮기기"가 된다. 옮긴 자리는 S.rockMv[바위 번호]=[x,y]에 적고 마을을 지을 때마다 applyRocks가 다시 얹는다. 캐는 것은 전과 같다 */
+function applyRocks(){
+  const mv=S&&S.rockMv;if(!mv)return;const oa=TOWN.objAt;
+  for(const o of TOWN.ROCKS){const m=mv[o.i];if(!m||!oa[m[1]]||oa[m[1]][m[0]]||TOWN.tile[m[1]][m[0]]!==0)continue;if(oa[o.y]&&oa[o.y][o.x]===o)oa[o.y][o.x]=null;o.x=m[0];o.y=m[1];oa[o.y][o.x]=o}
+}
 let treeJob=null;
 function applyTrees(){
   const mv=S&&S.treeMv;if(!mv)return;const oa=TOWN.objAt;
@@ -9615,16 +9630,17 @@ function treeClick(x,y){
     }
     J.o=o;o.sh=.3;toast('심을 자리를 눌러요. 문과 길목에서 떨어진 빈 풀밭이면 돼요');return;
   }
-  if(S.coins<TREE_FEE){toast('돈이 모자라요 (옮겨 심는 삯 '+TREE_FEE+'냥)');sfx('err');return}
+  const rk=J.o.t==='rock',fee=rk?ROCK_FEE:TREE_FEE; /* v146: 바위도 같은 길로 옮긴다(삯이 조금 더 든다) */
+  if(S.coins<fee){toast('돈이 모자라요 (옮기는 삯 '+fee+'냥)');sfx('err');return}
   const near=(p,a,b,r)=>Math.abs(p[0]-a)<=r&&Math.abs(p[1]-b)<=r;
   if(x<1||y<2||x>=W-1||y>=H-2||TOWN.tile[y][x]!==0||oa[y][x]||S.farm[x+','+y]||yardAt(x,y)||(x===P.x&&y===P.y)||npcOn(x,y)||herdOn(x,y)
     ||BLD.some(q=>near(q.door,x,y,1))||STALLS.some(q=>near([q.x,q.y],x,y,1))||near(FEST_AT,x,y,2)||near(BOARD,x,y,1)||near(FORGE_AT,x,y,1)||near(SPAWN,x,y,1)){toast('여기에는 심을 수 없어요. 문·좌판·알림판에서 떨어진 빈 풀밭이어야 해요');sfx('err');return}
   const t=J.o;oa[t.y][t.x]=null; /* 옮기는 나무의 지금 자리는 빈 것으로 치고 길이 막히는지 본다 */
   const base=reach(null),after=reach(new Set([x+','+y]));
   if(!base.has(x+','+y)||after.size!==base.size-1){oa[t.y][t.x]=t;toast('길이 막혀서 여기에는 심을 수 없어요');sfx('err');return}
-  addCoins(-TREE_FEE);t.x=x;t.y=y;oa[y][x]=t;S.treeMv=S.treeMv||{};S.treeMv[t.i]=[x,y];
+  addCoins(-fee);t.x=x;t.y=y;oa[y][x]=t;if(rk){S.rockMv=S.rockMv||{};S.rockMv[t.i]=[x,y]}else{S.treeMv=S.treeMv||{};S.treeMv[t.i]=[x,y]}miniRef=null;
   {let i;while((i=S.pickups.findIndex(p=>p.x===x&&p.y===y))>=0)grab(i)}
-  useStart(x,y,'hoe');sfx('chop');treeJob=null;syncPlace();toast('나무를 옮겨 심었어요 · 삯 '+won(TREE_FEE));saveAll();
+  useStart(x,y,'hoe');sfx('chop');treeJob=null;syncPlace();toast((rk?'바위를 옮겼어요':'나무를 옮겨 심었어요')+' · 삯 '+won(fee));saveAll();
 }
 function bauTalk(){
   const say=(text,choices)=>dialog({npc:'bau',who:NPCS.bau.name,text,choices}),ch=[['다리 놓기',bridgeTalk]];
@@ -12086,7 +12102,7 @@ function begin(st){
   if(S.lvOff){const q=S.lvOff;delete S.lvOff;setTimeout(()=>{if(S)toast('레벨이 모자란 장비 '+q.length+'가지('+q.slice(0,3).map(id=>GEAR[id].n).join(', ')+(q.length>3?' 등':'')+')를 벗어 장비 창에 넣어 뒀어요. 그 레벨이 되면 다시 걸칠 수 있어요')},5500)}
   if(S.lvNote){const q=S.lvNote;delete S.lvNote;setTimeout(()=>{if(S)toast('레벨을 새 기준으로 다시 셌어요: 레벨 '+q[0]+' → '+q[1]+'. 길의 자리·옷·집·돈은 그대로예요')},2500)} /* 궁궐 처소 안에서 저장된 채 끝났으면 방 정보를 집 것으로 되돌린다 */
   S.sound=false;S.bgm=false;bgmStop(); /* 소리는 열 때마다 꺼진 채로 시작한다(사용자 요청). 설정 창에서 켠다 */
-  applyTrees();applyBridges();syncRouteGear(true);started=true;$('title').hidden=true;scene='town';
+  applyTrees();applyRocks();applyBridges();syncRouteGear(true);started=true;$('title').hidden=true;scene='town';
   // 사냥터에서 저장된 채 끝났더라도 마을에서 다시 시작한다
   useMap(TOWN);wildBeasts=null;deepBeasts=null;snowBeasts=null;fieldBeasts=null;if(S.away==='field'&&S.pickTown){S.fpick=S.pickups;S.pickups=S.pickTown;delete S.pickTown;S.away=null}wz=0;huntStreak=0;cop=null;jailNight=false;comer=null;comeCool=rnd(40,80);cave=null;if(S.pickTown){if(S.pickups.length){if(S.away==='sea')S.spick=S.pickups;else if(S.away==='deep')S.dpick=S.pickups;else if(S.away==='snow')S.npick=S.pickups;else if(S.away==='royal')S.rpick=S.pickups;else if(S.away!=='palace')S.wpick=S.pickups}S.pickups=S.pickTown;delete S.pickTown}S.away=null;royalBeasts=null;mate=null;$('bDeco').hidden=true;warp(SPAWN[0],SPAWN[1],[0,1]);
   // 가축 우리를 지도에 얹고, 새로 생긴 화덕·우리 자리에 남아 있던 주울 것은 치운다
