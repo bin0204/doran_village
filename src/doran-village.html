@@ -1489,6 +1489,9 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:180,d:'11월 27일',t:'숫자로 마을 옮기기',l:[
+    '긴 코드 대신 숫자 여섯 자리로 마을을 옮길 수 있어요(신분 → 마을 옮기기).',
+    '두 기기에서 놀이를 함께 열어 두고 숫자를 넣어요. 공개 주소에서만 돼요.']},
   {v:179,d:'11월 27일',t:'걸음 고침',l:[
     '두 방향을 함께 누르고 벽에 닿으면 갈 수 있는 쪽으로 미끄러져 가요.',
     '비스듬히 걸을 때 나중에 누른 쪽을 바라봐요.']},
@@ -13041,6 +13044,97 @@ function applySave(o){
   if(!started){begin(o);return}
   moving=true;location.reload();
 }
+/* 숫자 여섯 자리로 옮기기(v180, 사용자 요청: 회사 보안 때문에 긴 코드를 못 보낸다 → 짧게 입력해서 옮기게. 사용자가 고른 방식):
+   두 기기에서 놀이를 함께 열어 두고, 보내는 쪽에 뜬 숫자 여섯 자리를 받는 쪽에 넣는다. 저장 내용(packSave의 글)은 그 숫자로 만든 열쇠(PBKDF2 → AES-GCM)로 잠가
+   "같이 하기"의 연결 서버를 잠깐 거쳐 간다(보관하지 않는 종류의 소식이라 서버에 남지 않는다). 받는 쪽이 want를 올리면 보내는 쪽이 토막(c) 내어 올리고, 다 받으면 ok.
+   아티팩트 안에서는 바깥 서버에 닿지 못해 쓸 수 없다(canMove6) — 거기서는 계정 저장이 이어 준다 */
+let mvPort=null;
+const canMove6=()=>!(window.claude&&window.claude.use)&&!!window.WebSocket&&!!(window.crypto&&crypto.subtle);
+async function mvOpen(code,onmsg){
+  if(mvPort){mvPort.close();mvPort=null}
+  if(!p2pLib)p2pLib=await import(P2P_LIB);
+  const sch=p2pLib.schnorr,kp=sch.keygen(),me=p2pHex(kp.publicKey),enc=new TextEncoder();
+  const topic=p2pHex(await p2pSha(P2P_APP+'|move|'+code)).slice(0,40),kind=20000+parseInt(topic.slice(0,6),16)%10000;
+  const base=await crypto.subtle.importKey('raw',enc.encode(code),'PBKDF2',false,['deriveKey']);
+  const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt:enc.encode(P2P_APP+'|movekey'),iterations:150000,hash:'SHA-256'},base,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);
+  const ord=[];for(const u of P2P_RELAYS)ord.push([p2pHex(await p2pSha(topic+u)),u]);ord.sort((a,b)=>a[0]<b[0]?-1:1);
+  const socks=[],seen=new Set();let closed=false;
+  const recv=async data=>{
+    let m;try{m=JSON.parse(data)}catch(e){return}
+    if(!Array.isArray(m)||m[0]!=='EVENT')return;const ev=m[2];
+    if(!ev||typeof ev!=='object'||ev.kind!==kind||typeof ev.id!=='string'||typeof ev.content!=='string'||ev.content.length>9000||ev.pubkey===me||seen.has(ev.id))return;seen.add(ev.id);
+    let d;try{const bin=atob(ev.content),raw=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)raw[i]=bin.charCodeAt(i);
+      d=JSON.parse(new TextDecoder().decode(await crypto.subtle.decrypt({name:'AES-GCM',iv:raw.subarray(0,12)},key,raw.subarray(12))))}catch(e){return}
+    if(!closed&&d&&typeof d==='object'&&!Array.isArray(d))onmsg(d);
+  };
+  for(const q of ord.slice(0,8)){
+    let ws;try{ws=new WebSocket('wss://'+q[1])}catch(e){continue}
+    socks.push(ws);
+    ws.onopen=()=>{try{ws.send(JSON.stringify(['REQ','m'+topic.slice(0,10),{kinds:[kind],since:Math.floor(Date.now()/1000)-30,'#x':[topic]}]))}catch(e){}};
+    ws.onmessage=e=>{if(typeof e.data==='string')recv(e.data)};ws.onerror=()=>{};
+  }
+  const port={
+    open:()=>socks.filter(w=>w.readyState===1).length,
+    async send(d){
+      if(closed)return false;
+      const iv=crypto.getRandomValues(new Uint8Array(12)),ct=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},key,enc.encode(JSON.stringify(d))));
+      const raw=new Uint8Array(12+ct.length);raw.set(iv);raw.set(ct,12);let bin='';for(let i=0;i<raw.length;i++)bin+=String.fromCharCode(raw[i]);
+      const ev={kind,tags:[['x',topic]],created_at:Math.floor(Date.now()/1000),content:btoa(bin),pubkey:me};
+      const idb=await p2pSha(JSON.stringify([0,ev.pubkey,ev.created_at,ev.kind,ev.tags,ev.content]));ev.id=p2pHex(idb);ev.sig=p2pHex(await sch.signAsync(idb,kp.secretKey));
+      const msg=JSON.stringify(['EVENT',ev]);let n=0;for(const w of socks)if(w.readyState===1){try{w.send(msg);n++}catch(e){}}
+      return n>0;
+    },
+    close(){closed=true;for(const w of socks){try{w.close()}catch(e){}}if(mvPort===port)mvPort=null}
+  };
+  mvPort=port;return port;
+}
+function moveSend(body){
+  const b=el('button','btn','숫자 여섯 자리로 보내기'),big=el('p',null,''),msg=el('p','note','긴 코드를 보낼 수 없을 때 써요. 두 기기에서 놀이를 함께 열어 두어야 해요.');b.type='button';b.style.marginTop='8px';
+  big.style.cssText='font-family:var(--display);font-size:34px;letter-spacing:7px;text-align:center;margin:8px 0;color:var(--ink)';big.hidden=true;
+  b.onclick=async()=>{
+    b.disabled=true;msg.textContent='준비하는 중이에요…';
+    try{
+      const code=String(100000+crypto.getRandomValues(new Uint32Array(1))[0]%900000),text=await packSave(),CH=2400,N=Math.ceil(text.length/CH);let last=0,done=false;
+      const port=await mvOpen(code,async d=>{
+        if(d.t==='ok'){done=true;if(msg.isConnected)msg.textContent='옮겼어요. 받는 기기에서 "가져오기"를 누르면 돼요.';setTimeout(()=>port.close(),400);return}
+        if(d.t!=='want'||done||Date.now()-last<5000)return;last=Date.now();if(msg.isConnected)msg.textContent='보내는 중이에요…';
+        for(let i=0;i<N;i++){await port.send({t:'c',i,n:N,d:text.slice(i*CH,(i+1)*CH)});await new Promise(r=>setTimeout(r,350))}
+        if(!done&&msg.isConnected)msg.textContent='보냈어요. 받는 기기의 화면을 봐 주세요.';
+      });
+      big.textContent=code;big.hidden=false;msg.textContent='받는 기기에서 "마을 옮기기"를 열고 이 숫자를 넣어요 · 이 창을 열어 두세요(5분)';
+      setTimeout(()=>{if(mvPort===port&&!port.open()&&msg.isConnected)msg.textContent='연결 서버에 닿지 못했어요. 이 인터넷에서는 숫자로 옮기지 못할 수 있어요.'},9000);
+      setTimeout(()=>{if(mvPort===port){port.close();if(msg.isConnected&&!done){msg.textContent='시간이 지나 닫았어요. 다시 눌러 주세요.';big.hidden=true;b.disabled=false}}},300000);
+    }catch(e){msg.textContent='준비하지 못했어요. 인터넷 연결을 확인해 주세요.';b.disabled=false}
+  };
+  body.appendChild(b);body.appendChild(big);body.appendChild(msg);
+}
+function moveConfirm(body,o,back){
+  body.textContent='';body.appendChild(el('p','sub','이 마을을 가져올까요?'));body.appendChild(el('p',null,saveSummary(o)));
+  body.appendChild(el('p','note','가져오면 이 기기에 있던 마을은 이 마을로 바뀌어요. 지금 마을은 한 벌 남겨 두어서 "마을 옮기기"에서 한 번은 되돌릴 수 있어요.'));
+  const r=el('div','tabs'),ok=el('button','btn pri','가져오기'),no=el('button','btn','그만두기');ok.type=no.type='button';r.style.marginTop='10px';
+  ok.onclick=()=>applySave(o);no.onclick=back;r.appendChild(ok);r.appendChild(no);body.appendChild(r);
+}
+function moveRecv(body,back){
+  const w=el('div','tabs'),inp=el('input'),go=el('button','btn pri','숫자로 받기'),msg=el('p','note','');go.type='button';
+  inp.type='text';inp.inputMode='numeric';inp.maxLength=6;inp.placeholder='숫자 여섯 자리';inp.autocomplete='off';inp.onkeydown=e=>e.stopPropagation();
+  inp.style.cssText='font-family:var(--display);font-size:20px;letter-spacing:4px;text-align:center;padding:6px 8px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);width:150px;min-width:0;box-sizing:border-box';
+  go.onclick=async()=>{
+    const code=inp.value.replace(/\D/g,'');if(code.length!==6){msg.textContent='보내는 기기에 뜬 숫자 여섯 자리를 넣어 주세요.';return}
+    go.disabled=true;msg.textContent='찾는 중이에요…';const parts=[];let fin=false,tm=0,tries=0;
+    try{
+      const port=await mvOpen(code,async d=>{
+        if(fin||d.t!=='c'||typeof d.d!=='string'||!(d.n>0&&d.n<400)||!(d.i>=0&&d.i<d.n))return;
+        const N=d.n|0;parts[d.i|0]=d.d;let c=0;for(let i=0;i<N;i++)if(typeof parts[i]==='string')c++;
+        if(msg.isConnected)msg.textContent='받는 중이에요… '+c+'/'+N;if(c<N)return;
+        fin=true;clearInterval(tm);let o;
+        try{o=await unpackSave(parts.slice(0,N).join(''))}catch(e){port.close();if(msg.isConnected){msg.textContent='받은 것을 읽지 못했어요. 다시 해 주세요.';go.disabled=false}return}
+        await port.send({t:'ok'});setTimeout(()=>port.close(),600);if(body.isConnected)moveConfirm(body,o,back);
+      });
+      tm=setInterval(()=>{if(fin){clearInterval(tm);return}if(++tries>26||!msg.isConnected){clearInterval(tm);port.close();if(msg.isConnected){msg.textContent=port.open()?'못 받았어요. 숫자가 맞는지, 보내는 기기의 창이 열려 있는지 봐 주세요.':'연결 서버에 닿지 못했어요. 이 인터넷에서는 숫자로 옮기지 못할 수 있어요.';go.disabled=false}return}port.send({t:'want'})},2500);
+    }catch(e){msg.textContent='준비하지 못했어요. 인터넷 연결을 확인해 주세요.';go.disabled=false}
+  };
+  w.appendChild(inp);w.appendChild(go);body.appendChild(w);body.appendChild(msg);
+}
 function moveImport(body,back){
   const css='font:12px/1.4 monospace;padding:7px 10px;border-radius:10px;border:1.5px solid var(--line);background:var(--bg);color:var(--ink);width:100%;display:block;margin:4px 0 8px;height:72px;resize:vertical;box-sizing:border-box';
   const ta=el('textarea'),msg=el('p','note',''),go=el('button','btn pri','이 코드로 가져오기');go.type='button';
@@ -13048,16 +13142,14 @@ function moveImport(body,back){
   go.onclick=async()=>{
     msg.textContent='코드를 읽는 중이에요…';let o;
     try{o=await unpackSave(ta.value)}catch(e){msg.textContent=e&&e.message==='old'?'이 브라우저는 눌러 담은 코드를 풀지 못해요. 브라우저를 새 판으로 올린 뒤 다시 해 보세요.':'코드를 읽을 수 없어요. 처음부터 끝까지 빠짐없이 붙여 넣었는지 확인해 주세요.';return}
-    body.textContent='';body.appendChild(el('p','sub','이 마을을 가져올까요?'));body.appendChild(el('p',null,saveSummary(o)));
-    body.appendChild(el('p','note','가져오면 이 기기에 있던 마을은 이 마을로 바뀌어요. 지금 마을은 한 벌 남겨 두어서 "마을 옮기기"에서 한 번은 되돌릴 수 있어요.'));
-    const r=el('div','tabs'),ok=el('button','btn pri','가져오기'),no=el('button','btn','그만두기');ok.type=no.type='button';r.style.marginTop='10px';
-    ok.onclick=()=>applySave(o);no.onclick=back;r.appendChild(ok);r.appendChild(no);body.appendChild(r);
+    moveConfirm(body,o,back);
   };
+  if(canMove6())moveRecv(body,back);
   body.appendChild(ta);body.appendChild(go);body.appendChild(msg);
 }
 function openMove(){
   openModal('마을 옮기기',body=>{
-    body.appendChild(el('p','note','이 마을을 다른 기기나 브라우저로 옮겨요. 여기서 코드를 만들어 복사하고, 옮길 곳에서 게임을 열어 그 코드를 가져오면 돼요. 코드는 이 마을의 저장 내용이고, 게임이 어디로 보내지는 않아요.'));
+    body.appendChild(el('p','note','이 마을을 다른 기기나 브라우저로 옮겨요. 여기서 코드를 만들어 복사하고, 옮길 곳에서 게임을 열어 그 코드를 가져오면 돼요. 코드는 이 마을의 저장 내용이고, 게임이 어디로 보내지는 않아요. 숫자로 옮길 때만 저장 내용을 잠가서 연결 서버를 잠깐 거쳐 보내요(남지 않아요).'));
     body.appendChild(el('p','sub','내보내기'));
     const out=el('textarea'),info=el('p','note',''),mk=el('button','btn pri','코드 만들기');mk.type='button';
     out.readOnly=true;out.hidden=true;out.onfocus=()=>out.select();out.onkeydown=e=>e.stopPropagation();
@@ -13066,6 +13158,7 @@ function openMove(){
     mk.onclick=async()=>{mk.disabled=true;out.value=await packSave();out.hidden=false;mk.disabled=false;mk.textContent='코드 복사';mk.onclick=copy;
       info.textContent='코드를 만들었어요(글자 '+out.value.length.toLocaleString()+'자). 복사해서 옮길 기기로 보내세요. 메신저의 "나에게 보내기"나 메모 앱을 쓰면 편해요. 그 뒤에 여기서 더 키운 것은 코드에 들어 있지 않아요.'};
     body.appendChild(mk);body.appendChild(out);body.appendChild(info);
+    if(canMove6())moveSend(body);else body.appendChild(el('p','note','숫자 여섯 자리로 옮기기는 공개 주소(깃허브)에서 연 놀이끼리 쓸 수 있어요.'));
     const h=el('p','sub','가져오기');h.style.marginTop='12px';body.appendChild(h);
     moveImport(body,openMove);
     let bk=null;try{bk=localStorage.getItem(BACKUP_KEY)}catch(e){}
