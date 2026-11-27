@@ -540,7 +540,7 @@ const HOUSES=[
 const TITLES=['새내기 주민','동네 일꾼','마을 살림꾼','든든한 이웃','마을의 자랑','고을의 일꾼','고을의 기둥','이름난 재주꾼','온 고을의 자랑','나라가 아는 이름','살아 있는 전설'],TITLE_LV=[1,2,3,4,5,8,11,14,18,22,26];
 // 연장: 모루의 대장간에서 세 번까지 벼린다. d[단계]=그 단계의 쓸모, FORGE[다음 단계]=드는 값과 재료
 const TOOLS={
-  hoe:{n:'괭이',d:['한 번에 1칸을 갈아요','한 번에 2칸을 갈아요','한 번에 3칸을 갈아요','한 번에 5칸을 갈아요']},
+  hoe:{n:'괭이',d:['한 칸씩 갈아요 · 기력 3','한 칸씩 · 기력 2','기력 2 · 빈 밭이 엿새 남아요','기력 1 · 빈 밭이 엿새 남아요']}, /* v135: 한 번에 한 칸만 */
   can:{n:'물뿌리개',d:['1칸에 물을 줘요','둘레까지 5칸에 물을 줘요','둘레 9칸에 물을 줘요','둘레 25칸에 물을 줘요']},
   axe:{n:'도끼',d:['나무를 벨 수 있어요','나무 +1 · 맞히기 쉬워져요','나무 +2 · 기력이 덜 들어요','나무 +3 · 훨씬 맞히기 쉬워요']},
   pick:{n:'곡괭이',d:['돌을 캘 수 있어요','돌 +1 · 쇳돌이 더 잘 나와요','돌 +2 · 맞히기 쉬워져요','돌 +3 · 쇳돌이 아주 잘 나와요']},
@@ -1407,6 +1407,11 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:135,d:'11월 27일',t:'밭은 한 칸씩',l:[
+    '밭은 이제 한 번에 한 칸만 갈아요. 괭이를 벼려도 같아요.',
+    '대신 괭이를 벼릴수록 기력이 덜 들어요(3→2→2→1).',
+    '둘째 단계부터는 빈 밭이 엿새까지 남아요.',
+    '데리고 다니는 사병이 뚝뚝 끊기지 않고 걸어서 따라와요.']},
   {v:134,d:'11월 27일',t:'끊기던 가락 고침',l:[
     '휴대폰에서 다른 앱에 다녀오면 배경 가락이 안 나오던 것을 고쳤어요. 화면을 한 번 누르면 다시 나와요.',
     '소리와 가락은 열 때마다 꺼져 있어요. "설정"에서 켜요.']},
@@ -2262,6 +2267,7 @@ let gTrail=[],gHit=0;
 const guardParty=()=>S&&S.hh&&S.hh.out&&scene!=='home'&&scene!=='sea'&&scene!=='cave'?guardsOn():0;
 function updGuards(dt){
   const n=guardParty();if(!n){gTrail.length=0;return}
+  if(gTrail.length&&Math.abs(gTrail[0][0]-P.x)+Math.abs(gTrail[0][1]-P.y)>1)gTrail.length=0; /* v135: 문을 드나들거나 멀리 옮겨졌으면 줄을 새로 선다(전에는 앞 장면의 자리에 서 있었다) */
   if(!gTrail.length||gTrail[0][0]!==P.x||gTrail[0][1]!==P.y){gTrail.unshift([P.x,P.y]);if(gTrail.length>9)gTrail.length=9}
   gHit-=dt;if(gHit>0||scene==='palace'||scene==='resort')return;
   const foe=beasts.filter(b=>{const D=BEASTS[b.k];return D.bite&&(!D.mild||b.mad)&&b.flee<=0&&!(mg&&mg.b===b)&&Math.abs(b.x-P.x)+Math.abs(b.y-P.y)<=2}).sort((a,b)=>a.hp-b.hp)[0];
@@ -2270,10 +2276,15 @@ function updGuards(dt){
   if(foe.hp<=0)huntKill(foe,true);
 }
 function drawGuards(c,list,labels){
-  const n=guardParty();
-  for(let i=0;i<n;i++){const q=gTrail[1+i*2]||gTrail[gTrail.length-1];if(!q||(q[0]===P.x&&q[1]===P.y))continue;
-    const nx=gTrail[Math.max(0,i*2)]||q,d=[Math.sign(nx[0]-q[0]),Math.sign(nx[1]-q[1])],cx=(q[0]+.5)*T,fy=(q[1]+.9)*T;
-    list.push([q[1]+.05,()=>{drawChar(c,cx,fy,GUARD_LOOK,d[0]||d[1]?d:[0,1],P.t<1,now+i);line(c,cx+8,fy-10,cx+11,fy-36,'#7a5230',1.6);poly(c,[cx+9.5,fy-36,cx+11,fy-43,cx+12.5,fy-36],'#cfd6dc')}]);}
+  /* v135(사용자 의견: 사병이 탁탁 끊겨 따라온다): 전에는 칸에서 칸으로 뚝뚝 옮겨 그렸다. 이제 내가 한 칸 딛는 동안(P.t) 사병도 제 뒤 칸에서 앞 칸으로 함께 걸어온다.
+     걷는 동안은 가는 쪽을, 멈추면 앞사람 쪽을 본다. 자리가 아직 없는 사병(막 문을 나섰을 때)은 내가 걸음을 떼는 대로 하나씩 따라 나온다 */
+  const n=guardParty(),t=P.t<1?P.t:1;
+  for(let i=0;i<n;i++){
+    const j=1+i*2,q=gTrail[j];if(!q)continue;
+    const pv=gTrail[j+1],nx=gTrail[j-1],mv=t<1&&!!pv&&Math.abs(pv[0]-q[0])+Math.abs(pv[1]-q[1])===1;
+    const gx=mv?lerp(pv[0],q[0],t):q[0],gy=mv?lerp(pv[1],q[1],t):q[1],d=mv?[q[0]-pv[0],q[1]-pv[1]]:[Math.sign(nx[0]-q[0]),Math.sign(nx[1]-q[1])],cx=(gx+.5)*T,fy=(gy+.9)*T;
+    list.push([gy+.05,()=>{drawChar(c,cx,fy,GUARD_LOOK,d[0]&&d[1]?[d[0],0]:d[0]||d[1]?d:[0,1],mv,now*stepPace()+i*.37);line(c,cx+8,fy-10,cx+11,fy-36,'#7a5230',1.6);poly(c,[cx+9.5,fy-36,cx+11,fy-43,cx+12.5,fy-36],'#cfd6dc')}]);
+  }
 }
 const FIEFS=[null,{n:'작은 마을',cost:200000,pay:20000,g:1},{n:'고을',cost:600000,pay:70000,g:2},{n:'큰 고을',cost:1500000,pay:180000,g:3}];
 function fiefTalk(){
@@ -5922,10 +5933,10 @@ function plant(k,seed){
 }
 function till(x,y,d){
   if(!inFarm(x,y)||S.farm[x+','+y])return;
-  // 괭이를 벼릴수록 바라보는 쪽으로 여러 칸을 한 번에 간다. 다 자란 소가 있으면 기력이 덜 든다.
-  // d: 발밑 칸을 갈 때는 나와 그 칸 사이에 방향이 없으므로 바라보는 쪽을 따로 받는다
-  const dx=d?d[0]:Math.sign(x-P.x),dy=d?d[1]:Math.sign(y-P.y),n=[1,2,3,5][tl('hoe')],ox=hasOx();
-  if(!useEn(ox?1:3))return;
+  /* v135(사용자 의견: 밭 갈기가 너무 쉽다 → 한 칸씩만): 괭이를 벼려도 한 번에 한 칸만 간다(전에는 2·3·5칸). 대신 벼릴수록 기력이 덜 들고(3→2→2→1), 둘째 단계부터 빈 밭이 엿새까지 남는다(nextDay).
+     다 자란 소가 있으면 기력 1. d: 발밑 칸을 갈 때는 나와 그 칸 사이에 방향이 없으므로 바라보는 쪽을 따로 받는다 */
+  const dx=d?d[0]:Math.sign(x-P.x),dy=d?d[1]:Math.sign(y-P.y),n=1,ox=hasOx(),en=ox?1:[3,2,2,1][tl('hoe')]||3;
+  if(!useEn(en))return;
   let made=0;const cells=[];
   for(let i=0;i<n;i++){
     const a=x+dx*i,b=y+dy*i,k=a+','+b;
@@ -5936,7 +5947,7 @@ function till(x,y,d){
   }
   /* 되돌린 밭을 다시 갈 때는 경험치를 또 주지 않는다 (tillDebt) */
   float(made>1?'밭 '+made+'칸 갈기':'밭 갈기',(x+.5)*T,y*T);{const xp=Math.max(1,made),d=Math.min(tillDebt,xp);tillDebt-=d;if(xp>d)addXp(xp-d)}touch();
-  if(made)lastTill={cells,en:ox?1:3,t:performance.now()};
+  if(made)lastTill={cells,en,t:performance.now()};
   if(S.tips.till)tip('untill','잘못 갈았으면 행동 단추 위의 "되돌리기"(Z 키)로 바로 물릴 수 있어요');
   tip('till','간 밭에 씨앗을 심어요. 나흘 동안 비워 두면 다시 풀밭이 돼요');
   if(ox)tip('ox','소가 쟁기를 끌어 줘서 밭 갈기가 한결 수월해요 (기력 1)');
@@ -9318,7 +9329,7 @@ function nextDay(forced){
   S.crows=[];
   if(S.wx==='drought')for(const k in S.farm){const p=S.farm[k];if(p.c&&!p.w&&p.g<CROPS[p.c].days)p.g=Math.max(0,p.g-1)}
   // 물 준 제철 작물은 하루 자라고, 나흘 비워 둔 밭은 풀밭으로 돌아간다
-  for(const k in S.farm){const p=S.farm[k];if(p.c){if(p.w&&CROPS[p.c].s.includes(was))p.g++}else if(++p.e>=4)delete S.farm[k]}
+  for(const k in S.farm){const p=S.farm[k];if(p.c){if(p.w&&CROPS[p.c].s.includes(was))p.g++}else if(++p.e>=(tl('hoe')>=2?6:4))delete S.farm[k]} /* v135: 괭이 둘째 단계부터 빈 밭이 엿새 남는다 */
   S.en=forced?Math.round(maxEn()*.7):maxEn();
   // 집 없이 짚자리에서 잔 밤: 기력이 덜 찬다. 비를 맞으며 잤으면 더 덜 찬다 (이때의 날씨는 아직 어젯밤 것)
   const campNight=S.camp&&!wakeQ&&!stay?(S.weather==='rain'?2:1):0;if(campNight)S.en=Math.round(S.en*(campNight===2?.7:.85));
