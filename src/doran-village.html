@@ -683,7 +683,11 @@ const RBLD=[
   {id:'jeong',pal:1,res:1,open:1,n:'풍류정',x:12,y:17,w:3,h:2,door:[13,19]},
   {id:'tuho',pal:1,res:1,open:1,n:'놀이마당',x:23,y:17,w:3,h:2,door:[24,19]},
   {id:'fortune',pal:1,res:1,n:'점집',x:28,y:17,w:3,h:2,door:[29,19],wall:'#e6d3a8',pil:'#5e3f24',band:'#5a3a6a'},
-  {id:'villa',pal:1,res:1,n:'별서',x:4,y:14,w:5,h:2,door:[6,16],wall:'#f3ead6',pil:'#5e3f24',band:'#3f6a4a'}
+  {id:'villa',pal:1,res:1,n:'별서',x:4,y:14,w:5,h:2,door:[6,16],wall:'#f3ead6',pil:'#5e3f24',band:'#3f6a4a'},
+  /* v145(사용자 요청: 새로 온 시전 사람들도 위쪽에 가게를 하나씩): 큰길 가게들 뒤로 뒷골목(y 7)을 내고 그 북쪽에 세 채를 지었다. 네거리에서 북쪽 샛길(x 17·18)로 올라간다 */
+  {id:'doga',pal:1,res:1,n:'시전 도가',x:6,y:4,w:5,h:2,door:[8,6],wall:'#f3ead6',pil:'#7a4f2c',band:'#3f5a4a'},
+  {id:'gomul',pal:1,res:1,n:'고물전',x:15,y:4,w:5,h:2,door:[17,6],wall:'#e6d3a8',pil:'#5e3f24',band:'#6a5a48'},
+  {id:'yak',pal:1,res:1,n:'약방',x:24,y:4,w:5,h:2,door:[26,6],wall:'#f3ead6',pil:'#7a4f2c',band:'#5a7a4a'}
 ];
 const BLD=[
   {id:'home',x:4,y:7,w:3,h:2,door:[5,9]}, {id:'shop',x:14,y:7,w:4,h:2,door:[15,9],roof:'#8a63c9',wall:'#f6efdc',tile:1},
@@ -1269,7 +1273,8 @@ const RESORT=(function(){
   for(let y=11;y<=20;y++){path(17,y);path(18,y)}                   /* 남쪽 마당으로 내려가는 길 */
   for(let x=13;x<=29;x++)path(x,19);                               /* 풍류정·놀이마당·점집 앞길 */
   for(let y=11;y<=14;y++)for(let x=15;x<=20;x++)tile[y][x]=7;      /* 네거리의 박석 */
-  for(const b of RBLD)if(b.door[1]===11)path(b.door[0],11);        /* 가게 문 앞 */
+  for(const b of RBLD)if(b.door[1]===11||b.door[1]===6)path(b.door[0],b.door[1]); /* 가게 문 앞 */
+  for(let x=8;x<=27;x++)path(x,7);for(let y=7;y<=10;y++){path(17,y);path(18,y)} /* v145: 뒷골목과 네거리에서 올라가는 샛길 */
   for(let y=14;y<=16;y++)path(9,y);for(let x=6;x<=8;x++)path(x,16); /* 큰길에서 연못가 별서로 드는 샛길 */
   for(let y=17;y<=20;y++)for(let x=4;x<=9;x++)if(!((x===4&&y===17)||(x===9&&y===20)))tile[y][x]=3; /* 연못 */
   for(const b of RBLD)for(let y=b.y;y<b.y+b.h;y++)for(let x=b.x;x<b.x+b.w;x++)objAt[y][x]={t:'bld',b};
@@ -1402,6 +1407,11 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:145,d:'11월 27일',t:'운종가 뒷골목',l:[
+    '운종가 큰길 가게들 뒤로 뒷골목이 생겼어요. 네거리에서 북쪽 샛길로 올라가요.',
+    '시전 도가·고물전·약방이 그 골목에 한 채씩 섰어요.',
+    '시전 행수·고물전 주인·약방 의원은 낮에 제 가게 문 옆에 서 있어요. 문에서 행동해도 돼요.',
+    '나무 옮겨 심기와 베어 내기는 이제 나무 앞의 "나무 손보기" 단추에서 해요. 바우에게 청하던 것은 없앴어요.']},
   {v:144,d:'11월 27일',t:'겨울 길과 눈 밟는 소리',l:[
     '겨울의 흙길이 눈에 덮여 다져진 길로 바뀌었어요. 눈밭과 빛깔이 어울려요.',
     '겨울 밭에도 눈이 얇게 앉아요.',
@@ -4236,6 +4246,32 @@ function resArt(c,b,night){
     lamp(x+11,ty+34,'#c8392f');lamp(x+w-11,ty+34,'#2e4a8a');
     return;
   }
+  if(id==='doga'||id==='gomul'||id==='yak'){
+    /* v145 뒷골목의 가게 세 채: 기와 얹은 시전 도가(쌀가마와 저울), 초가 고물전(처마에 걸린 헌 연장과 솥), 기와 약방(줄에 매단 약봉지와 약탕기) */
+    const gm=id==='gomul',wy=ty+4;
+    base(gm?'#b8a888':'#cfc9bb');rr(c,x+2,wy,w-4,wb-wy,2,gm?'#dcc9a2':'#f3ead6');
+    if(gm){c.fillStyle='rgba(120,90,50,.2)';for(let i=x+8;i<x+w-8;i+=13)c.fillRect(i,wy+8+((i*7)%11),5,2)}
+    win(x+22,wb-30,20,18);win(x+w-22,wb-30,20,18);door(gm?'#5a3a2a':'#6b3a2a',30);pil(gm?'#5e3f24':'#7a4f2c',[x+2,x+w-7],wy);
+    c.fillStyle=b.band;c.fillRect(x+2,wy,w-4,6);
+    roof(c,x,w,wy,gm?'thatch':'tile',gm?'#b89a4a':id==='yak'?'#4f5a4a':'#3f4a44');
+    if(id==='doga'){
+      for(let i=0;i<3;i++){const sx=x+10+i*13;rr(c,sx,wb-13-(i===1?8:0),12,9,3,'#d9c08a');line(c,sx+2,wb-9-(i===1?8:0),sx+10,wb-9-(i===1?8:0),'#a8884a',1.2)} /* 쌓아 둔 쌀가마 */
+      rr(c,x+16,wb-21,12,9,3,'#d9c08a');
+      line(c,x+w-20,wb-22,x+w-20,wb-4,'#6b4226',2);line(c,x+w-29,wb-21,x+w-11,wb-21,'#6b4226',1.6);ell(c,x+w-28,wb-14,4,1.6,'#b08a3a');ell(c,x+w-12,wb-16,4,1.6,'#b08a3a');line(c,x+w-28,wb-21,x+w-28,wb-14,'#4a3a2a',.8);line(c,x+w-12,wb-21,x+w-12,wb-16,'#4a3a2a',.8); /* 저울 */
+      lamp(dx+19,ty+36,'#e9b930');
+    }else if(gm){
+      for(let i=0;i<5;i++){const hx=x+12+i*(w-30)/4;if(Math.abs(hx-dx)<16)continue;line(c,hx,wy+7,hx,wy+13,'#4a3a2a',1);if(i%2){line(c,hx,wy+13,hx,wy+24,'#7a5230',2);poly(c,[hx-5,wy+13,hx+1,wy+11,hx+1,wy+16],'#8a9399')}else{ell(c,hx,wy+18,5,4,'#3a3a40');ell(c,hx,wy+15,4,1.4,'#55555c')}} /* 처마에 건 헌 낫과 솥 */
+      ell(c,x+14,wb-4,8,7,'#6b4a34');ell(c,x+14,wb-9,6,2.2,'#3a2a20');rr(c,x+w-30,wb-12,20,9,2,'#8a6238');rr(c,x+w-30,wb-12,20,2.5,1,'#6a4a2a'); /* 독과 궤짝 */
+      lamp(x+10,ty+38,'#8a5a34');
+    }else{
+      c.strokeStyle='#8a7a5a';c.lineWidth=1;c.beginPath();c.moveTo(x+6,wy+10);c.quadraticCurveTo(cx,wy+16,x+w-6,wy+10);c.stroke();
+      for(let i=0;i<8;i++){const u=(i+.5)/8,hx=x+6+u*(w-12);if(Math.abs(hx-dx)<15)continue;rr(c,hx-3,wy+11+Math.sin(u*Math.PI)*5,6,8,1,'#fbf6ea');c.fillStyle='#8a6a4a';c.fillRect(hx-2,wy+13+Math.sin(u*Math.PI)*5,4,1.2)} /* 줄에 매단 약봉지 */
+      ell(c,x+15,wb-5,7,6,'#5a4a3a');rr(c,x+11,wb-13,8,3,1,'#5a4a3a');line(c,x+22,wb-7,x+27,wb-10,'#5a4a3a',2); /* 약탕기 */
+      rr(c,x+w-32,wb-13,22,10,1,'#8a6238');for(let i=0;i<3;i++)for(let j=0;j<2;j++)rr(c,x+w-31+i*7,wb-12+j*5,6,4,.5,'#a57a48'); /* 약장 */
+      lamp(dx+19,ty+36,'#5a7a4a');
+    }
+    return;
+  }
   if(id==='inn'||id==='fortune'){
     const inn=id==='inn',wy=ty+4;
     base('#b8a888');rr(c,x+2,wy,w-4,wb-wy,2,inn?'#e2c998':'#d9c7a0');c.fillStyle='rgba(120,90,50,.22)';for(let i=x+8;i<x+w-8;i+=13)c.fillRect(i,wy+8+((i*7)%11),5,2); /* 황토벽 */
@@ -6352,7 +6388,7 @@ function undoWhat(){
   const f=faceTarget(),tg=f&&f.tg;
   if(tg&&tg.t==='soil'){const k=tg.x+','+tg.y,p=S.farm[k];if(p&&!p.c)return{cells:[k],en:0,txt:'밭 메우기'};if(p&&p.c&&p.g<CROPS[p.c].days)return{pull:k,txt:'뽑아내기'}}
   /* v141(사용자 요청: 나무는 바우에게 묻지 않고 그 나무에서 바로 옮겨 심게): 마을 나무를 바라보면 작은 단추가 "옮겨 심기"가 된다. 삯은 전과 같이 TREE_FEE(나라에 낸다) */
-  if(scene==='town'&&!treeJob&&tg&&tg.t==='tree'&&TOWN.TREES.includes(tg))return{tree:tg,txt:'옮겨 심기'};
+  if(scene==='town'&&!treeJob&&tg&&tg.t==='tree'&&TOWN.TREES.includes(tg))return{tree:tg,txt:'나무 손보기'};
   return null;
 }
 /* v132(사용자 요청: 철이 바뀌면 작물이 밭에 박혀 못 뽑는다 · 심은 밭은 없앨 수 없다): 덜 자란 작물은 뽑아낼 수 있다. 뽑으면 빈 밭이 되고, 빈 밭은 "밭 메우기"로 풀밭이 된다.
@@ -6369,7 +6405,8 @@ function pullAsk(k){
 function undoTill(){
   const u=undoWhat();if(!u)return;
   if(u.pull){pullAsk(u.pull);return}
-  if(u.tree){treeJob={k:'move',o:u.tree};u.tree.sh=.3;placing=false;relo=null;syncPlace();toast('심을 자리를 눌러요 · 삯 '+TREE_FEE+'냥(나라에 내요) · 화면을 끌면 다른 곳도 보여요');return}
+  if(u.tree){const tr=u.tree; /* v145(사용자 요청: 바우에게 청하던 나무 손보기는 없애고 나무에서 바로): 옮겨 심기와 아주 베어 내기를 여기서 고른다 */
+    dialog({who:'나무 손보기',text:'이 나무를 어떻게 할까요?\n· 옮겨 심기: 삯 '+TREE_FEE+'냥(나라에 내요)\n· 베어 내기: 나무를 얻지만 다시 자라지 않아요',choices:[['옮겨 심기',()=>{if(!TOWN.TREES.includes(tr))return;treeJob={k:'move',o:tr};tr.sh=.3;placing=false;relo=null;syncPlace();toast('심을 자리를 눌러요 · 화면을 끌면 다른 곳도 보여요')}],['베어 내기',()=>{if(!TOWN.TREES.includes(tr))return;treeJob={k:'cut',o:null};treeClick(tr.x,tr.y)}],['그만',null]]});return}
   for(const k of u.cells)delete S.farm[k];
   if(lastTill){S.en=Math.min(maxEn(),S.en+u.en);tillDebt+=u.cells.length}
   const back=!!lastTill;lastTill=null;touch();hud();sfx('chop');
@@ -7054,7 +7091,7 @@ function dokGlow(c){
    ② 시전 행수 · 큰 주문: 철마다 하나(sjOrder, 그 철의 번호로 정한다). 철 안에 한꺼번에 대면 값의 2.2배쯤과 경험치, 그리고 도매 한도가 500냥씩 는다(S.sjN, 열 번까지).
    ③ 고물전 주인: 가진 장비를 값의 절반에 산다(값은 gearGet과 같은 기준). 하루 세 개. 입고 있는 것과 길에서 받은 장비는 안 산다.
    ④ 약방 의원: 여기서만 파는 것. 환약(기력 +60)·쌍화탕(기력 +35)·화약통. 날마다 조금씩만 */
-const SJ_AT={hang:[9,13],gomul:[16,13],yak:[19,13]};
+const SJ_AT={hang:[10,6],gomul:[19,6],yak:[28,6]}; /* v145: 저마다 제 가게(뒷골목 북쪽) 문 옆에 선다 */
 const SJ_FOLK={hang:{n:'시전 행수',look:{skin:'#f0cdb0',hair:'#2e2a2a',shirt:'#3f5a4a',bot:'#2c3a30',rib:'#e9b930',sex:'m',hat:'gat',beard:1}},
   gomul:{n:'고물전 주인',look:{skin:'#e0b48c',hair:'#9a9a9a',shirt:'#6a5a48',bot:'#4a3f34',rib:'#3a2a1e',sex:'m',hat:'band',hatC:'#3a2a1e',beard:1}},
   yak:{n:'약방 의원',look:{skin:'#f3d6bd',hair:'#2e2a2a',shirt:'#e9e0c8',bot:'#7a9a8a',rib:'#5a7a4a',sex:'f',hat:'none'}}};
@@ -7124,6 +7161,7 @@ function resAct(b){
   if(MALL[b.id]){if(b.id==='inn'||!asleep(NPCS[MALL[b.id].npc].name))openMall(b.id);return}
   if(b.id==='tuho'){if(!asleep(NPCS.deoksoe.name))playTalk();return}
   if(b.id==='fortune'){if(!asleep())fortuneTalk();return}
+  if(b.id==='doga'||b.id==='gomul'||b.id==='yak'){const k=b.id==='doga'?'hang':b.id;if(!asleep(SJ_FOLK[k].n))sijeonTalk(k);return} /* v145: 시전 세 사람의 가게 */
   if(b.id==='villa'){villaTalk();return}
   /* 풍류정: 하루 한 번 쉬어 간다. 선비 서하와 친하면 더 찬다 */
   if(S.jeongDay===S.day){toast('풍류정이에요. 연못 위로 바람이 지나가요');return}
@@ -9593,9 +9631,8 @@ function bauTalk(){
   for(const k in PENS)if(!S.pens[k]&&S.place!==k)ch.push([PENS[k].n+' 짓기',()=>penTalk(k)]);
   if(!S.works.gate.at)ch.push(['축지 장승 터 잡기',()=>say('사냥터를 한달음에 오가는 축지 장승이요? 터는 직접 고르세요. 터를 잡은 뒤 나무 40, 돌 30, 쇳돌 10, 깃털 6에 1,500냥을 모아 넣고 못질하면 돼요.',[['터 고르기',()=>moveStart('gate')],['그만',null]])]);
   ch.push(['시설 옮기기',openRelo]);
-  ch.push(['나무 옮겨 심기·베어 내기',treeTalk]);
   ch.push(['그만',null]);
-  say('무엇을 도와드릴까요? 닭장이나 외양간은 내 땅 어디든, 고르신 자리에 세워 드려요. 우물이나 정자 같은 마을 시설도 옮겨 드려요.',ch);
+  say('무엇을 도와드릴까요? 닭장이나 외양간은 내 땅 어디든, 고르신 자리에 세워 드려요. 우물이나 정자 같은 마을 시설도 옮겨 드려요. 나무는 그 나무 앞에서 "나무 손보기" 단추로 바로 하시면 돼요.',ch);
 }
 // ───────── 혼인 ─────────
 // 혼례 때 건네는 나무 기러기는 목수 모루가 깎아 준다
