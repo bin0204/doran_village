@@ -1409,6 +1409,12 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:140,d:'11월 27일',t:'운종가 시전',l:[
+    '운종가 큰길에 세 사람이 자리 잡았어요.',
+    '시전 행수: 생선·작물·가죽을 만물상보다 2~3할 더 쳐줘요(하루 한도 있음).',
+    '철마다 큰 주문을 내요. 철 안에 대면 큰돈을 받고 도매 한도가 늘어요.',
+    '고물전 주인: 안 쓰는 장비를 사 줘요. 하루 세 개까지.',
+    '약방 의원: 환약·쌍화탕·화약통을 여기서만 팔아요.']},
   {v:139,d:'11월 27일',t:'행랑채',l:[
     '머슴이나 사병을 들이면 내 집 곁에 행랑채가 서요. 그들이 지내는 곳이에요.',
     '다친 사병은 행랑채 툇마루에서 머리를 싸매고 쉬어요. 다음 날 아침이면 나아요.',
@@ -1900,6 +1906,7 @@ function fixState(s){
   /* v121: 집 빚 · 산 밭터 구획 · 재산세 · 쌀 산 양. 전부터 들판에서 갈던 밭은 그 구획을 가진 것으로 쳐 준다(가진 것은 인정) */
   s.caravans=Array.isArray(s.caravans)?s.caravans.filter(q=>q&&TRIPS[q.to]):[];s.story=s.story&&typeof s.story==='object'?s.story:{};
   s.fief=clamp(s.fief|0,0,3);s.starN=s.starN|0;s.dokDay=s.dokDay|0;s.dokWin=s.dokWin|0; /* v132 도깨비 씨름 */
+  s.sjN=s.sjN|0;s.sjOrd=s.sjOrd==null?-1:s.sjOrd|0; /* v140 운종가 시전: 치른 큰 주문 수 · 마지막으로 치른 철 */
   s.posts=s.posts&&typeof s.posts==='object'&&!Array.isArray(s.posts)?s.posts:{};for(const k in s.posts)if(!POSTS[k])delete s.posts[k]; /* v137 세운 역참 */
   s.hh=s.hh&&typeof s.hh==='object'?s.hh:{hand:0,guard:0};s.hh.hand=s.hh.hand|0;s.hh.guard=s.hh.guard|0;
   s.debt=Math.max(0,Math.round(+s.debt||0));if(s.past==null)s.past=s.graze?1:0;
@@ -3036,6 +3043,8 @@ function drawCore(c,id){
   case 'jfan':poly(c,[0,9,-10,-3,-6,-8,0,-10,6,-8,10,-3],'#f3ead6');for(const a of [-7,-3.5,0,3.5,7])line(c,0,9,a*1.3,-7,'#b98a5a',1);poly(c,[-10,-3,-6,-8,0,-10,6,-8,10,-3,8,-1,0,-6,-8,-1],'#c8392f');circ(c,0,8,1.6,'#5e3f24');break;
   case 'pepper':rr(c,-7,-4,14,13,5,'#c9b58a');rr(c,-5,-8,10,5,2,'#a8905e');line(c,-4,-6,4,-6,'#6b4a2a',1.5);for(const q of [[-3,1],[2,0],[0,4],[4,4],[-4,5]])circ(c,q[0],q[1],1.5,'#2e2420');break;
   case 'silk':rr(c,-9,-6,18,12,5,'#c8392f');rr(c,-9,-6,18,4,3,'#e0584a');ell(c,-8,0,2.5,5.5,'#a82a22');ell(c,8,0,2.5,5.5,'#f3ead6');ell(c,8,0,1.2,3,'#c8392f');c.fillStyle='#e9b930';c.fillRect(-3,-6,2,12);c.fillRect(2,-6,1.2,12);break;
+  case 'hwan':rr(c,-8,-4,16,10,3,'#e9d8b0');rr(c,-8,-4,16,3,2,'#c9a86a');for(const [a,b] of [[-4,1],[0,2],[4,1],[-2,-2],[2,-2]])circ(c,a,b,2.1,'#3a2a22');break;
+  case 'ssanghwa':rr(c,-7,-3,14,10,4,'#8a6a4a');ell(c,0,-3,7,3,'#3a2418');ell(c,0,-3,5,1.8,'#5a3a22');line(c,-2,-8,-3,-12,'rgba(255,255,255,.6)',1.2);line(c,2,-8,3,-12,'rgba(255,255,255,.6)',1.2);break;
   case 'tea':rr(c,-7,-7,14,15,3,'#5a7a4a');rr(c,-7,-7,14,4,2,'#6f9458');rr(c,-4,-1,8,7,1,'#f3ead6');line(c,-2,1,2,1,'#5a7a4a',1.2);line(c,-2,3.5,1,3.5,'#5a7a4a',1.2);line(c,-3,-7,3,-10,'#8a5a34',1.5);break;
   case 'gamcho':for(const [a,b,d] of [[-7,-6,5],[-3,-8,7],[1,-7,6],[5,-5,4]]){line(c,a,b,a+3,b+14+d*.3,'#b08a55',3);line(c,a+.6,b+1,a+3,b+12,'#d0b07a',1)}rr(c,-8,0,16,3.5,1.5,'#c8392f');break;
   case 'chinaware':ell(c,0,3,7.5,7,'#f6f6f0');rr(c,-3,-9,6,6,2,'#f6f6f0');ell(c,0,-9,4,1.6,'#e6e6dc');ell(c,0,9.5,4,1.4,'#d9d9cf');c.strokeStyle='#3f6fb0';c.lineWidth=1.3;c.beginPath();c.arc(-1,3,4,3.4,5.6);c.stroke();c.beginPath();c.arc(1,5,3,.3,2.4);c.stroke();circ(c,0,3,1.3,'#3f6fb0');line(c,-3,-5,3,-5,'#3f6fb0',1);break;
@@ -4568,6 +4577,10 @@ function renderTown(c){
     list.push([f.y+.1,()=>{drawChar(c,x,y,DOK_LOOK,near&&(d[0]||d[1])?(d[0]&&d[1]?[0,d[1]]:d):[0,1],false,now+f.x);rr(c,x+9,y-19,3,12,1.5,'#6a4a2a');rr(c,x+8,y-28,5,10,2.5,'#8a6238');rr(c,x+8,y-28,5,2,1,'#a57a48')}]);
     if(near&&!mg)labels.push(()=>label(c,x,y+9,'도깨비'));
   }
+  if(scene==='resort')for(const k in SJ_AT){const q=SJ_AT[k],f=SJ_FOLK[k],x=(q[0]+.5)*T,y=(q[1]+.9)*T,near=Math.abs(P.x-q[0])+Math.abs(P.y-q[1])<=3; /* v140 운종가 시전 사람들: 발치에 깐 멍석과 물건 */
+    list.push([q[1]+.08,()=>{rr(c,x-15,y-3,30,8,2,'#c9a86a');rr(c,x-15,y-3,30,2,1,'#b08a4a');if(k==='hang'){rr(c,x-12,y-8,8,7,1,'#8a6238');rr(c,x+3,y-9,9,8,2,'#d9d2bc')}else if(k==='gomul'){rr(c,x-12,y-7,7,5,1,'#8a9399');line(c,x+2,y-9,x+11,y-2,'#6a4a2a',2)}else{circ(c,x-8,y-4,3.2,'#5a7a4a');circ(c,x+8,y-4,3.2,'#8a6a4a');rr(c,x-2,y-8,5,7,1,'#f3ead6')}drawChar(c,x,y-5,f.look,near?[Math.sign(P.x-q[0])||0,Math.sign(P.x-q[0])?0:Math.sign(P.y-q[1])||1]:[0,1],false,now+q[0])}]);
+    if(near&&!mg)labels.push(()=>label(c,x,y+9,f.n));
+  }
   if(haengAt&&scene==='town'){const hq=haengAt,hx=(hq.x+1)*T,hy=(hq.y+1)*T;list.push([hq.y+.3,()=>haengArt(c,hq)]);if(!mg&&Math.abs(P.x-hq.x-.5)+Math.abs(P.y-hq.y)<=3)labels.push(()=>label(c,hx,hy-56,haengHurt()?'행랑채 · 다친 사병 '+haengHurt()+'명':'행랑채'))} /* v139 행랑채 */
   {const pk=postHere(),ps=pk&&postSpot(pk);if(ps){const x=(ps[0]+.5)*T,y=(ps[1]+.9)*T,built=!!S.posts[pk];list.push([ps[1]+.1,()=>postArt(c,x,y,built)]);if(!mg&&Math.abs(P.x-ps[0])+Math.abs(P.y-ps[1])<=3)labels.push(()=>label(c,x,y-(built?52:40),built?'역참':'역참 터'))}} /* v137 역참 */
   for(const r of bridgeRuns)list.push([r.y+.6,()=>drawBridgeFront(c,r)]); /* 앞쪽 난간은 다리 위의 사람(순서 y+.2)보다 나중에 */
@@ -5405,6 +5418,7 @@ function act(tg,x,y){
   case 'sail':moorStart(tg.x,tg.y,0);break;
   case 'post':postTalk(tg.k);break;
   case 'haeng':haengTalk();break;
+  case 'sijeon':if(!asleep())sijeonTalk(tg.k);break;
   case 'hboard':openHunt();break;
   case 'sgate':gateTalk();break;
   case 'spring':springAct();break;
@@ -6870,6 +6884,77 @@ function dokGlow(c){
     const g=c.createRadialGradient(X,Y,0,X,Y,12);g.addColorStop(0,'rgba(120,210,255,'+(.55*a)+')');g.addColorStop(1,'rgba(120,210,255,0)');circ(c,X,Y,12,g);
     c.fillStyle='rgba(225,250,255,'+a+')';c.fillRect(Math.round(X)-1,Math.round(Y)-2,3,4);
   }
+}
+/* ───────── 운종가 시전(v140, 사용자 의견: 저잣거리에 가야 할 까닭이 없다 → 고른 네 가지를 모두) ─────────
+   큰길 아랫줄에 세 사람이 선다(SJ_AT, 지도에 t 'sijeon'). 밤에는 닫는다.
+   ① 시전 행수 · 도매: 생선(어물전)·작물(미곡전)·가죽과 사냥감(피물전)을 만물상 값보다 2~3할 더 쳐서 산다. 하루 한도 sjCap(상인의 길 자리와 치른 주문 수만큼 는다) → 돈이 끝없이 불지 않는다.
+   ② 시전 행수 · 큰 주문: 철마다 하나(sjOrder, 그 철의 번호로 정한다). 철 안에 한꺼번에 대면 값의 2.2배쯤과 경험치, 그리고 도매 한도가 500냥씩 는다(S.sjN, 열 번까지).
+   ③ 고물전 주인: 가진 장비를 값의 절반에 산다(값은 gearGet과 같은 기준). 하루 세 개. 입고 있는 것과 길에서 받은 장비는 안 산다.
+   ④ 약방 의원: 여기서만 파는 것. 환약(기력 +60)·쌍화탕(기력 +35)·화약통. 날마다 조금씩만 */
+const SJ_AT={hang:[9,13],gomul:[16,13],yak:[19,13]};
+const SJ_FOLK={hang:{n:'시전 행수',look:{skin:'#f0cdb0',hair:'#2e2a2a',shirt:'#3f5a4a',bot:'#2c3a30',rib:'#e9b930',sex:'m',hat:'gat',beard:1}},
+  gomul:{n:'고물전 주인',look:{skin:'#e0b48c',hair:'#9a9a9a',shirt:'#6a5a48',bot:'#4a3f34',rib:'#3a2a1e',sex:'m',hat:'band',hatC:'#3a2a1e',beard:1}},
+  yak:{n:'약방 의원',look:{skin:'#f3d6bd',hair:'#2e2a2a',shirt:'#e9e0c8',bot:'#7a9a8a',rib:'#5a7a4a',sex:'f',hat:'none'}}};
+Object.assign(ITEMS,{hwan:{n:'환약',p:90,nodex:1},ssanghwa:{n:'쌍화탕',p:50,nodex:1}});Object.assign(EAT,{hwan:60,ssanghwa:35});
+const SJ_YAK={hwan:[280,3],ssanghwa:[150,4],bomb:[250,2]};
+const SJ_HIDE=new Set([].concat(...Object.keys(BEASTS).map(k=>BEASTS[k].loot||[])));
+const SJ_KIND=[['어물전',1.25,k=>!!FISHLOOK[k]],['미곡전',1.2,k=>!!CROPS[k]&&!ITEMS[k].mk],['피물전',1.3,k=>SJ_HIDE.has(k)]];
+const SJ_ORDERS=[['mokhwa',12],['carp',6],['mackerel',10],['hide',6],['feather',12],['bean',15],['bori',15],['mushroom',12],['ginseng',2],['snapper',4]].filter(q=>ITEMS[q[0]]);
+function applySijeon(){const oa=RESORT.objAt;for(const k in SJ_AT){const [x,y]=SJ_AT[k];if(!oa[y][x])oa[y][x]={t:'sijeon',k,x,y}}}
+applySijeon();
+const sjKind=id=>SJ_KIND.find(q=>q[2](id));
+const sjCap=()=>4000+2000*Math.max(0,rankOf('merch')+1)+500*Math.min(10,S.sjN|0);
+const sjToday=()=>{if(!S.sj||S.sj.day!==S.day)S.sj={day:S.day,sold:0};return S.sj};
+function sjOrder(){
+  const sn=Math.floor((S.day-1)/7),q=SJ_ORDERS[Math.floor(hash(sn*31+mkSeed(),91)*SJ_ORDERS.length)],n=Math.round(q[1]*(1+Math.floor(S.level/8)*.5));
+  return{sn,id:q[0],n,pay:Math.round(n*ITEMS[q[0]].p*2.2/10)*10+300,done:S.sjOrd===sn};
+}
+function openWholesale(){
+  const B=sjToday(),room=()=>Math.max(0,sjCap()-B.sold);
+  openModal('시전 도매',body=>{
+    body.appendChild(el('p','note','오늘 더 팔 수 있는 값 '+won(room())+' · 만물상보다 2~3할 더 쳐줘요'));
+    const ids=Object.keys(S.inv).filter(id=>have(id)>0&&ITEMS[id]&&sjKind(id));
+    if(!ids.length)body.appendChild(el('p',null,'팔 물건이 없어요. 생선·작물·가죽을 가져와요.'));
+    for(const id of ids){
+      const K=sjKind(id),p=Math.ceil(sellPrice(id)*K[1]),n=have(id),can=Math.min(n,Math.floor(room()/p));
+      const sell=q=>{if(q<1)return;gain(id,-q);addCoins(p*q);B.sold+=p*q;addXp(Math.min(15,q));sfx('coin');touch();openWholesale()};
+      row(body,icon('item',id),ITEMS[id].n,[n+'개 · 개당 '+won(p)+' ('+K[0]+')','만물상 '+sellPrice(id)+'냥'+(can<n?' · 오늘은 '+can+'개까지':'')],[['1개',()=>sell(1),can<1],['모두',()=>sell(can),can<2]]);
+    }
+  });
+}
+function openGomul(){
+  if(!S.gm||S.gm.day!==S.day)S.gm={day:S.day,n:0};
+  const left=Math.max(0,3-S.gm.n),worn=Object.values(S.gear.on);
+  openModal('고물전',body=>{
+    body.appendChild(el('p','note','쓰지 않는 장비를 사 줘요. 오늘 더 팔 수 있는 것 '+left+'개 · 입고 있는 것과 길에서 받은 것은 안 사요'));
+    const ids=Object.keys(S.gear.own).filter(id=>S.gear.own[id]&&GEAR[id]&&!GEAR[id].route&&!worn.includes(id));
+    if(!ids.length)body.appendChild(el('p',null,'팔 장비가 없어요.'));
+    for(const id of ids){
+      const G=GEAR[id],p=Math.round((G.cost||[60,200,500,1200,3000][G.g])*.5);
+      row(body,gearBadge(id),G.n,GEAR_GRADE[G.g]+' '+gearSlot(G.s)+' · '+won(p),[['팔기',()=>{if(S.gm.n>=3||!S.gear.own[id]||Object.values(S.gear.on).includes(id))return;delete S.gear.own[id];S.gm.n++;addCoins(p);sfx('coin');saveAll();openGomul()},left<1]]);
+    }
+  });
+}
+function openYak(){
+  if(!S.yak||S.yak.day!==S.day){S.yak={day:S.day,left:{}};for(const k in SJ_YAK)S.yak.left[k]=SJ_YAK[k][1]}
+  const Y=S.yak;
+  openModal('약방',body=>{
+    body.appendChild(el('p','note','여기서만 파는 것들이에요. 날마다 조금씩만 지어요. 가진 돈 '+won(S.coins)));
+    for(const k in SJ_YAK){
+      const p=SJ_YAK[k][0],left=Y.left[k]|0;
+      row(body,icon('item',k),ITEMS[k].n,[(EAT[k]?'먹으면 기력 +'+EAT[k]:'동굴에서 바위를 한꺼번에 깨요'),'남은 것 '+left+'/'+SJ_YAK[k][1]+' · 가진 것 '+have(k)],[[won(p),()=>{if(S.coins<p||Y.left[k]<1)return;Y.left[k]--;addCoins(-p);gain(k,1);sfx('coin');openYak()},S.coins<p||left<1]]);
+    }
+  });
+}
+function sijeonTalk(k){
+  const f=SJ_FOLK[k];
+  if(k==='gomul'){openGomul();return}
+  if(k==='yak'){openYak();return}
+  const O=sjOrder(),B=sjToday(),ok=!O.done&&have(O.id)>=O.n,ch=[['도매로 팔기',openWholesale]];
+  if(ok)ch.push(['주문 대기',()=>{const Q=sjOrder();if(Q.done||have(Q.id)<Q.n)return;gain(Q.id,-Q.n);addCoins(Q.pay);S.sjOrd=Q.sn;S.sjN=(S.sjN|0)+1;addXp(60);sfx('level');saveAll();
+    dialog({who:f.n,text:'"틀림없이 받았소. 다음 철에도 부탁하오."\n(주문 값 '+won(Q.pay)+' · 도매 한도가 '+won(sjCap())+'으로 늘었어요)'})}]);
+  ch.push(['다음에요',null]);
+  dialog({who:f.n,text:'"좋은 물건은 좋은 값에 받겠소."\n· 도매: 생선·작물·가죽을 더 쳐줘요\n· 오늘 더 팔 수 있는 값 '+won(Math.max(0,sjCap()-B.sold))+'\n· 이번 철 큰 주문: '+ITEMS[O.id].n+' '+O.n+'개 → '+won(O.pay)+(O.done?' (치렀어요)':' · 가진 것 '+have(O.id)),choices:ch});
 }
 function resAct(b){
   if(MALL[b.id]){if(b.id==='inn'||!asleep(NPCS[MALL[b.id].npc].name))openMall(b.id);return}
@@ -9699,6 +9784,7 @@ function nextDay(forced){
   applyMarket();applyFest();applyFair();applyVisit();applyHaeng();
   {const vm=visitNow();if(vm&&visitAt)msgs.push('오늘은 '+(vm==='bd'?'대륙':'섬나라')+' 보따리 상인이 마을에 왔어요 · 알림판 곁')}
   {const f=fest(),nx=festOf(S.day+1);if(f)msgs.push('오늘은 '+f.n+' · 동쪽 마당에서 잔치');else if(nx)msgs.push('내일은 '+jo(nx.n,'이에요','예요'))}
+  if(S.seenRes&&(S.day-1)%7===0){const O=sjOrder();msgs.push('운종가 큰 주문: '+ITEMS[O.id].n+' '+O.n+'개 · 이번 철 안에')} /* v140 */
   if(S.seenRes){const fm=fairNow(),fn=fairOf(S.day+1);if(fm)msgs.push('오늘은 '+(fm==='bd'?'대륙':'섬나라')+' 사신 행차 · 운종가에 큰 장');else if(fn)msgs.push('내일은 사신 행차 날이에요')}
   if(isMarket())msgs.push('오늘은 장날 · 동쪽 마당에 보부상');else if(marketIn()===1)msgs.push('내일은 장날이에요');
   if(cupMsg){msgs.push('사냥 대회 셈: '+cupMsg);sendMail('mujin','{name} 보시오.\n어제 사냥 대회의 셈을 마쳤소. 그대는 '+cupMsg.split(' · ').slice(0,2).join(', ')+'이었소. 상은 이미 보냈으니 살펴보시오. 다음 대회에서 또 겨룹시다.\n— 무진')}
