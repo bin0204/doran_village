@@ -36,6 +36,8 @@ body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15p
 #app{height:100%;max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:8px;min-height:0}
 @media (min-width:1000px){#app{max-width:none;gap:6px}.brand{font-size:18px}.stats{font-size:13px;gap:5px}.chip{padding:1px 9px}.bar{width:64px;height:8px}#bar .btn{font-size:13px;padding:3px 11px;min-width:42px}#skPad button,#skPad button:nth-child(1),#skPad button:nth-child(2),#skPad button:nth-child(3){width:84px;height:34px;font-size:12.5px}body{padding-top:6px;padding-bottom:6px}} /* v162: PC에서는 위아래 단추와 글자도 조금 작게 */
 .pc{display:none}#bar .btn i{font-style:normal;opacity:.6;font-size:.85em}
+/* v165(사용자 요청: 아래 단추 줄도 놀이판 안에): PC에서는 단추 줄을 놀이판 왼쪽 아래에 얹어 놀이판이 창 끝까지 내려온다 */
+@media (min-width:1000px) and (hover:hover) and (pointer:fine){#app{position:relative}#bar{position:absolute;left:14px;bottom:14px;z-index:3;flex-wrap:nowrap;gap:5px;max-width:calc(50% - 190px);overflow-x:auto;scrollbar-width:none}#bar::-webkit-scrollbar{display:none}#bar .sp{margin-left:0}#bar .btn{flex:none;box-shadow:0 2px 0 var(--shade)}}
 @media (min-width:1000px) and (hover:hover) and (pointer:fine){#bar .btn.pc{display:inline-block}#bar .btn i.pc{display:inline}} /* v162: PC에서만 스탯·기술 단추와 단축키 글자가 보인다 */
 @media (min-width:1000px){#app{max-width:none}} /* v161(사용자 요청: PC에서는 창 전체로): 넓은 화면에서는 너비 제한을 풀어 창을 가득 채운다 */
 #hud{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;min-width:0}
@@ -77,6 +79,12 @@ button.chip{font:inherit;color:inherit;cursor:pointer;line-height:inherit}
 #actBtn.idle{opacity:.42} /* 지금 할 것이 없으면 흐리게 */
 /* 싸움 단추(v156): 싸우는 동안 공격 단추가 커지고, 그 둘레에 기술 단추 셋이 부채꼴로 놓인다 */
 #actBtn.fight{width:74px;height:74px;font-size:18px}
+/* 장비 칸과 단련 판(v165): 가운데 내 모습, 둘레에 한지 칸 */
+.doll{display:grid;grid-template-columns:68px 104px 68px;grid-template-rows:repeat(3,68px);grid-template-areas:"w me h" "t me a" ". me s";gap:22px 12px;justify-content:center;margin:6px auto 22px}
+.dollme{grid-area:me;width:104px;height:156px;align-self:center;image-rendering:pixelated;background:var(--bg);border:2px solid var(--wood);border-radius:14px}
+.slot{position:relative;width:68px;height:68px;padding:0;border:2px solid var(--wood);border-radius:12px;background:var(--bg);box-shadow:inset 0 0 0 2px var(--surface),0 2px 0 var(--shade);cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:12.5px;color:var(--muted);touch-action:manipulation}
+.slot:hover{border-color:var(--wood-dk)}.slot b{position:absolute;right:4px;top:1px;font-size:11.5px;color:var(--accent)}.slot small{position:absolute;left:-10px;right:-10px;top:100%;margin-top:2px;font-size:11px;line-height:1.15;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}
+.slot.rnd{border-radius:50%}.slot.rnd i{font-style:normal;font-size:19px;color:var(--ink)}.slot.rnd:disabled{opacity:.55;cursor:default}
 #stage.ghost{border-color:#2a2440;box-shadow:0 0 0 1.5px #15121f,inset 0 0 26px rgba(90,60,170,.6)} /* v161: 귀신골에 있는 동안 놀이판 테두리가 검보랏빛으로 */
 #skPad button{position:absolute;width:48px;height:48px;border-radius:50%;border:2px solid var(--wood);background:linear-gradient(to top,rgba(74,46,24,.34) calc(var(--cd,0)*100%),transparent 0),var(--surface);color:var(--ink);font-family:var(--display);font-size:12px;line-height:1.05;padding:0;cursor:pointer;box-shadow:0 2px 0 var(--shade);touch-action:manipulation}
 #skPad button:nth-child(1){right:92px;bottom:10px}#skPad button:nth-child(2){right:78px;bottom:66px}#skPad button:nth-child(3){right:20px;bottom:94px}
@@ -1481,6 +1489,10 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:165,d:'11월 27일',t:'장비 칸과 단련 판',l:[
+    '장비 창이 바뀌었어요. 가운데 내 모습 둘레의 칸을 눌러 장비를 골라요.',
+    '직업 창에 단련 판이 생겼어요. 힘·몸·손 동그라미를 눌러 올려요.',
+    'PC에서는 아래 단추 줄이 놀이판 안 왼쪽 아래로 들어갔어요.']},
   {v:164,d:'11월 27일',t:'싸울 때는 조용히',l:[
     '사냥하거나 토벌하는 동안에는 이웃이 먼저 말을 걸지 않아요.',
     '싸움이 끝나고 조금 지나야, 그리고 짐승이 곁에 없어야 다가와요.']},
@@ -9608,6 +9620,11 @@ function openSkills(){
     row(body,el('span','badge',C.ic),'내 직업 · '+C.n,C.d,[['직업 바꾸기',()=>openClass()]]);
     body.appendChild(el('p','note','남은 기술 점수 '+left+' · 레벨마다 1점 · 기술 다섯 단계 · 단련 열 단계'));
     body.appendChild(el('p','note','갈래의 둘째 기술은 싸울 때 단추로 써요 · 컴퓨터는 1·2·3 키 · 기력 2'));
+    /* v165(사용자 요청: 가운데 캐릭터, 단련을 눌러 올리는 느낌): 단련 판. 힘·몸·손 동그라미를 누르면 한 단계 오른다 */
+    {const d=el('div','doll'),q=S.cls.charAt(0),sp=charSprite(playerLook(),'front',0),m=el('canvas');m.width=16;m.height=24;m.getContext('2d').drawImage(sp,0,0);m.className='dollme';
+      const mk=(n,ch,nm,area)=>{const id=q+'_t'+n,lv=S.sk[id]|0,b=el('button','slot rnd');b.type='button';b.style.gridArea=area;b.appendChild(el('i',null,ch));b.appendChild(el('b',null,String(lv)));b.appendChild(el('small',null,nm+' '+lv+'/10'));
+        b.disabled=lv>=10||left<1;b.onclick=()=>{if(skLeft()<1||(S.sk[id]|0)>=10)return;S.sk[id]=(S.sk[id]|0)+1;sfx('level');saveAll();openSkills()};return b};
+      d.appendChild(mk(1,'힘','힘 기르기','w'));d.appendChild(m);d.appendChild(mk(2,'몸','몸 다지기','h'));d.appendChild(mk(3,'손','손 익히기','s'));body.appendChild(d)}
     for(const [rn,list] of SKILLS[S.cls]){
       body.appendChild(el('p','sub',rn+' 갈래'));
       list.forEach(([id,n,d],i)=>{const lv=S.sk[id]|0,lock=rn!=='단련'&&i>0&&!(S.sk[list[i-1][0]]|0);
@@ -11939,15 +11956,13 @@ function openGear(){
   openModal('장비',body=>{
     const all=Object.keys(FX_TXT).filter(k=>gearFx(k)).map(k=>FX_TXT[k](+(k==='guard'?Math.min(.75,gearFx(k)):gearFx(k)).toFixed(2))); /* 덜 다침은 75%가 끝 */
     // 지금 내 모습: 앞·옆·뒤. 걸친 장비가 그대로 보인다
-    const pv=el('div','tabs');pv.style.cssText='justify-content:center;gap:14px;margin-bottom:6px';
-    for(const v of ['front','side','back']){const sp=charSprite(playerLook(),v,0),m=el('canvas');m.width=16;m.height=24;m.getContext('2d').drawImage(sp,0,0);m.style.cssText='width:72px;height:108px;image-rendering:pixelated;background:var(--bg);border:1.5px solid var(--line);border-radius:12px';pv.appendChild(m)}
-    body.appendChild(pv);
+    /* v165(사용자 요청: 장비를 칸에 넣는 창으로 · 도트 결로): 가운데 내 모습, 둘레에 다섯 칸. 칸을 누르면 그 자리의 장비를 고른다. 벼린 단계는 칸 구석에 +n */
+    {const d=el('div','doll'),mk=(s,sn,area)=>{const id=S.gear.on[s],G=GEAR[id],b=el('button','slot');b.type='button';b.style.gridArea=area;b.setAttribute('aria-label',sn+(G?': '+G.n:': 비어 있음'));
+        if(G){b.appendChild(gearBadge(id));if(upLv(id))b.appendChild(el('b',null,'+'+upLv(id)))}else b.appendChild(el('span',null,sn.split('·')[0]));
+        b.appendChild(el('small',null,G?G.n:'비어 있음'));b.onclick=()=>pickGear(s);return b};
+      const sp=charSprite(playerLook(),'front',0),m=el('canvas');m.width=16;m.height=24;m.getContext('2d').drawImage(sp,0,0);m.className='dollme';
+      d.appendChild(mk('w','무기','w'));d.appendChild(mk('t','장신구','t'));d.appendChild(m);d.appendChild(mk('h','쓰개','h'));d.appendChild(mk('a','갑옷','a'));d.appendChild(mk('s','신발','s'));body.appendChild(d)}
     body.appendChild(el('p','note',all.length?'지금 걸친 장비의 힘: '+all.join(' · '):Object.keys(S.gear.own).length?'걸친 장비가 없어요. 아래에서 골라 걸쳐요.':'아직 가진 장비가 없어요.'));
-    for(const [s,sn] of GEAR_SLOTS){
-      const id=S.gear.on[s],G=GEAR[id],mine=Object.keys(S.gear.own).filter(k=>GEAR[k].s===s);
-      const r=row(body,G?gearBadge(id):el('span','badge',sn[0]),sn+': '+(G?G.n:'비어 있음'),[G?gearReq(G)+' · '+GEAR_GRADE[G.g]+' · '+gearTxt(id):mine.length?'가진 것이 '+mine.length+'개 있어요':'가진 것이 없어요'],mine.length?[['바꾸기',()=>pickGear(s)]]:[]);
-      if(G)gearTap(r,id,openGear);
-    }
     const t=el('div','tabs'),b=el('button','btn'+(S.gear.show?' on':''),S.gear.show?'걸친 모습 보이는 중':'걸친 모습 숨기는 중');b.type='button';
     b.onclick=()=>{S.gear.show=!S.gear.show;touch();openGear()};t.appendChild(b);body.appendChild(t);
     body.appendChild(el('p','note','걸친 장비는 내 모습에 그대로 보여요: 등에 멘 활, 갑옷 빛깔과 띠, 쓰개, 신발, 가슴의 노리개. 옷장에서 고른 옷을 그대로 보이고 싶으면 위 단추로 숨겨요. 장비마다 걸칠 수 있는 레벨이 있고, 걸어가는 길에 따라 스승이 내어 주는 장비도 있어요.'));
