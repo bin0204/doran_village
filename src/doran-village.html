@@ -28,6 +28,9 @@ body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15p
   box-sizing:border-box;overflow:hidden;overscroll-behavior:none;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 *{box-sizing:border-box}
 #app{height:100%;max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:8px;min-height:0}
+@media (min-width:1000px){#app{max-width:none;gap:6px}.brand{font-size:18px}.stats{font-size:13px;gap:5px}.chip{padding:1px 9px}.bar{width:64px;height:8px}#bar .btn{font-size:13px;padding:3px 11px;min-width:42px}#skPad button,#skPad button:nth-child(1),#skPad button:nth-child(2),#skPad button:nth-child(3){width:84px;height:34px;font-size:12.5px}body{padding-top:6px;padding-bottom:6px}} /* v162: PC에서는 위아래 단추와 글자도 조금 작게 */
+.pc{display:none}#bar .btn i{font-style:normal;opacity:.6;font-size:.85em}
+@media (min-width:1000px) and (hover:hover) and (pointer:fine){#bar .btn.pc{display:inline-block}#bar .btn i.pc{display:inline}} /* v162: PC에서만 스탯·기술 단추와 단축키 글자가 보인다 */
 @media (min-width:1000px){#app{max-width:none}} /* v161(사용자 요청: PC에서는 창 전체로): 넓은 화면에서는 너비 제한을 풀어 창을 가득 채운다 */
 #hud{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;min-width:0}
 .brand{font-family:var(--display);font-size:22px;color:var(--leaf);letter-spacing:.02em;margin-right:auto}
@@ -69,15 +72,15 @@ button.chip{font:inherit;color:inherit;cursor:pointer;line-height:inherit}
 /* 싸움 단추(v156): 싸우는 동안 공격 단추가 커지고, 그 둘레에 기술 단추 셋이 부채꼴로 놓인다 */
 #actBtn.fight{width:74px;height:74px;font-size:18px}
 #stage.ghost{border-color:#2a2440;box-shadow:0 0 0 1.5px #15121f,inset 0 0 26px rgba(90,60,170,.6)} /* v161: 귀신골에 있는 동안 놀이판 테두리가 검보랏빛으로 */
-#skPad button{position:absolute;width:48px;height:48px;border-radius:50%;border:2px solid var(--wood);background:var(--surface);color:var(--ink);font-family:var(--display);font-size:12px;line-height:1.05;padding:0;cursor:pointer;box-shadow:0 2px 0 var(--shade);touch-action:manipulation}
+#skPad button{position:absolute;width:48px;height:48px;border-radius:50%;border:2px solid var(--wood);background:linear-gradient(to top,rgba(74,46,24,.34) calc(var(--cd,0)*100%),transparent 0),var(--surface);color:var(--ink);font-family:var(--display);font-size:12px;line-height:1.05;padding:0;cursor:pointer;box-shadow:0 2px 0 var(--shade);touch-action:manipulation}
 #skPad button:nth-child(1){right:92px;bottom:10px}#skPad button:nth-child(2){right:78px;bottom:66px}#skPad button:nth-child(3){right:20px;bottom:94px}
-#skPad button:active{transform:translateY(2px)}#skPad button.cool{opacity:.55;font-size:16px}#skPad button.off{opacity:.3}#skPad button.on{border-color:var(--accent-ink);background:var(--accent);color:var(--accent-ink)}
+#skPad button:active{transform:translateY(2px)}#skPad button.cool{color:var(--muted);font-size:16px}#skPad button.off{opacity:.35}#skPad button.on{border-color:var(--accent-ink);background:var(--accent);color:var(--accent-ink)}
 /* 컴퓨터(v157, 사용자 요청): 기술 단추를 화면 아래 가운데에 가로 한 줄로 늘 보여 준다. 왼쪽 위의 작은 숫자가 누를 키 */
 @media (hover:hover) and (pointer:fine) and (min-width:700px){
-  #skPad{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);display:flex;gap:8px;padding:5px 7px;border-radius:14px;background:rgba(42,29,19,.42)}
+  #skPad{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);display:flex;gap:5px;padding:4px 5px;border-radius:12px;background:var(--surface);border:2px solid var(--wood);box-shadow:0 3px 0 var(--shade)}
   #skPad[hidden]{display:none}
-  #skPad button,#skPad button:nth-child(1),#skPad button:nth-child(2),#skPad button:nth-child(3){position:relative;right:auto;bottom:auto;width:98px;height:40px;border-radius:10px;font-size:13.5px}
-  #skPad button::before{content:attr(data-k);position:absolute;left:6px;top:3px;font-size:10px;opacity:.7}
+  #skPad button,#skPad button:nth-child(1),#skPad button:nth-child(2),#skPad button:nth-child(3){position:relative;right:auto;bottom:auto;width:98px;height:40px;border-radius:8px;font-size:13.5px;border:1.5px solid var(--line);box-shadow:none}
+  #skPad button::before{content:attr(data-k);position:absolute;left:4px;top:3px;width:14px;height:14px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:9.5px;line-height:14px;text-align:center}
   #skPad button.cool{font-size:17px}
 }
 /* 밭 되돌리기 단추: 행동 단추 바로 위에 잠깐 뜬다 */
@@ -253,7 +256,9 @@ ul.help{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
     <div id="decoList"></div>
   </div>
   <nav id="bar" aria-label="도구">
-    <button class="btn" id="bBag" type="button">가방</button>
+    <button class="btn" id="bBag" type="button">가방<i class="pc"> I</i></button>
+    <button class="btn pc" id="bStat" type="button">스탯 E</button>
+    <button class="btn pc" id="bSkill" type="button">기술 K</button>
     <button class="btn" id="bMe" type="button">나</button>
     <button class="btn" id="bLog" type="button">기록</button>
     <button class="btn" id="bSay" type="button">같이 하기</button>
@@ -1468,6 +1473,16 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:162,d:'11월 27일',t:'PC 크기 줄이기와 무기 그림',l:[
+    'PC에서 놀이판이 덜 확대돼 보여요. − 와 + 키로 작게·보통·크게를 고를 수 있어요.',
+    'PC의 위아래 단추와 글자도 조금 작아졌어요.',
+    '칼·비수·창·도끼·지팡이·활·화살·표창·부적을 모두 도트 그림으로 새로 그렸어요.',
+    '벨 때 나오는 칼바람이 초승달 모양이 됐어요. 표창은 세 가지 모양이 섞여 날아가요.',
+    '호신부·버티기·연막·질풍을 쓰는 동안 몸 둘레에 기운이 보여요.',
+    '짐승과 귀신의 기운을 두 배 넘게 올리고, 칼의 힘도 올렸어요.',
+    'PC에서는 I 가방 · E 스탯 · K 기술이에요. 행동은 스페이스예요.',
+    '사냥터와 던전의 패·꼬리표·기술 단추를 한지와 나무 결로 맞췄어요.',
+    'PC에서 수련과 놀이 판이 너무 크던 것을 줄이고, 위가 잘리지 않게 했어요.']},
   {v:161,d:'11월 27일',t:'PC에서는 창 가득',l:[
     '넓은 화면(PC)에서는 놀이판이 창을 가득 채워요.',
     '크게 보이는 화면에서는 이름표 글씨를 조금 줄였어요.',
@@ -2551,8 +2566,8 @@ function updGuards(dt){
       if(Math.abs(b.x-g.x)+Math.abs(b.y-g.y)===1){
         const D=BEASTS[b.k];g.st=0;g.dir=[b.x-g.x,b.y-g.y];b.gf=.35;g.cd-=dt;
         if(g.cd<=0){
-          g.cd=Math.max(1,1.7-.06*g.lv);g.lunge=.2;b.hp-=1+Math.floor(g.lv/4);b.mad=1;sfx('spear');
-          b.hit=.16;b.kb=[Math.sign(b.x-g.x),Math.sign(b.y-g.y)];if(!b.mhp)b.mhp=Math.max(b.hp+1+Math.floor(g.lv/4),D.hp);float('-'+(1+Math.floor(g.lv/4)),rx(b)*T+16+ri(-6,6),ry(b)*T-12,'#bcd3ff'); /* v157: 사병이 친 것도 번쩍이고 숫자가 뜬다 · 치는 박자를 2.6초 → 1.7초로 */shots.push({x0:0,y0:0,x1:rx(b)*T+16,y1:ry(b)*T+12,t:.14,hit:true});
+          g.cd=Math.max(1,1.7-.06*g.lv);g.lunge=.2;b.hp-=gDmg(g.lv);b.mad=1;sfx('spear');
+          b.hit=.16;b.kb=[Math.sign(b.x-g.x),Math.sign(b.y-g.y)];if(!b.mhp)b.mhp=Math.max(b.hp+gDmg(g.lv),D.hp);float('-'+(gDmg(g.lv)),rx(b)*T+16+ri(-6,6),ry(b)*T-12,'#bcd3ff'); /* v157: 사병이 친 것도 번쩍이고 숫자가 뜬다 · 치는 박자를 2.6초 → 1.7초로 */shots.push({x0:0,y0:0,x1:rx(b)*T+16,y1:ry(b)*T+12,t:.14,hit:true});
           {const up=gGain(g.ri,b.hp<=0?3+Math.floor(D.lv/4):1);if(up){g.lv=up;g.mhp=gHp(up);g.hp=g.mhp;float(ros[g.ri].n+' Lv.'+up+'!',(g.x+.5)*T,g.y*T-40,'#f7d24a');sfx('level')}} /* v153: 싸운 만큼 자란다 */
           if(b.hp<=0){if(mg&&mg.b===b)mg=null;huntKill(b,true);g.m=2;g.foe=null;continue}
         }
@@ -4987,10 +5002,12 @@ function label(c,x,y,txt){
   if(lblT){const t=lblT;lblT=null;c.font='12px '+FONT;const w=c.measureText(txt).width+10,L=Math.max(.8,Math.min(t.K,1.3,(view.w-10)/w)),X=clamp(t.cx+(x-t.cx)*t.K,cam.x+w*L/2+3,cam.x+view.w-w*L/2-3),Y=t.cy+(y-t.cy)*t.K;
     c.save();c.translate(X,Y);c.scale(L,L);label(c,0,0,txt);c.restore();lblT=t;return}
   const fs=zoom>=1.5?10:12,hh=fs+4;c.font=fs+'px '+FONT;c.textAlign='center';c.textBaseline='middle';const w=c.measureText(txt).width+(fs<12?8:10);rr(c,x-w/2,y-hh/2,w,hh,fs<12?4:5,'rgba(251,245,230,.93)');c.fillStyle='#33261c';c.fillText(txt,x,y+1)} /* 이름표: 한지 빛 바탕에 먹빛 글씨. v161: 크게 보이는 화면(PC)에서는 글씨를 조금 줄인다 */
+let zoomPref=0;try{zoomPref=clamp(+localStorage.getItem('doran-village-zoom')||0,-1,1)|0}catch(e){}
+function zoomStep(d){const z=clamp(zoomPref+d,-1,1);if(z===zoomPref)return;zoomPref=z;try{localStorage.setItem('doran-village-zoom',String(z))}catch(e){}resize();miniRef=null;toast('화면 크기: '+['작게','보통','크게'][z+1])}
 function resize(){
   const r=$('stage').getBoundingClientRect();dpr=Math.min(window.devicePixelRatio||1,2);
   // 도트가 뭉개지지 않게 화면 배율을 0.5 단위로 맞춘다 (도트 한 칸 = 화면 정수 픽셀)
-  KPX=Math.max(1,Math.round(dpr*clamp(r.width/540,1,1.7)*2)/2);
+  KPX=Math.max(1,Math.round(dpr*clamp(r.width/800,1,[1,1.3,1.7][zoomPref+1])*2)/2); /* v162(사용자 의견: PC에서 확대된 느낌): 넓은 화면의 배율을 1.7 → 1.3으로 낮춰 더 넓게 본다(휴대폰은 그대로 1). − · + 키로 작게·보통·크게를 고른다(zoomPref, 이 기기에만 기억) */
   {const need=dpr*Math.max(r.width/(W*T),r.height/(H*T));if(KPX<need)KPX=Math.ceil(need*2)/2} /* v161: 창이 아주 넓어도 화면이 지도보다 넓어지지 않게 배율을 올린다 */
   zoom=KPX/dpr;
   cv.width=Math.max(1,Math.round(r.width*dpr));cv.height=Math.max(1,Math.round(r.height*dpr));view.w=r.width/zoom;view.h=r.height/zoom;
@@ -5180,6 +5197,7 @@ function renderTown(c){
     c.save();c.beginPath();c.rect(px-40,fy-90,80,87);c.clip();drawChar(c,px-sx*3,fy+12,playerLook(),P.dir,false,now*stepPace());c.restore();
     line(c,px+sx*5,fy-15,px+sx*(15+sw),fy+7,'#7a5230',2.2);ell(c,px+sx*(16+sw),fy+10,2.6,5,'#8a5a34');circ(c,px+sx*5,fy-15,2.3,playerLook().skin);
   })]); /* 연장을 휘두를 때는 발도 디딘다(v104) */
+  if(skOn('d_ward')||skOn('m_wide')||skOn('h_smoke')||skOn('h_step'))list.push([ry(P)+.22,()=>drawAura(c,px,py)]); /* v162: 기술을 쓴 동안의 기운 */
   headRects.length=0;headStack(c,labels,px,py,tagIt(),rps&&rps.done?RPS[rps.me]:rps&&(rps.st==='pick'||rps.st==='show')?'냈어요':'',now-mySayAt<5?mySay:'',myEmo&&now-myEmoAt<EMO_T?EMO[myEmo][1]:'',mg||fishing?'':myTag()+(isNoble()?' · 양반':''));
   // 같이 하는 친구들
   for(const p of peers){
@@ -5395,9 +5413,10 @@ function render(){
   if(scene==='cave'){
     // 동굴 안은 낮밤이 없다. 내 둘레만 등불로 밝고 멀수록 어둡다
     a=0;const gh=!!(cave&&cave.ghost),lx=pcx-cam.x,ly=pcy-cam.y,g=c.createRadialGradient(lx,ly,gh?34:50,lx,ly,gh?150+Math.sin(now*7)*5+Math.sin(now*2.3)*8:210); /* v161: 귀신골은 등불이 좁고 흔들리며 어둠이 검푸르다 */
-    g.addColorStop(0,gh?'rgba(8,8,26,0)':'rgba(8,6,5,0)');g.addColorStop(1,gh?'rgba(5,5,16,.93)':'rgba(8,6,5,.82)');c.fillStyle=g;c.fillRect(0,0,view.w,view.h);if(gh)ghostMood(c,lx,ly);
+    g.addColorStop(0,gh?'rgba(8,8,26,0)':'rgba(8,6,5,0)');g.addColorStop(1,gh?'rgba(5,5,16,.93)':'rgba(8,6,5,.82)');c.fillStyle=g;c.fillRect(0,0,view.w,view.h);if(gh)ghostMood(c,lx,ly);else zoneBanner(c);
   }
   if(a>0){c.fillStyle='rgba('+col+','+a+')';c.fillRect(0,0,view.w,view.h)}
+  if(scene==='wild')zoneBanner(c); /* v162: 사냥터의 모든 구역에 같은 패 */
   if(a>.1&&m>=1050){
     c.translate(-cam.x,-cam.y);/*L*/c.globalCompositeOperation='lighter';
     const glow=(x,y,r,al)=>{const g=c.createRadialGradient(x,y,2,x,y,r);g.addColorStop(0,'rgba(255,205,110,'+al+')');g.addColorStop(1,'rgba(255,205,110,0)');circ(c,x,y,r,g)};
@@ -6384,22 +6403,16 @@ function drawMgIn(c,labels){
   if(m.kind==='hunt'){
     /* v156 싸움: 겨눈 짐승 발밑의 고리와 머리 위 기운 막대, 손에 든 무기. 붙어 있으면 휘두르고(m.sw), 떨어져 있으면 활·표창·부적을 겨눈다 */
     const b=m.b,D=BEASTS[b.k],bx=rx(b)*T+16,by=ry(b)*T+14,h=handAt(),a=Math.atan2(by-h[1],bx-h[0]),col=bowCol(),top=ry(b)*T-(D.man?52:D.big?46:32);
-    c.strokeStyle='rgba(217,65,46,.9)';c.lineWidth=2;c.beginPath();c.ellipse(bx,by+13,16,6,0,0,7);c.stroke();
-    {const w=32,mh=b.mhp||D.hp,u=clamp(b.hp/mh,0,1);rr(c,bx-w/2-1,top-1,w+2,6,3,'rgba(42,29,19,.85)');if(u>0)rr(c,bx-w/2,top,Math.max(2,w*u),4,2,u>.5?'#7fd06a':u>.25?'#f2c531':'#e0503a')}
+    c.setLineDash([9,5]);c.lineDashOffset=-now*14;c.strokeStyle='rgba(74,30,24,.55)';c.lineWidth=4;c.beginPath();c.ellipse(bx,by+13,17,6.5,0,0,7);c.stroke();c.strokeStyle='#c8392f';c.lineWidth=2;c.stroke();c.setLineDash([]); /* 겨눈 짐승: 돌아가는 붓 자국 고리 */
     drawArm(c);
     if(m.mel){
       const u=m.sw>0?1-m.sw/.22:1;c.save();c.translate(h[0],h[1]);c.rotate(a+(m.sw>0?-1.25+u*2.1:-.55+Math.sin(now*3)*.05));
-      if(m.mel==='sword'){rr(c,2,-1.6,19,3.2,1,col);poly(c,[21,-1.6,25,0,21,1.6],col);rr(c,-1,-3.2,3,6.4,1,'#e9b930');rr(c,-6,-1.6,6,3.2,1,'#6b4226')}
-      else if(m.mel==='spear'){rr(c,-10,-1.2,30,2.4,1,'#a9793f');poly(c,[20,-3.4,29,0,20,3.4],col);rr(c,17,-1.8,3,3.6,1,'#c8392f')}
-      else if(m.mel==='axe'){rr(c,-6,-1.4,25,2.8,1,'#a9793f');poly(c,[12,-1.4,15,-9,22,-8,23,1.4,18,3],col)}
-      else if(m.mel==='dagger'){rr(c,1,-1.4,11,2.8,1,col);poly(c,[12,-1.4,16,0,12,1.4],col);rr(c,-1,-2.8,2.5,5.6,1,'#e9b930');rr(c,-5,-1.4,5,2.8,1,'#3a2a22')}
-      else if(m.mel==='staff'){rr(c,-10,-1.4,32,2.8,1,'#8a5a34');circ(c,23,0,3.6,col);circ(c,23,0,1.6,'#f7d24a')}
-      else circ(c,6+(m.sw>0?7:0),0,4.2,'#f3cfb0');
+      {const ws=wpSpr(m.mel,col),sm2=c.imageSmoothingEnabled;c.imageSmoothingEnabled=false;c.drawImage(ws,-ws.ox,-ws.oy,ws.width*2,ws.height*2);c.imageSmoothingEnabled=sm2}
       c.restore();
-      if(m.sw>0){c.strokeStyle='rgba(255,255,255,.7)';c.lineWidth=2;c.lineCap='round';c.beginPath();c.arc(h[0],h[1],23,a-1.25,a-1.25+u*2.1);c.stroke();c.lineCap='butt'} /* 휘두른 자국(v161: 희고 가늘게) */
+      if(m.sw>0)slashArt(c,h[0],h[1],27,a-1.25,a-1.25+u*2.1,'rgba(255,255,255,.5)'); /* 휘두른 자국: 초승달꼴 칼바람 */
     }
     else if(isCls('dosa'))drawBujeok(c,h[0],h[1]-6,Math.sin(now*6)*.15);
-    else if(isCls('hyeop')){star(c,h[0]+P.dir[0]*3,h[1]-3,5,'#cfd6dc');circ(c,h[0]+P.dir[0]*3,h[1]-3,1.4,'#3a3a40')}
+    else if(isCls('hyeop'))sprRot(c,pyoSpr(0,'#cfd6dc'),h[0]+P.dir[0]*3,h[1]-3,now*2);
     else drawBow(c,h[0],h[1],a,4.5+(1-clamp(m.cd/shotGap(),0,1))*3.5,col);
     if(m.note)labels.push(()=>label(c,bx,top-14,m.note));return;
   }
@@ -8122,7 +8135,7 @@ applyPosts();
      물리친 횟수(S.waeN)가 늘수록 물결·사람 수·기운이 늘고 왜장이 섞인다(내 레벨이 아니라 횟수에 따라 세진다 → 계속 자라야 막는다). 지면 세지지 않는다.
      다 물리치면 포상과 공 3. 못 막으면 산적 때처럼 집이 부서지고 돈을 털린다. 밸런스: 철에 한 번뿐이라 돈이 끝없이 불어나지 않는다 */
 const G_NAMES=['돌쇠','억쇠','장쇠','무쇠','칠복','만복','범석','천동'],G_LVMAX=10,DRILL_DAYS=3;
-const gLv=q=>Math.min(G_LVMAX,1+Math.floor(Math.sqrt((q.x|0)/12))),gNext=l=>12*l*l,gHp=l=>3+Math.floor(l/2),gCap=()=>Math.max(1,Math.min(G_LVMAX,Math.floor(S.level/2)));
+const gLv=q=>Math.min(G_LVMAX,1+Math.floor(Math.sqrt((q.x|0)/12))),gNext=l=>12*l*l,gHp=l=>3+Math.floor(l/2),gDmg=l=>2+Math.floor(l/3),gCap=()=>Math.max(1,Math.min(G_LVMAX,Math.floor(S.level/2)));
 const gTraining=q=>!!q.tr&&q.tr>S.day,drillFee=l=>400+250*l,drillXp=l=>18+6*l;
 function gRoster(){const Q=S.hh,n=Q.guard|0;if(!Array.isArray(Q.gs))Q.gs=[];const A=Q.gs;if(A.length>n)A.length=n;while(A.length<n)A.push({n:G_NAMES.find(s=>!A.some(q=>q.n===s))||'사병',x:0});return A}
 function gUsable(){const L=[];gRoster().forEach((q,i)=>{if(!gTraining(q)&&q.hd!==S.day)L.push(i)});L.length=Math.max(0,L.length-guardsAway());return L} /* 지금 곁에 있는 사병의 명부 번호 */
@@ -8183,7 +8196,7 @@ function openDrill(){
     A.forEach((q,i)=>{
       const lv=gLv(q),tr=gTraining(q),fee=drillFee(lv),full=lv>=cap,base=gNext(lv-1),here=us.includes(i);
       const st=tr?'조련 중 · '+(q.tr-S.day)+'일 뒤 아침에 돌아와요':q.hd===S.day?'다쳐서 오늘은 쉬어요':!here?'상단을 따라갔어요':full?(lv>=G_LVMAX?'다 자랐어요':'내 레벨이 오르면 더 자라요'):'경험 '+((q.x|0)-base)+'/'+(gNext(lv)-base)+' · 삯 '+won(fee)+' · 경험 +'+drillXp(lv);
-      row(body,el('span','badge',String(lv)),'Lv.'+lv+' '+q.n,[st,'버티는 힘 '+gHp(lv)+' · 치는 힘 '+(1+Math.floor(lv/4))],
+      row(body,el('span','badge',String(lv)),'Lv.'+lv+' '+q.n,[st,'버티는 힘 '+gHp(lv)+' · 치는 힘 '+gDmg(lv)],
         tr?[['데려오기',()=>{delete q.tr;delete q.tx;sfx('pick');saveAll();openDrill()}]]
           :[['맡기기',()=>{if(gTraining(q)||S.coins<fee||!gUsable().includes(i))return;addCoins(-fee);q.tr=S.day+DRILL_DAYS;q.tx=drillXp(lv);sfx('coin');saveAll();openDrill()},full||!here||S.coins<fee]]);
     });
@@ -8431,9 +8444,7 @@ function ghostMood(c,lx,ly){
     g.addColorStop(0,'rgba(120,200,255,.5)');g.addColorStop(1,'rgba(120,200,255,0)');c.fillStyle=g;c.fillRect(wx-22,wy-22,44,44)}
   c.globalCompositeOperation='source-over';
   {const v=c.createRadialGradient(view.w/2,view.h/2,Math.min(view.w,view.h)*.35,view.w/2,view.h/2,Math.max(view.w,view.h)*.75);v.addColorStop(0,'rgba(30,10,50,0)');v.addColorStop(1,'rgba(30,10,50,.55)');c.fillStyle=v;c.fillRect(0,0,view.w,view.h)}
-  {const n=beasts.length,t='귀신골 '+cave.floor+'층 · '+(n?'남은 귀신 '+n:'고요해요');c.font='14px '+FONT;c.textAlign='center';c.textBaseline='middle';const w=c.measureText(t).width+28,x=w/2+12,y=24+Math.sin(now*1.3)*1.5; /* 알림과 작은 지도를 피해 왼쪽 위에 */
-    rr(c,x-w/2,y-12,w,24,6,'rgba(12,10,24,.78)');c.strokeStyle='rgba(120,200,255,.45)';c.lineWidth=1;c.strokeRect(Math.round(x-w/2)+.5,Math.round(y-12)+.5,Math.round(w)-1,23);
-    c.shadowColor='rgba(120,200,255,.9)';c.shadowBlur=8;c.fillStyle=n?'#cfe9ff':'#9fd6a8';c.fillText(t,x,y+1);c.shadowBlur=0}
+  plaque(c,10,10,'귀신골 '+cave.floor+'층 · '+(beasts.length?'남은 귀신 '+beasts.length:'고요해요'),true);
 }
 function ghostGateArt(c){
   rr(c,-22,-34,9,36,2,'#6a6f78');rr(c,13,-34,9,36,2,'#5a5f68');poly(c,[-26,-34,0,-48,26,-34,22,-30,-22,-30],'#4a4f58'); /* 무너진 돌문 */
@@ -9118,8 +9129,8 @@ function riteRound(m){
 // 미니게임 판 키우기(v82, 사용자 요청: 너무 작고 읽기 어렵다): 머리 위의 판을 화면 크기에 맞춰 mgK()배(1~1.7)로 그린다.
 // ritePad()=판의 가운데(화면 밖으로 나가지 않게 안으로 민다. 화면이 낮으면 캐릭터를 덮는다). 그릴 때는 mgPad(c)가 가운데를 축으로 늘림을 걸고,
 // drawMg가 끝에 풀면서 그 판의 이름표도 같이 옮긴다(label의 lblT). 누른 자리를 보는 riteClick·eyeClick은 같은 배율로 거꾸로 센다
-const mgK=()=>clamp(Math.min((view.w-16)/200,(view.h-24)/175),1,1.7);
-const ritePad=()=>{const K=mgK(),py=(ry(P)+.9)*T,ex=100*K+4,ey=60*K+16;
+const mgK=()=>clamp(Math.min((view.w-16)/200,(view.h-24)/175,1.75/zoom),1,1.7); /* v162(사용자 의견: 수련·미니게임 판이 PC에서 너무 크고 위가 잘린다): 화면 배율(zoom)까지 곱해 1.75배를 넘지 않게 한다 → PC에서는 판이 작아진다 */
+const ritePad=()=>{const K=mgK(),py=(ry(P)+.9)*T,ex=100*K+4,ey=72*K+22; /* v162: 판의 위쪽이 화면 밖으로 나가지 않게 높이를 넉넉히 잡는다 */
   return{cx:clamp((rx(P)+.5)*T,cam.x+ex,Math.max(cam.x+ex,cam.x+view.w-ex)),cy:clamp(py-44-ey,cam.y+ey,Math.max(cam.y+ey,cam.y+view.h-ey))}};
 let padT=null;
 function padAt(c,x,y){const K=mgK();padT={cx:x,cy:y,K};c.save();c.translate(x,y);c.scale(K,K);c.translate(-x,-y)}
@@ -9413,16 +9424,79 @@ function drawFx(c){
     if(f.t<0)continue;const u=f.t/.6,x=f.x,y=f.y;c.globalAlpha=Math.max(0,1-u);
     if(f.k==='bolt'){c.lineJoin='round';for(const q of [['rgba(127,208,255,.5)',6.5],['#e9f7ff',2.2]]){c.strokeStyle=q[0];c.lineWidth=q[1];c.beginPath();c.moveTo(x-9,y-96);c.lineTo(x+6,y-70);c.lineTo(x-5,y-50);c.lineTo(x+7,y-30);c.lineTo(x,y);c.moveTo(x+6,y-70);c.lineTo(x+17,y-58);c.moveTo(x-5,y-50);c.lineTo(x-16,y-40);c.stroke()}circ(c,x,y,7+u*9,'rgba(200,235,255,.6)')} /* v161: 벼락은 가지 친 푸른빛 번개로 */
     else if(f.k==='spark'){for(let i=0;i<7;i++){const q=i*.9+.2,r0=3+u*6,r1=7+u*13;line(c,x+Math.cos(q)*r0,y-4+Math.sin(q)*r0,x+Math.cos(q)*r1,y-4+Math.sin(q)*r1,i%2?'#dff4ff':'#7fd0ff',1.8)}circ(c,x,y-4,3+u*3,'rgba(223,244,255,.7)')}
-    else if(f.k==='slash'||f.k==='slash2'){c.strokeStyle=f.k==='slash2'?'#f7d24a':'#fff';c.lineWidth=3.4;c.lineCap='round';c.beginPath();c.arc(x,y,15+u*7,-2.3+u*2.2,-.7+u*2.2);c.stroke();c.lineCap='butt'}
+    else if(f.k==='slash'||f.k==='slash2')slashArt(c,x,y,17+u*8,-2.3+u*2.2,-.7+u*2.2,f.k==='slash2'?'rgba(247,210,74,.92)':'rgba(255,255,255,.9)');
     else if(f.k==='crit'){for(let i=0;i<8;i++){const q=i*.785+.3;line(c,x+Math.cos(q)*(6+u*8),y+Math.sin(q)*(6+u*8),x+Math.cos(q)*(13+u*17),y+Math.sin(q)*(13+u*17),i%2?'#d9412e':'#f7d24a',2.6)}}
     else if(f.k==='smoke'){for(let i=0;i<6;i++){const q=i*1.05;circ(c,x+Math.cos(q)*(5+u*15),y-12+Math.sin(q)*(4+u*10),6+u*5,'rgba(190,190,196,.8)')}}
-    else if(f.k==='ward'){c.strokeStyle='#f7d24a';c.lineWidth=2.4;c.beginPath();c.arc(x,y-16,15+u*7,0,7);c.stroke()}
+    else if(f.k==='ward'){c.strokeStyle='#bfe6ff';c.lineWidth=2.2;for(let i=0;i<4;i++){c.beginPath();c.arc(x,y-16,16+u*9,i*1.5708+u,i*1.5708+u+.9);c.stroke()}} /* v162: 막아 낸 순간은 푸른 테 조각이 퍼진다 */
     else if(f.k==='roar'){c.strokeStyle='#fffbe8';c.lineWidth=3;for(const r of [12,26])if(u*70>r-12){c.beginPath();c.arc(x,y-14,r+u*52,0,7);c.stroke()}}
     else if(f.k==='heal'){for(let i=0;i<4;i++){const q=i*1.6+u*3;c.fillStyle='#7fe08a';c.fillRect(Math.round(x+Math.cos(q)*12)-1,Math.round(y-10-u*26+Math.sin(q)*5)-3,3,7);c.fillRect(Math.round(x+Math.cos(q)*12)-3,Math.round(y-10-u*26+Math.sin(q)*5)-1,7,3)}}
     c.globalAlpha=1;
   }
 }
-function drawBujeok(c,x,y,a){c.save();c.translate(x,y);c.rotate(a||0);rr(c,-4,-8,8,16,1,'#f1d75a');line(c,0,-5,0,5,'#b5332a',1.6);line(c,-2,-2,2,-2,'#b5332a',1.2);line(c,-2,2,2,2,'#b5332a',1.2);c.restore()}
+/* 무기 그림(v162, 사용자 의견: 칼이 성의 없다 — 회색 줄 하나였다): 손(0,0)에서 오른쪽으로 뻗은 모습으로 그린다. 놀이의 맞붙기와 직업 맛보기가 함께 쓴다.
+   칼(환도)=살짝 휜 외날·빛 받은 날·놋쇠 코등이·감은 자루·붉은 유소 / 비수=짧은 양날·쇠 코등이·검은 자루 / 창=자루·버들잎 날·붉은 삭모 / 도끼=휜 날과 날 끝의 빛 / 지팡이=옹이 진 나무·고리·부적 */
+function weaponArt(c,k,col){
+  const dk=shade(col,.6),lt='#f6fbff';
+  if(k==='sword'){
+    c.fillStyle=dk;c.beginPath();c.moveTo(3,-2.3);c.quadraticCurveTo(15,-3.8,26,-1.3);c.lineTo(28,.7);c.quadraticCurveTo(15,2,3,2.3);c.closePath();c.fill();
+    c.fillStyle=col;c.beginPath();c.moveTo(3,-1.7);c.quadraticCurveTo(15,-3,26,-.9);c.lineTo(26.8,.2);c.quadraticCurveTo(15,.7,3,1);c.closePath();c.fill();
+    c.strokeStyle=lt;c.lineWidth=.9;c.beginPath();c.moveTo(5,-1.3);c.quadraticCurveTo(14,-2.3,23,-1);c.stroke();
+    rr(c,.4,-3.8,2.8,7.6,1.3,'#c9972a');rr(c,1.1,-3.1,1.4,6.2,.7,'#f2cf5a');
+    rr(c,-8.4,-1.9,9,3.8,1.6,'#5a3a22');for(let i=0;i<3;i++)line(c,-6.8+i*2.4,-1.9,-5.6+i*2.4,1.9,'#2a1a10',.9);
+    circ(c,-8.8,0,2,'#c9972a');line(c,-9.8,1,-12.4,5.6,'#c8392f',1.4);line(c,-9.2,1.3,-10.4,6.2,'#c8392f',1.2);
+  }else if(k==='dagger'){
+    c.fillStyle=dk;c.beginPath();c.moveTo(2,-2.5);c.lineTo(13,-1.7);c.lineTo(18,0);c.lineTo(13,1.9);c.lineTo(2,2.5);c.closePath();c.fill();
+    c.fillStyle=col;c.beginPath();c.moveTo(2,-1.8);c.lineTo(12.6,-1.1);c.lineTo(16.8,0);c.lineTo(2,0);c.closePath();c.fill();line(c,3.5,-1,12,-.6,lt,.8);
+    rr(c,.1,-3.4,2.3,6.8,1,'#8a9399');rr(c,-6.4,-1.8,6.8,3.6,1.5,'#2a2a30');line(c,-4.8,-1.8,-4.8,1.8,'#b5332a',1);line(c,-2.5,-1.8,-2.5,1.8,'#b5332a',1);circ(c,-6.6,0,1.6,'#8a9399');
+  }else if(k==='spear'){
+    rr(c,-12,-1.3,30,2.6,1,'#8a5a34');line(c,-12,-.5,18,-.5,'#a9793f',.8);
+    c.fillStyle=dk;c.beginPath();c.moveTo(18,-1.7);c.lineTo(22,-4);c.lineTo(31.5,0);c.lineTo(22,4);c.lineTo(18,1.7);c.closePath();c.fill();
+    c.fillStyle=col;c.beginPath();c.moveTo(19,-1.1);c.lineTo(22,-3);c.lineTo(30,0);c.lineTo(19,0);c.closePath();c.fill();line(c,19,0,29.4,0,lt,.8);
+    rr(c,16,-2.1,2.6,4.2,1,'#c9972a');for(const dy of [-1,0,1])line(c,16.4,dy*1.4,13.2,dy*3.4+1.6,'#c8392f',1.3);
+  }else if(k==='axe'){
+    rr(c,-8,-1.5,27,3,1,'#8a5a34');line(c,-8,-.6,18,-.6,'#a9793f',.8);
+    c.fillStyle=dk;c.beginPath();c.moveTo(12,-1.7);c.quadraticCurveTo(14,-8.2,22,-10.8);c.quadraticCurveTo(25.8,-4,24.2,3);c.quadraticCurveTo(18,3.8,12,1.7);c.closePath();c.fill();
+    c.fillStyle=col;c.beginPath();c.moveTo(13,-1.5);c.quadraticCurveTo(15,-7,21.4,-9.2);c.quadraticCurveTo(23.8,-4,22.8,1.8);c.quadraticCurveTo(18,2.4,13,1.1);c.closePath();c.fill();
+    c.strokeStyle=lt;c.lineWidth=1;c.beginPath();c.moveTo(22.4,-9.6);c.quadraticCurveTo(25.2,-4,23.8,2.4);c.stroke();rr(c,11,-2.3,3,4.6,1,'#5a4030');
+  }else if(k==='staff'){
+    rr(c,-12,-1.5,33,3,1.2,'#7a5230');line(c,-12,-.6,20,-.6,'#9a6a40',.8);circ(c,-2,0,1.4,'#5a3a22');circ(c,9,.3,1.2,'#5a3a22');
+    c.strokeStyle=col;c.lineWidth=2.4;c.beginPath();c.arc(24,-1.6,4.3,Math.PI*.35,Math.PI*1.95);c.stroke();circ(c,24,-1.6,1.8,'#f7d24a');
+    rr(c,17,1.4,4.2,8.4,1,'#f1d75a');line(c,19.1,2.8,19.1,8,'#b5332a',1);
+  }else{circ(c,6,0,4.5,'#3a2a22');circ(c,6,0,3.5,'#f3cfb0')}
+}
+/* 칼바람: 가운데가 두껍고 양 끝이 뾰족한 초승달꼴(전에는 가는 원호 한 줄) */
+function slashArt(c,x,y,r,a0,a1,col,al){
+  const am=(a0+a1)/2,k=Math.min(1.6,1/Math.max(.2,Math.cos((a1-a0)/2))),p0=[x+Math.cos(a0)*r,y+Math.sin(a0)*r],p1=[x+Math.cos(a1)*r,y+Math.sin(a1)*r],ox=x+Math.cos(am)*r*k,oy=y+Math.sin(am)*r*k,ix=x+Math.cos(am)*r*k*.6,iy=y+Math.sin(am)*r*k*.6;
+  c.save();if(al!=null)c.globalAlpha*=al;c.fillStyle=col;c.beginPath();c.moveTo(p0[0],p0[1]);c.quadraticCurveTo(ox,oy,p1[0],p1[1]);c.quadraticCurveTo(ix,iy,p0[0],p0[1]);c.fill();
+  c.strokeStyle='rgba(255,255,255,.85)';c.lineWidth=1;c.beginPath();c.moveTo(p0[0],p0[1]);c.quadraticCurveTo(ox,oy,p1[0],p1[1]);c.stroke();c.restore();
+}
+/* 도트로 구운 무기와 날아가는 것(v162, 사용자 요청: 모든 직업의 무기를 지금의 도트 느낌에 맞게 세세하게): 부드럽게 그린 그림(weaponArt 등)을 bake로 절반 크기에 찍어
+   어두운 테두리를 두른 도트 그림으로 만들고, 돌려서 찍는다(sprRot). 칼·비수·창·도끼·지팡이(wpSpr), 화살(arrowSpr), 표창 세 가지(pyoSpr: 사방·육방·비도), 부적(bujeokSpr), 활(drawBow) */
+function sprRot(c,s,x,y,rot){const sm=c.imageSmoothingEnabled;c.save();c.translate(x,y);if(rot)c.rotate(rot);c.imageSmoothingEnabled=false;c.drawImage(s,-s.ox,-s.oy,s.width*2,s.height*2);c.imageSmoothingEnabled=sm;c.restore()}
+const wpSpr=(k,col)=>spr('wp_'+k+col,()=>bake(72,40,20,20,0,0,c2=>weaponArt(c2,k,col)));
+const wpDraw=(c,k,col,x,y,rot)=>sprRot(c,wpSpr(k,col),x,y,rot);
+function arrowArt(c){rr(c,-14,-1,15,2,.6,'#b98a5a');poly(c,[5,0,-1,-3,-1,3],'#dfe9ee');poly(c,[-14,0,-11,-3.4,-8,-3.4,-10,0],'#f3ead6');poly(c,[-14,0,-11,3.4,-8,3.4,-10,0],'#e2d9c6')}
+const arrowSpr=()=>spr('arrow',()=>bake(44,20,28,10,0,0,arrowArt));
+function pyoArt(c,v,col){
+  const d=shade(col,.6);
+  if(v===2){poly(c,[-7,0,-2,-2.4,8,0,-2,2.4],col);poly(c,[-7,0,-2,-2.4,-2,0],d);rr(c,-11,-1.2,4.4,2.4,.8,'#3a2a22');circ(c,-11.4,0,1.5,'#b5332a');return} /* 비도(던지는 작은 칼) */
+  const n=v?6:4,p=[],p2=[];for(let i=0;i<n*2;i++){const a=i*Math.PI/n,q=i%2?2.8:7.4,q2=i%2?1.7:4.4;p.push(Math.cos(a)*q,Math.sin(a)*q);p2.push(Math.cos(a)*q2,Math.sin(a)*q2)}
+  poly(c,p,col);poly(c,p2,d);circ(c,0,0,1.6,'#2a2a30');
+}
+const pyoSpr=(v,col)=>spr('pyo'+v+col,()=>bake(32,32,16,16,0,0,c2=>pyoArt(c2,v,col)));
+function bujeokArt(c){rr(c,-4.5,-9,9,18,1,'#f4e6ac');rr(c,-4.5,-9,9,2.6,1,'#dcc878');rr(c,-1,-5.6,2,11,.5,'#c8392f');rr(c,-3,-3.4,6,1.7,.5,'#c8392f');rr(c,-3,.8,6,1.7,.5,'#c8392f');rr(c,-2.6,5,1.8,1.8,.5,'#c8392f');rr(c,.8,5,1.8,1.8,.5,'#c8392f')}
+const bujeokSpr=()=>spr('bujeok',()=>bake(24,32,12,16,0,0,bujeokArt));
+/* 기술을 쓴 동안 몸 둘레에 보이는 기운(v162, 사용자 의견: 호신부가 이상하다 — 전에는 맞을 때 노란 고리만 떴다): 호신부=몸 둘레를 도는 부적 넷과 푸른 테,
+   버티기=앞을 가린 방패, 연막=발치의 연기, 질풍=뒤로 흐르는 바람 줄 */
+function drawAura(c,px,py){
+  if(skOn('d_ward')){c.strokeStyle='rgba(127,208,255,.55)';c.lineWidth=1.6;c.beginPath();c.ellipse(px,py-16,19,24,0,0,7);c.stroke();c.fillStyle='rgba(127,208,255,.08)';c.fill();
+    for(let i=0;i<4;i++){const a=now*2.4+i*1.5708;sprRot(c,bujeokSpr(),px+Math.cos(a)*19,py-18+Math.sin(a)*7,Math.sin(a)*.25)}}
+  if(skOn('m_wide')){const dx=P.dir[0],dy=P.dir[1],sx=px+dx*13,sy=py-16+dy*8,fl=Math.sin(now*14)*.5;ell(c,sx,sy,dx?6:11,dx?12:7,'#6a7178');ell(c,sx,sy,dx?4.4:9,dx?10:5.2,'#aeb8c0');circ(c,sx,sy,2.2,'#e9b930');
+    c.strokeStyle='rgba(255,255,255,'+(.5+fl*.3).toFixed(2)+')';c.lineWidth=1.4;c.beginPath();c.ellipse(sx,sy,dx?7.5:12.5,dx?13.5:8.5,0,0,7);c.stroke()}
+  if(skOn('h_smoke'))for(let i=0;i<6;i++){const u=(now*.9+i*.17)%1,a=i*1.05;c.globalAlpha=.55*(1-u);circ(c,px+Math.cos(a)*(8+u*12),py-6-u*20+Math.sin(a)*4,5+u*5,'#c4c4cc');c.globalAlpha=1}
+  if(skOn('h_step'))for(let i=0;i<4;i++){const u=(now*3+i*.25)%1,y=py-6-i*8;c.globalAlpha=.7*(1-u);line(c,px-P.dir[0]*(6+u*18)-6,y,px-P.dir[0]*(6+u*18)+6,y,'#dff4ff',1.6);c.globalAlpha=1}
+}
+function drawBujeok(c,x,y,a){sprRot(c,bujeokSpr(),x,y,a||0)} /* v162: 부적도 도트 그림으로(전에는 노란 네모 막대처럼 보였다) */
 /* 맞을 때: 협객의 연막은 피하고, 직업과 기술에 따라 덜(더) 다친다. 실제로 깎일 기력을 돌려준다(피했으면 0) */
 function clsHit(h){
   const px=(rx(P)+.5)*T,py=(ry(P)+.9)*T;
@@ -9461,12 +9535,12 @@ function clsDemoDraw(c,k,t){
   drawChar(c,px,py,L,[1,0],k==='hyeop'&&u>1.1&&u<1.3,t);
   /* 손에 든 것과 날아가는 것 */
   const fly=(s,dur,fn)=>{if(u>=s-dur&&u<s)fn(lerp(hx+8,bx-12,(u-s+dur)/dur))};
-  if(k==='gung'){drawBow(c,hx,hy,0,4.5+ph*3,'#8a5a34');for(const q of D.h)fly(q[0],.2,x=>{line(c,x-11,hy,x,hy,'#b98a5a',2);poly(c,[x+3.5,hy,x-1,hy-2.6,x-1,hy+2.6],'#dfe9ee')})}
+  if(k==='gung'){drawBow(c,hx,hy,0,4.5+ph*3,'#8a5a34');for(const q of D.h)fly(q[0],.2,x=>sprRot(c,arrowSpr(),x,hy,0))}
   else if(k==='dosa'){drawBujeok(c,hx,hy-6,Math.sin(t*6)*.15);for(const q of D.h)fly(q[0],.24,x=>drawBujeok(c,x,hy-4,x*.2));
     for(const q of D.h)if(u>=q[0]&&u<q[0]+.3)for(const ox of q[2]?[0,24]:[0]){const X=bx+ox,Y=by-(ox?34:10);c.strokeStyle='#fff7b0';c.lineWidth=2.6;c.beginPath();c.moveTo(X-8,Y-62);c.lineTo(X+6,Y-42);c.lineTo(X-5,Y-26);c.lineTo(X+4,Y-12);c.lineTo(X,Y);c.stroke();circ(c,X,Y,6,'rgba(255,247,176,.6)')}}
-  else if(k==='hyeop'&&u<1.1){star(c,hx+2,hy-3,4.5,'#cfd6dc');for(const q of D.h.slice(0,2))fly(q[0],.2,x=>{c.save();c.translate(x,hy-2);c.rotate(x*.3);star(c,0,0,4.5,'#cfd6dc');c.restore()})}
-  else{const dg=k==='hyeop';c.save();c.translate(hx,hy);c.rotate(sw?-1.25+ph*2.1:-.55);rr(c,2,-1.5,dg?11:19,3,1,'#cfd6dc');poly(c,[dg?13:21,-1.5,dg?17:25,0,dg?13:21,1.5],'#cfd6dc');rr(c,-1,-3,2.6,6,1,'#e9b930');rr(c,-5,-1.5,5,3,1,'#6b4226');c.restore();
-    if(hit){c.strokeStyle=hit[2]?'#f7d24a':'#ffffff';c.lineWidth=hit[2]?4:3;c.lineCap='round';c.beginPath();c.arc(bx-2,by-14,hit[2]?20:15,-2.3+(u-hit[0])*12,-.7+(u-hit[0])*12);c.stroke();c.lineCap='butt'}}
+  else if(k==='hyeop'&&u<1.1){sprRot(c,pyoSpr(0,'#cfd6dc'),hx+2,hy-3,t*2);D.h.slice(0,2).forEach((q,i)=>fly(q[0],.2,x=>sprRot(c,pyoSpr(i?1:0,'#cfd6dc'),x,hy-2,x*.3)))}
+  else{wpDraw(c,k==='hyeop'?'dagger':'sword','#cfd6dc',hx,hy,sw?-1.25+ph*2.1:-.55);
+    if(hit)slashArt(c,bx-2,by-14,hit[2]?25:19,-2.3+(u-hit[0])*12,-.7+(u-hit[0])*12,hit[2]?'rgba(247,210,74,.92)':'rgba(255,255,255,.9)')}
   if(hit&&k==='gung')for(let i=0;i<6;i++){const q=i*1.05;line(c,bx+Math.cos(q)*5,by-14+Math.sin(q)*5,bx+Math.cos(q)*11,by-14+Math.sin(q)*11,'#f7d24a',1.6)}
   /* 깎인 기운과 기술 이름 */
   c.font='bold 9px '+FONT;c.textAlign='center';c.textBaseline='middle';
@@ -9522,6 +9596,9 @@ const aimCalm=()=>1-Math.min(.15,Math.max(0,aimRaw()-5)*.015);
 const aimAmp=k=>1+Math.min(16,BEASTS[k].lv|0)*.05;
 /* v86(사용자 의견: 화살이 거의 한 방이라 너무 쉽다): 짐승의 기운을 올리고, 이어서 맞힐수록 과녁이 조금씩 작아진다(한 번에 10%, 세 번까지). 작은 짐승(토끼·꿩·사슴·너구리·고라니)은 그대로 한 방 */
 {const up={fox:2,sak:2,marten:2,wdeer:2,boar:3,badger:3,wolf:3,goral:3,lynx:3,tiger:5,leopard:5,bear:7,kboar:8,wtiger:9};for(const k in up)if(BEASTS[k])BEASTS[k].hp=up[k]}
+/* v162(사용자 의견: 몬스터가 전체적으로 약하다 · 칼은 더 세게): 저절로 싸우게 된 뒤로 짐승이 너무 빨리 쓰러져서, 모든 짐승·산적·왜구·귀신의 기운을 2.2배로 올렸다(적어도 2).
+   맞붙는 한 번의 힘은 받아치기 힘의 절반에서 4분의 3으로 올렸다 → 칼이 활보다 훨씬 빨리 잡는다. 사병의 치는 힘도 2+레벨/3으로 올렸다 */
+for(const k in BEASTS)BEASTS[k].hp=Math.max(2,Math.round(BEASTS[k].hp*2.2));
 const aimRm=m=>aimR()*(isCls('gung')?1:1-Math.min(3,m.i|0)*.1); /* v154: 궁사는 이어 맞혀도 과녁이 줄지 않는다 */
 // ───────── 맞붙어 싸우기 (v76) ─────────
 // 짐승과 붙어 있으면(칼·맨손은 바로 앞 한 칸, 창은 두 칸) 활 대신 맞붙는다. 걸친 무기가 칼(ic:'sword')·창(ic:'spear')이면 그것으로, 아니면 맨손으로.
@@ -9576,7 +9653,7 @@ function startMelee(b){startHunt(b)}
 function fightPress(m){if(!m.pb){m.pb=1;m.cd-=.22}} /* 공격을 더 누르면 다음 한 번이 조금 빨리 나간다 */
 function fightSwing(m){
   const b=m.b,k=m.mel,bx=rx(b)*T+16,by=ry(b)*T+10;m.cd=SWING[k]*(skOn('h_step')?.67:1);m.sw=.22;m.pb=0;m.i++;
-  let dmg=Math.max(1,Math.ceil(meleeDmg(k)/2));const o={mel:1,sfx:k==='sword'||k==='dagger'?'sword':k==='spear'?'spear':k==='axe'?'axe':'fist'};
+  let dmg=Math.max(1,Math.ceil(meleeDmg(k)*.75));const o={mel:1,sfx:k==='sword'||k==='dagger'?'sword':k==='spear'?'spear':k==='axe'?'axe':'fist'};
   if(isCls('hyeop')&&!b.amb){b.amb=1;dmg=meleeDmg(k)*2+sk('h_amb');fxAdd('slash2',bx,by);float('기습!',bx,by-40,'#f7d24a');o.big=1;o.col='#f7d24a'} /* 협객의 특기: 그 짐승을 처음 칠 때 */
   fxAdd('slash',bx,by);
   if(sk('m_heal')&&m.i%4===0&&S.en<maxEn()){S.en=Math.min(maxEn(),S.en+sk('m_heal'));hud();fxAdd('heal',(rx(P)+.5)*T,(ry(P)+.9)*T)} /* 무사의 투지: 세 번 휘두를 때마다 */
@@ -9619,15 +9696,15 @@ function skSlash(b,dmg,i){
   return fightHit(b,dmg,{mel:1,sfx:'sword',big:i===0,col:'#f7d24a'});
 }
 const SK_DO={
-  g_crit:(l,b)=>skQ.push({t:now+.05,f:()=>skShot(b,shotDmg()+l,'crit','급소!')}),
+  g_crit:(l,b)=>skQ.push({t:now+.05,f:()=>skShot(b,shotDmg()+2*l,'crit','급소!')}),
   g_twin:(l,b)=>{for(let i=0;i<Math.min(3,1+l);i++)skQ.push({t:now+.05+i*.13,f:()=>skShot(b,Math.max(1,shotDmg()-1),'',i?'':'연사!')})},
-  g_fire:(l,b)=>skQ.push({t:now+.05,f:()=>{if(!skShot(b,shotDmg(),'crit','불화살!')){b.burn=1.2;b.burnD=l}}}),
+  g_fire:(l,b)=>skQ.push({t:now+.05,f:()=>{if(!skShot(b,shotDmg(),'crit','불화살!')){b.burn=1.2;b.burnD=2*l}}}),
   h_twin:(l,b)=>{for(let i=0;i<1+Math.ceil(l/2);i++)skQ.push({t:now+.05+i*.12,f:()=>skShot(b,shotDmg(),'',i?'':'쌍표창!')})},
-  m_chain:(l,b)=>{for(let i=0;i<Math.min(3,1+l);i++)skQ.push({t:now+.04+i*.13,f:()=>skSlash(b,Math.max(1,Math.ceil(meleeDmg(meleeKind())/2)-1),i)})},
+  m_chain:(l,b)=>{for(let i=0;i<Math.min(3,1+l);i++)skQ.push({t:now+.04+i*.13,f:()=>skSlash(b,Math.max(1,Math.ceil(meleeDmg(meleeKind())*.75)-1),i)})},
   m_wide:l=>{skT.m_wide=now+1.5+.5*l},d_ward:l=>{skT.d_ward=now+1.5+.5*l},h_step:l=>{skT.h_step=now+3+l},
   h_smoke:l=>{skT.h_smoke=now+1.5+.5*l;fxAdd('smoke',(rx(P)+.5)*T,(ry(P)+.9)*T)},
   m_roar:l=>{fxAdd('roar',(rx(P)+.5)*T,(ry(P)+.9)*T);shakeT=.2;for(const q of beasts)if(q.hp>0&&Math.abs(q.x-P.x)+Math.abs(q.y-P.y)<=3){q.stun=Math.max(q.stun||0,.8+.6*l);q.bj=0}},
-  d_chain:(l,b)=>{const R=sk('d_bind')>=3?3:2;shakeT=.22;for(const q of beasts.slice())if(q.hp>0&&Math.abs(q.x-b.x)+Math.abs(q.y-b.y)<=R){fxAdd('bolt',rx(q)*T+16,ry(q)*T+14);q.stun=Math.max(q.stun||0,.5);const dm=q===b?1+Math.ceil(l/2):Math.min(1,q.hp-1);if(dm>0)fightHit(q,dm,{col:'#fff7b0'})}}, /* v158(사용자 의견: 벼락 한 방에 다 죽는다): 겨눈 짐승만 2~3, 둘레는 1씩이고 둘레 짐승은 벼락으로 쓰러지지 않는다 */
+  d_chain:(l,b)=>{const R=sk('d_bind')>=3?3:2;shakeT=.22;for(const q of beasts.slice())if(q.hp>0&&Math.abs(q.x-b.x)+Math.abs(q.y-b.y)<=R){fxAdd('bolt',rx(q)*T+16,ry(q)*T+14);q.stun=Math.max(q.stun||0,.5);const dm=q===b?2+l:Math.min(1+(l>1?1:0),q.hp-1);if(dm>0)fightHit(q,dm,{col:'#fff7b0'})}}, /* v158(사용자 의견: 벼락 한 방에 다 죽는다): 겨눈 짐승만 2~3, 둘레는 1씩이고 둘레 짐승은 벼락으로 쓰러지지 않는다 */
   d_heal:l=>{S.en=Math.min(maxEn(),S.en+8*l);hud();fxAdd('heal',(rx(P)+.5)*T,(ry(P)+.9)*T)}};
 function skUse(i){
   if(!S||!S.cls||!started||busy()||fishing||scene==='home'||(mg&&mg.kind!=='hunt'))return;
@@ -9645,7 +9722,7 @@ function skPad(dt){ /* 기술 단추: 짐승이 가까이 있거나 싸우는 �
   skPadT-=dt;if(skPadT>0)return;skPadT=.15;const pad=$('skPad'),fight=!!(mg&&mg.kind==='hunt');$('stage').classList.toggle('ghost',scene==='cave'&&!!cave&&!!cave.ghost);
   const show=!!(S&&S.cls&&started&&!busy()&&scene!=='home'&&(fight||skDesk.matches||beasts.some(b=>Math.abs(b.x-P.x)+Math.abs(b.y-P.y)<=7))); /* v157: 컴퓨터에서는 아래 가로 줄로 늘 보인다 */
   if(pad.hidden===show)pad.hidden=!show;$('actBtn').classList.toggle('fight',fight&&!busy());if(!show)return;
-  const ids=skSlots();[...pad.children].forEach((bt,i)=>{const id=ids[i],A=ACTIVE[id],l=id?sk(id):0,left=Math.ceil((skCd[id]||0)-now),t=!A?'':left>0&&l?String(left):A.n;if(bt.textContent!==t)bt.textContent=t;const cl=!l?'off':left>0?'cool':skOn(id)?'on':'';if(bt.className!==cl)bt.className=cl});
+  const ids=skSlots();[...pad.children].forEach((bt,i)=>{const id=ids[i],A=ACTIVE[id],l=id?sk(id):0,left=Math.ceil((skCd[id]||0)-now),t=!A?'':left>0&&l?String(left):A.n;if(bt.textContent!==t)bt.textContent=t;bt.style.setProperty('--cd',l&&left>0?Math.min(1,((skCd[id]||0)-now)/Math.max(1,A.cd-(l-1))).toFixed(2):'0');const cl=!l?'off':left>0?'cool':skOn(id)?'on':'';if(bt.className!==cl)bt.className=cl});
 }
 function skTick(dt){
   if(shakeT>0)shakeT-=dt;
@@ -9662,17 +9739,16 @@ let huntStreak=0; /* 놓치지 않고 이어서 잡은 수 (저장하지 않는�
 let shots=[];
 const bowCol=()=>{const G=GEAR[S.gear.on.w];return G&&G.look&&G.look.bow?G.look.bow:'#8a5a34'};
 const handAt=()=>[(rx(P)+.5)*T+P.dir[0]*9,(ry(P)+.9)*T-15+P.dir[1]*6];
-function shotFire(x,y,hit,bj){const h=handAt();shots.push({x0:h[0],y0:h[1],x1:x,y1:y,t:0,hit,bj});if(shots.length>8)shots.shift()}
+function shotFire(x,y,hit,bj){const h=handAt();shots.push({x0:h[0],y0:h[1],x1:x,y1:y,t:0,hit,bj,v:(Math.random()*3)|0}); /* v: 표창의 모양(사방·육방·비도) */if(shots.length>8)shots.shift()}
 function updShots(dt){if(!shots.length)return;for(const s of shots)s.t+=dt;shots=shots.filter(s=>s.t<(s.hit?.5:1.3))}
 function drawShots(c){
   for(const s of shots){
     const u=Math.min(1,s.t/.14),x=lerp(s.x0,s.x1,u),y=lerp(s.y0,s.y1,u),a=Math.atan2(s.y1-s.y0,s.x1-s.x0),ca=Math.cos(a),sa=Math.sin(a);
-    if(s.bj===true){if(u<1||!s.hit){c.globalAlpha=u<1?1:Math.max(0,1-(s.t-.14)/1.1);drawBujeok(c,x,y,u<1?Math.sin(s.t*26)*.35:.4);c.globalAlpha=1}continue} /* v154: 도사의 부적(벼락은 fxs가 그린다) */
-    if(s.bj===2){if(u<1||!s.hit){c.globalAlpha=u<1?1:Math.max(0,1-(s.t-.14)/1.1);c.save();c.translate(x,y);c.rotate(s.t*40);star(c,0,0,5,'#cfd6dc');circ(c,0,0,1.4,'#3a3a40');c.restore();c.globalAlpha=1}} /* v155: 협객의 표창 */
+    if(s.bj===true){if(u<1||!s.hit){c.globalAlpha=u<1?1:Math.max(0,1-(s.t-.14)/1.1);if(u<1){c.globalAlpha=.35;circ(c,x,y,8,'#7fd0ff');c.globalAlpha=1}drawBujeok(c,x,y,u<1?Math.sin(s.t*26)*.35:.4);c.globalAlpha=1}continue} /* v154: 도사의 부적(벼락은 fxs가 그린다) */
+    if(s.bj===2){if(u<1||!s.hit){c.globalAlpha=u<1?1:Math.max(0,1-(s.t-.14)/1.1);sprRot(c,pyoSpr(s.v|0,'#cfd6dc'),x,y,s.v===2?a:s.t*40);c.globalAlpha=1}} /* v155: 협객의 표창 */
     else if(u<1||!s.hit){
       c.globalAlpha=u<1?1:Math.max(0,1-(s.t-.14)/1.1);
-      line(c,x-ca*12,y-sa*12,x,y,'#b98a5a',2);poly(c,[x+ca*3.5,y+sa*3.5,x-ca*2-sa*2.6,y-sa*2+ca*2.6,x-ca*2+sa*2.6,y-sa*2-ca*2.6],'#dfe9ee');
-      line(c,x-ca*12,y-sa*12,x-ca*9-sa*2.2,y-sa*9+ca*2.2,'#f3ead6',1.4);line(c,x-ca*12,y-sa*12,x-ca*9+sa*2.2,y-sa*9-ca*2.2,'#f3ead6',1.4);c.globalAlpha=1;
+      sprRot(c,arrowSpr(),x,y,a);c.globalAlpha=1; /* v162: 화살도 도트 그림으로 */
     }
     if(u>=1&&s.hit){const k=(s.t-.14)/.36;c.globalAlpha=Math.max(0,1-k);for(let i=0;i<6;i++){const q=i*1.047+.4;line(c,s.x1+Math.cos(q)*(4+k*6),s.y1+Math.sin(q)*(4+k*6),s.x1+Math.cos(q)*(9+k*12),s.y1+Math.sin(q)*(9+k*12),'#f7d24a',2)}c.globalAlpha=1}
   }
@@ -9693,13 +9769,14 @@ function drawArm(c,hp){
   {const ux=(hx-ex)/(Math.hypot(hx-ex,hy-ey)||1),uy=(hy-ey)/(Math.hypot(hx-ex,hy-ey)||1);line(c,hx-ux*3-uy*2.4,hy-uy*3+ux*2.4,hx-ux*3+uy*2.4,hy-uy*3-ux*2.4,'#f3ead6',1.6)}
   circ(c,hx,hy,3.3,'#3a2a22');circ(c,hx,hy,2.3,L.skin);
 }
-function drawBow(c,x,y,a,pull,col){
-  c.save();c.translate(x,y);c.rotate(a);c.lineCap='round';
+function drawBow(c,x,y,a,pull,col){const lv=pull>7?2:pull>5.6?1:0;sprRot(c,spr('bow'+col+lv,()=>bake(64,56,28,28,0,0,c2=>bowArt(c2,[4.5,6.5,8][lv],col))),x,y,a)} /* v162: 활도 도트 그림으로(시위를 당긴 정도는 세 단계) */
+function bowArt(c,pull,col){
+  c.lineCap='round';
   c.strokeStyle=shade(col,.65);c.lineWidth=4.5;c.beginPath();c.moveTo(0,-11);c.quadraticCurveTo(11,0,0,11);c.stroke();
   c.strokeStyle=col;c.lineWidth=2.4;c.beginPath();c.moveTo(0,-11);c.quadraticCurveTo(11,0,0,11);c.stroke();
   c.strokeStyle='#f3ead6';c.lineWidth=1.1;c.beginPath();c.moveTo(0,-11);c.lineTo(-pull,0);c.lineTo(0,11);c.stroke();
   line(c,-pull,0,13,0,'#b98a5a',1.8);poly(c,[17.5,0,12,-2.8,12,2.8],'#dfe9ee');
-  c.lineCap='butt';c.restore();
+  c.lineCap='butt';
 }
 /* 짐승을 잡았을 때의 셈: 활로 잡든 맞붙어 잡든(melee) 여기로 온다. 맞붙어 잡으면 경험치가 조금 더 붙는다 */
 function huntKill(b,melee){
@@ -9753,9 +9830,25 @@ function drawBeast(c,b){
   else if(b.mad&&BEASTS[b.k].mild){const X=gx+(b.dir[0]<0?-12:12),Y=y-(BEASTS[b.k].big?40:34)+Math.sin(now*9)*1.5;c.fillStyle='#d9412e';c.fillRect(X-1,Y-6,3,7);c.fillRect(X-1,Y+3,3,3)} /* 성난 짐승 머리 위의 느낌표 */
 }
 /* 짐승의 레벨 표(v155): 내 레벨보다 높으면 노랑, 셋 넘게 높으면 붉게. 불이 붙었으면(궁사의 불화살) 작은 불꽃도 여기서 그린다 */
+/* 사냥터·던전의 화면 꾸밈을 한 가지 결로(v162, 사용자 의견: 그냥 넣어 둔 느낌이라 분위기가 통일되지 않는다): 놀이의 다른 창과 같은 "한지에 나무 테" 결로 맞춘다.
+   · plaque: 왼쪽 위에 거는 패(곳 이름과 남은 짐승 수). 사냥터의 모든 구역·동굴·귀신골이 같은 패를 쓴다(귀신골만 먹빛)
+   · beastTag: 짐승 머리 위의 작은 한지 꼬리표(레벨, 나보다 세면 테와 글씨가 누렇게·붉게)와, 다친 짐승의 기운 막대(나무 테에 붉은 옻빛)
+   · 겨눈 짐승 발밑의 고리는 돌아가는 붓 자국, 기술 단추는 한지 판에 붉은 낙관 숫자(쉬는 동안은 먹물이 차오른다) */
+function plaque(c,x,y,txt,dark){
+  c.font='13px '+FONT;c.textAlign='left';c.textBaseline='middle';const w=c.measureText(txt).width+24,h=24;
+  rr(c,x,y,w,h,5,dark?'#2a2440':'#6b4a2a');rr(c,x+2,y+2,w-4,h-4,3.5,dark?'rgba(16,14,30,.94)':'rgba(251,245,230,.96)');
+  circ(c,x+8,y+h/2,2.2,dark?'#7fd0ff':'#c8392f');c.fillStyle=dark?'#cfe9ff':'#33261c';c.fillText(txt,x+15,y+h/2+1);return w;
+}
+const ZONE_N=['사냥터 숲','깊은 산','금원','눈고개','서쪽 들판','국경 장터','바닷길 나루','윗숲','아랫숲'];
+function zoneBanner(c){
+  if(mg&&mg.kind!=='hunt')return;const n=beasts.length;
+  plaque(c,10,10,(scene==='cave'?'동굴 '+cave.floor+'층':ZONE_N[wz]||'사냥터')+(n?' · 짐승 '+n:''),false);
+}
 function beastTag(c,b){
-  const D=BEASTS[b.k],x=rx(b)*T+16,y=ry(b)*T-(D.man?40:D.big?34:20),t='Lv.'+D.lv;
-  c.font='bold 10px '+FONT;c.textAlign='center';c.textBaseline='middle';c.lineWidth=3;c.strokeStyle='rgba(30,22,16,.85)';c.strokeText(t,x,y);c.fillStyle=D.lv>S.level+3?'#ff6a55':D.lv>S.level?'#f7d24a':'#fffbe8';c.fillText(t,x,y);
+  const D=BEASTS[b.k],x=rx(b)*T+16,y=ry(b)*T-(D.man?40:D.big?34:20),t='Lv.'+D.lv,hi=D.lv>S.level+3,mid=D.lv>S.level;
+  c.font='10px '+FONT;c.textAlign='center';c.textBaseline='middle';const w=c.measureText(t).width+9;
+  rr(c,x-w/2-1,y-7,w+2,14,4,hi?'#8a2a22':mid?'#8a6a2a':'#6b4a2a');rr(c,x-w/2,y-6,w,12,3,'rgba(251,245,230,.96)');c.fillStyle=hi?'#b5332a':mid?'#8a5a12':'#33261c';c.fillText(t,x,y+.5);
+  if(b.mhp&&b.hp<b.mhp){const u=clamp(b.hp/b.mhp,0,1),bw=30;rr(c,x-bw/2-1,y+8,bw+2,6,2,'#4a3324');rr(c,x-bw/2,y+9,bw,4,1.5,'#e9dcc0');if(u>0)rr(c,x-bw/2,y+9,Math.max(2,bw*u),4,1.5,u>.5?'#b5332a':u>.25?'#c9722a':'#7a1f1a')} /* 다친 짐승의 기운 막대 */
   if(b.burn>0){const f=Math.sin(now*18)*2;poly(c,[x-5,y+18,x,y+6+f,x+5,y+18],'#f08a2a');poly(c,[x-2.5,y+18,x,y+11+f,x+2.5,y+18],'#f7d24a')}
 }
 const beastSpr=k=>spr('b'+k,()=>bake(64,60,32,52,0,0,c2=>beastArt(c2,k)));
@@ -13527,7 +13620,7 @@ window.addEventListener('keydown',e=>{
   if(e.target&&(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'))return;
   if(e.code==='Escape'){if(!$('modal').hidden)closeModal();else if(decoMode)setDeco(false);else if(placing)stopPlacing();else if(garden){garden=null;syncPlace()}else if(mg&&['rite','eye','study','catch','scoop'].includes(mg.kind)){mgEnd();toast('그만뒀어요')}return}
   if(!started||sleeping)return;
-  const go=e.code==='Space'||e.code==='KeyE'||e.code==='Enter';
+  const go=e.code==='Space'||e.code==='Enter'; /* v162: E는 스탯 창으로 옮겼다(행동은 스페이스·엔터) */
   if(!$('dlg').hidden){
     // 대화 창: 스페이스로 글을 넘기고, 다 나온 뒤에는 고른 선택을 정한다. 방향키로 선택을 옮기고 숫자 키로 바로 고른다
     const typing=dlgState&&dlgState.i<dlgState.txt.length,bs=$('dlgChoices').children;
@@ -13536,7 +13629,10 @@ window.addEventListener('keydown',e=>{
     if(!typing&&/^(Digit|Numpad)[1-9]$/.test(e.code)){const b=bs[+e.code.slice(-1)-1];if(b){e.preventDefault();b.click()}}
     return;
   }
-  if(!$('modal').hidden)return;
+  if(!$('modal').hidden){if((e.code==='KeyI'||e.code==='KeyE'||e.code==='KeyK')&&!e.repeat&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();closeModal()}return} /* v162: 창이 열려 있을 때 I·E·K를 누르면 닫는다 */
+  if((e.code==='Minus'||e.code==='Equal'||e.code==='NumpadSubtract'||e.code==='NumpadAdd')&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&$('modal').hidden){e.preventDefault();if(!e.repeat)zoomStep(e.code==='Minus'||e.code==='NumpadSubtract'?-1:1);return} /* v162: − · + 로 화면 크기 */
+  if((e.code==='KeyI'||e.code==='KeyE'||e.code==='KeyK')&&!e.ctrlKey&&!e.metaKey&&!e.altKey){ /* v162(사용자 요청): I 가방 · E 스탯 · K 기술. 창이 열려 있으면 닫는다 */
+    e.preventDefault();if(e.repeat)return;if(!$('modal').hidden){closeModal();return}if(mg||fishing)return;(e.code==='KeyI'?openBag:e.code==='KeyE'?openStatus:openSkills)();return}
   if(/^(Digit|Numpad)[1-3]$/.test(e.code)&&$('modal').hidden&&!(e.target&&e.target.tagName==='BUTTON')){e.preventDefault();if(!e.repeat)skUse(+e.code.slice(-1)-1);return} /* v156: 기술 단추 */
   if(KEYDIR[e.code]){e.preventDefault();dirDown(e.code,e.repeat);return}
   if(go){if(e.target&&e.target.tagName==='BUTTON'&&e.code!=='KeyE')return;e.preventDefault();if(!e.repeat)interact();return}
@@ -13703,14 +13799,14 @@ $('dlgText').addEventListener('click',skipType);
 $('actBtn').onclick=()=>{interact();cv.focus({preventScroll:true})};
 // 행동을 누르고 있는가 (대패질처럼 누르고 있어야 하는 놀이가 본다). 1 글쇠, 2 행동 단추. 화면을 누르고 있는 것은 cvPtr로 안다
 let actHold=0;
-const holding=()=>!!actHold||cvPtr!==null,isGo=e=>e.code==='Space'||e.code==='KeyE'||e.code==='Enter';
+const holding=()=>!!actHold||cvPtr!==null,isGo=e=>e.code==='Space'||e.code==='Enter';
 window.addEventListener('keydown',e=>{if(isGo(e)&&!(e.target&&(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')))actHold|=1});
 window.addEventListener('keyup',e=>{if(isGo(e))actHold&=~1});
 window.addEventListener('blur',()=>{actHold=0});
 {const ab=$('actBtn'),up=()=>{actHold&=~2};ab.addEventListener('pointerdown',()=>{actHold|=2});for(const ev of ['pointerup','pointercancel','pointerleave'])ab.addEventListener(ev,up)}
 $('undoBtn').onclick=()=>{undoTill();cv.focus({preventScroll:true})};
 const tool=(id,fn)=>{$(id).onclick=()=>{if(!started||sleeping)return;if(!$('dlg').hidden)closeDlg();fn()}};
-tool('bBag',openBag);tool('bSay',openSay);tool('bMe',()=>openGroup('me'));tool('bLog',()=>openGroup('log'));tool('bSet',()=>openGroup('set'));tool('bAsk',()=>openAsk());
+tool('bBag',openBag);tool('bStat',()=>openStatus());tool('bSkill',()=>openSkills());tool('bSay',openSay);tool('bMe',()=>openGroup('me'));tool('bLog',()=>openGroup('log'));tool('bSet',()=>openGroup('set'));tool('bAsk',()=>openAsk());
 tool('bDeco',()=>{setDeco(!decoMode);cv.focus({preventScroll:true})});
 tool('bYard',()=>{if(garden){garden=null;syncPlace()}else if(!busy()&&scene==='town')openYard();cv.focus({preventScroll:true})});
 tool('bGate',()=>{gateHome();cv.focus({preventScroll:true})});
