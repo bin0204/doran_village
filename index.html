@@ -96,7 +96,7 @@ button.chip{font:inherit;color:inherit;cursor:pointer;line-height:inherit}
   #skPad{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);display:flex;gap:5px;padding:4px 5px;border-radius:12px;background:var(--surface);border:2px solid var(--wood);box-shadow:0 3px 0 var(--shade)}
   #skPad[hidden]{display:none}
   #skPad button,#skPad button:nth-child(1),#skPad button:nth-child(2),#skPad button:nth-child(3),#skPad button:nth-child(4){position:relative;right:auto;bottom:auto;width:98px;height:40px;border-radius:8px;font-size:13.5px;border:1.5px solid var(--line);box-shadow:none}
-  #skPad button::before{content:attr(data-k);position:absolute;left:4px;top:3px;width:14px;height:14px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:9.5px;line-height:14px;text-align:center}
+  #skPad button::before{content:attr(data-k);position:absolute;left:4px;top:3px;min-width:14px;box-sizing:border-box;padding:0 3px;height:14px;border-radius:7px;background:var(--accent);color:var(--accent-ink);font-size:9.5px;line-height:14px;text-align:center}
   #skPad button.cool{font-size:17px}
 }
 /* 밭 되돌리기 단추: 행동 단추 바로 위에 잠깐 뜬다 */
@@ -1497,6 +1497,10 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:178,d:'11월 27일',t:'무기 든 모습',l:[
+    '목검을 나무칼답게 새로 그렸어요.',
+    '왼쪽을 볼 때 무기가 거꾸로 들리던 것을 고쳤어요.',
+    '컴퓨터에서는 설정에서 기술 글쇠를 바꿀 수 있어요.']},
   {v:177,d:'11월 27일',t:'창 밀림 고침',l:[
     '신분 창이 양옆으로 밀리던 것을 한 번 더 막았어요.']},
   {v:176,d:'11월 27일',t:'머슴의 낚시',l:[
@@ -6502,10 +6506,11 @@ function drawMgIn(c,labels){
     c.setLineDash([9,5]);c.lineDashOffset=-now*14;c.strokeStyle='rgba(74,30,24,.55)';c.lineWidth=4;c.beginPath();c.ellipse(bx,by+13,17,6.5,0,0,7);c.stroke();c.strokeStyle='#c8392f';c.lineWidth=2;c.stroke();c.setLineDash([]); /* 겨눈 짐승: 돌아가는 붓 자국 고리 */
     drawArm(c);
     if(m.mel){
-      const u=m.sw>0?1-m.sw/.22:1;c.save();c.translate(h[0],h[1]);c.rotate(a+(m.sw>0?-1.25+u*2.1:-.55+Math.sin(now*3)*.05));
-      {const ws=wpSpr(m.mel,col),sm2=c.imageSmoothingEnabled;c.imageSmoothingEnabled=false;c.scale(WP_K,WP_K);c.drawImage(ws,-ws.ox,-ws.oy,ws.width*2,ws.height*2);c.imageSmoothingEnabled=sm2}
+      /* v178: 왼쪽을 볼 때는 무기를 뒤집어 그린다(전에는 그대로 돌려서 날이 거꾸로 서고, 쉬는 자세가 땅을 가리켰다). 휘두르는 폭도 조금 넓혔다 */
+      const u=m.sw>0?1-m.sw/.22:1,sd=Math.cos(a)<-.01?-1:1,wk=m.mel==='sword'&&S.gear.on.w==='w_mok'?'wood':m.mel;c.save();c.translate(h[0],h[1]);c.rotate(a+sd*(m.sw>0?-1.45+u*2.5:-.7+Math.sin(now*3)*.05));c.scale(1,sd);
+      {const ws=wpSpr(wk,col),sm2=c.imageSmoothingEnabled;c.imageSmoothingEnabled=false;c.scale(WP_K,WP_K);c.drawImage(ws,-ws.ox,-ws.oy,ws.width*2,ws.height*2);c.imageSmoothingEnabled=sm2}
       c.restore();
-      if(m.sw>0)slashArt(c,h[0],h[1],21,a-1.25,a-1.25+u*2.1,'rgba(255,255,255,.5)'); /* 휘두른 자국: 초승달꼴 칼바람 */
+      if(m.sw>0){const a0=a-sd*1.45,a1=a0+sd*u*2.5;slashArt(c,h[0],h[1],23,Math.min(a0,a1),Math.max(a0,a1),'rgba(255,255,255,.55)')} /* 휘두른 자국: 초승달꼴 칼바람 */
     }
     else if(isCls('dosa'))drawBujeok(c,h[0],h[1]-6,Math.sin(now*6)*.15);
     else if(isCls('hyeop'))sprRot(c,pyoSpr(0,'#cfd6dc'),h[0]+P.dir[0]*3,h[1]-3,now*2);
@@ -9547,6 +9552,12 @@ function drawFx(c){
    칼(환도)=살짝 휜 외날·빛 받은 날·놋쇠 코등이·감은 자루·붉은 유소 / 비수=짧은 양날·쇠 코등이·검은 자루 / 창=자루·버들잎 날·붉은 삭모 / 도끼=휜 날과 날 끝의 빛 / 지팡이=옹이 진 나무·고리·부적 */
 function weaponArt(c,k,col){
   const dk=shade(col,.6),lt='#f6fbff';
+  if(k==='wood'){ /* v178(사용자 의견: 가까이서 쓰는 무기가 이상하다 — 낡은 목검이 갈색 막대기로 보였다): 목검은 넓은 나무 날·나뭇결·무명 감은 자루로 따로 그린다 */
+    poly(c,[3,-3.4,20,-3.2,31,0,20,3.2,3,3.4],'#6b4526');poly(c,[3,-2.5,19.6,-2.3,29,0,3,.4],'#d6ab6c');poly(c,[3,.4,29,0,19.6,2.3,3,2.5],col);
+    line(c,5,-1.3,22,-1.1,'#e3c08c',.9);line(c,8,1.2,13,1.25,'#6b4526',.6);line(c,16,1.15,21,1.2,'#6b4526',.6);
+    rr(c,-.4,-5,3.4,10,1.4,'#4a2e18');rr(c,.5,-4.1,1.4,8.2,.7,'#8a5a34');
+    rr(c,-8.6,-2,9,4,1.7,'#efe7d2');for(let i=0;i<3;i++)line(c,-7+i*2.5,-2,-5.6+i*2.5,2,'#b9ad92',.9);circ(c,-9,0,2,'#5a3a22');return;
+  }
   if(k==='sword'){
     c.fillStyle=dk;c.beginPath();c.moveTo(3,-2.3);c.quadraticCurveTo(15,-3.8,26,-1.3);c.lineTo(28,.7);c.quadraticCurveTo(15,2,3,2.3);c.closePath();c.fill();
     c.fillStyle=col;c.beginPath();c.moveTo(3,-1.7);c.quadraticCurveTo(15,-3,26,-.9);c.lineTo(26.8,.2);c.quadraticCurveTo(15,.7,3,1);c.closePath();c.fill();
@@ -9852,6 +9863,21 @@ function skClear(cx,cy,R,get){
   if(get){const w=Math.ceil((n-nr)/2),s=Math.ceil(nr/2),px=(rx(P)+.5)*T,py=(ry(P)+.9)*T; /* 둘에 하나꼴로만 얻는다(조금 얻기) */
     if(w)gain('wood',w);if(s)gain('stone',s);float(n?[w?'나무 +'+w:'',s?'돌 +'+s:''].filter(Boolean).join(' · '):'캘 것이 없어요',px,py-62,n?'#fff7ea':'#cfd6dc');if(n){saveAll();hud()}}
 }
+/* v178(사용자 요청: PC에서는 기술을 원하는 키로 바꿀 수 있게): 기술 단추 넷의 글쇠(skKeys, 이 브라우저에만 둔다). 설정 창에서 단추를 누른 뒤 바꿀 글쇠를 누른다.
+   걷기·행동·아래 단추·화면 크기에 쓰는 글쇠는 받지 않고, 이미 다른 기술이 쓰는 글쇠를 고르면 둘을 맞바꾼다 */
+const SK_KEY_DEF=['Digit1','Digit2','Digit3','Digit4'];let skKeys=SK_KEY_DEF.slice();
+try{const a=JSON.parse(localStorage.getItem('doran-village-skkeys')||'null');if(Array.isArray(a)&&a.length===4&&a.every(x=>typeof x==='string'&&x))skKeys=a}catch(e){}
+const keyName=c=>c.replace(/^Key|^Digit/,'').replace(/^Numpad/,'N').replace(/^Bracket(Left|Right)$/,(m,s)=>s==='Left'?'[':']').slice(0,3);
+function skKeySync(){[...$('skPad').children].forEach((b,i)=>b.setAttribute('data-k',keyName(skKeys[i])))}
+function skKeySave(){try{localStorage.setItem('doran-village-skkeys',JSON.stringify(skKeys))}catch(e){}skKeySync()}
+function skKeySet(i){
+  toast('바꿀 글쇠를 눌러요 · Esc는 그만두기');
+  const h=e=>{e.preventDefault();e.stopPropagation();const c=e.code;if(/^(Shift|Control|Alt|Meta)/.test(c))return;window.removeEventListener('keydown',h,true);
+    if(c==='Escape'){openSettings();return}
+    if(KEYDIR[c]||BAR_KEYS[c]||['Space','Enter','NumpadEnter','Minus','Equal','NumpadSubtract','NumpadAdd','Tab'].includes(c)){toast('그 글쇠는 다른 데 쓰고 있어요');openSettings();return}
+    const j=skKeys.indexOf(c);if(j>=0)skKeys[j]=skKeys[i];skKeys[i]=c;skKeySave();openSettings()};
+  window.addEventListener('keydown',h,true);
+}
 function skUse(i){
   if(!S||!S.cls||!started||busy()||fishing||scene==='home'||(mg&&mg.kind!=='hunt'))return;
   const id=skSlots()[i],A=ACTIVE[id],l=skLv(id),px=(rx(P)+.5)*T,py=(ry(P)+.9)*T;if(!A)return;
@@ -9877,7 +9903,7 @@ function skTick(dt){
   if(skQ.length){const due=skQ.filter(q=>q.t<=now);if(due.length){skQ=skQ.filter(q=>q.t>now);for(const q of due)q.f()}}
   skPad(dt);respawnTick(dt);
 }
-[...$('skPad').children].forEach((bt,i)=>{bt.onclick=()=>{skUse(i);cv.focus({preventScroll:true})}});
+[...$('skPad').children].forEach((bt,i)=>{bt.onclick=()=>{skUse(i);cv.focus({preventScroll:true})}});skKeySync();
 // 과녁이 짐승에서 벗어난 만큼: 짐승마다 가로·세로 폭과 박자가 다르다. 빠르기는 맞힐 때마다 조금씩 오른다(세 번까지)
 const aimOff=m=>{const a=BEASTS[m.b.k].aim,k=aimAmp(m.b.k);return[Math.sin(m.ph)*a[1]*k,Math.sin(m.ph*a[3])*a[2]*k]};
 const aimSpeed=m=>(BEASTS[m.b.k].aim[0]+Math.min(3,m.i)*.8)*aimCalm();
@@ -12468,6 +12494,7 @@ function openSettings(){
     row(body,badge('♬'),'배경 음악',[S.bgm?'지금 켜져 있어요':'지금 꺼져 있어요 · 효과음과 따로 켜요','옛 5음 음계로 새로 지은 가락이에요. 낮·밤·궁궐·사냥터마다 달라요'],[[S.bgm?'끄기':'켜기',()=>{S.bgm=!S.bgm;bgmTick();openSettings()}]]);
     body.appendChild(el('p','note','소리는 게임을 열 때마다 꺼진 채로 시작해요.'));
     if(touchDev)row(body,badge('✥'),'조작키',padOn?'화면 왼쪽 아래에 방향 단추가 보여요':'방향 단추를 감췄어요. 가고 싶은 곳을 눌러서 걸어요',[[padOn?'끄기':'켜기',()=>{padOn=!padOn;try{localStorage.setItem('doran-village-keys',padOn?'1':'0')}catch(e){}syncKeys();openSettings()}]]);
+    if(!touchDev)row(body,badge('키'),'기술 글쇠',['기술 단추를 누르는 글쇠예요','바꿀 기술을 누른 뒤 새 글쇠를 눌러요'],skKeys.map((k,i)=>[(i+1)+' · '+keyName(k),()=>skKeySet(i)]).concat([['처음대로',()=>{skKeys=SK_KEY_DEF.slice();skKeySave();openSettings()}]]));
     row(body,badge('길'),'길라잡이','처음 하는 사람을 위한 조작 안내예요. 걷기·행동·가방·이웃·하루를 차례로 해 봐요',[['다시 보기',()=>{S.tut=0;tutM=null;closeModal();tutSync();touch()}]]);
     body.appendChild(el('p','note','이름 바꾸기와 마을 옮기기는 "나"의 "신분" 창에 있어요.'));
   });
@@ -13821,7 +13848,7 @@ window.addEventListener('keydown',e=>{
   if(!$('modal').hidden){if(BAR_KEYS[e.code]&&!e.repeat&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();closeModal()}return} /* 창이 열려 있을 때 단추 글쇠를 누르면 닫는다 */
   if((e.code==='Minus'||e.code==='Equal'||e.code==='NumpadSubtract'||e.code==='NumpadAdd')&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&$('modal').hidden){e.preventDefault();if(!e.repeat)zoomStep(e.code==='Minus'||e.code==='NumpadSubtract'?-1:1);return} /* v162: − · + 로 화면 크기 */
   if(BAR_KEYS[e.code]&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();if(e.repeat||mg||fishing)return;const b=$(BAR_KEYS[e.code]);if(e.code==='KeyE')openStatus();else if(e.code==='KeyK')openSkills();else if(b&&!b.hidden&&!b.disabled)b.click();return} /* v166: 아래 단추의 글쇠 */
-  if(/^(Digit|Numpad)[1-4]$/.test(e.code)&&$('modal').hidden&&!(e.target&&e.target.tagName==='BUTTON')){e.preventDefault();if(!e.repeat)skUse(+e.code.slice(-1)-1);return} /* v156: 기술 단추 */
+  {const ki=skKeys.indexOf(e.code);if(ki>=0&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&$('modal').hidden&&!(e.target&&e.target.tagName==='BUTTON')){e.preventDefault();if(!e.repeat)skUse(ki);return}} /* v156: 기술 단추 */
   if(KEYDIR[e.code]){e.preventDefault();dirDown(e.code,e.repeat);return}
   if(go){if(e.target&&e.target.tagName==='BUTTON'&&e.code!=='KeyE')return;e.preventDefault();if(!e.repeat)interact();return}
   if(e.code==='KeyB')openBag();
