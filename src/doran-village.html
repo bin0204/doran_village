@@ -75,7 +75,7 @@ button.chip{font:inherit;color:inherit;cursor:pointer;line-height:inherit}
 #actBtn.fight{width:74px;height:74px;font-size:18px}
 /* 장비 칸과 단련 판(v165): 가운데 내 모습, 둘레에 한지 칸 */
 .doll{display:grid;grid-template-columns:84px 112px 84px;grid-template-rows:repeat(3,84px);grid-template-areas:"w me h" "t me a" ". me s";gap:44px 18px;justify-content:center;margin:14px auto 44px}
-.doll.trn{grid-template-rows:repeat(3,84px);grid-template-areas:"w me h" "t me a" ". c .";gap:36px 26px;margin:22px auto 40px}
+.doll.trn{grid-template-rows:repeat(2,84px);grid-template-areas:"w me h" "t me a";gap:36px 26px;margin:22px auto 40px}
 .doll.trn .dollme{grid-row:1/3}
 .dollme{grid-area:me;width:112px;height:168px;align-self:center;image-rendering:pixelated;background:var(--bg);border:2px solid var(--wood);border-radius:14px}
 .slot{position:relative;width:84px;height:84px;padding:0;border:3px solid var(--wood);border-radius:12px;background:var(--bg);box-shadow:inset 0 0 0 2px var(--surface),0 2px 0 var(--shade);cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:12.5px;color:var(--muted);touch-action:manipulation}
@@ -603,7 +603,11 @@ const STOCK={hen:{n:'닭',baby:'병아리',grow:3,buy:150,pen:'coop',names:['꼬
 const FEED_PRICE=15;
 // 스탯: 레벨이 오를 때 받는 점수로 찍고, 관련된 일을 하면 조금씩 저절로도 오른다 (하나에 20까지)
 const STATS={cook:{n:'손맛',d:'요리할 때 알맞은 불의 폭이 넓어져요'},grace:{n:'기품',d:'이웃·왕실과 더 빨리 가까워져요 (10까지 1마다 +4%, 그 위로는 +2%)'},
-  lore:{n:'학식',d:'경험치를 더 많이 얻어요 (10까지 1마다 +3%, 그 위로는 +1.5%)'},arms:{n:'무예',d:'기력 최대치가 늘고 사냥 과녁이 커져요'},trade:{n:'수완',d:'물건을 더 비싸게 팔아요 (10까지 1마다 +2%, 그 위로는 +1%)'}};
+  lore:{n:'학식',d:'경험치를 더 많이 얻어요 (10까지 1마다 +3%, 그 위로는 +1.5%)'},arms:{n:'무예',d:'기력 최대치가 늘고 사냥 과녁이 커져요'},trade:{n:'수완',d:'물건을 더 비싸게 팔아요 (10까지 1마다 +2%, 그 위로는 +1%)'},
+  pow:{n:'힘',d:'5마다 모든 공격의 힘 +1',b:1},body:{n:'몸',d:'1마다 기력 최대치 +2, 1.2% 덜 다쳐요',b:2},hand:{n:'손',d:'1마다 공격이 1.2% 빨라져요',b:3},leg:{n:'다리',d:'1마다 걸음이 0.8% 빨라져요',b:4}};
+/* v175(사용자 의견: 기술과 스탯은 따로 가는 게 좋다 · 스탯이 기력·걸음과 이어지게): 단련(힘·몸·손·다리)을 기술 점수에서 떼어 스탯으로 옮겼다(b=단련 판의 자리). 스탯 점수로 찍고, 싸우면 저절로도 조금씩 오른다.
+   셈은 전처럼 trn(n)이 하되 스탯 2.5가 옛 단련 한 단계다(30까지 찍으면 옛 열 단계). 옛 단련 단계는 fixState가 두 배의 스탯으로 바꿔 주고 기술 점수는 돌려준다 */
+const TRN_K={1:'pow',2:'body',3:'hand',4:'leg'};
 const STAT_MAX=30; /* v163(사용자 요청: 스탯을 더 올릴 수 있게): 20 → 30. 20 위로는 효과가 절반만 붙는다(sv) */
 /* 길에서 자리가 오를 때 갖춰야 하는 레벨(v80 균형): [처음, 둘째 자리, 으뜸 자리]. 전에는 레벨 조건이 없어서 스탯만 채우면 초반에 으뜸 자리까지 갔다 */
 /* v90(사용자 의견: 초반에는 여러 길을 맛볼 수 있어야 한다): 스탯이 레벨마다 1점이 되면서, 길에 들어서는 스탯 조건은 없애고(2 → 0) 둘째 자리는 낮췄다(6~8 → 4~5).
@@ -1483,6 +1487,11 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:175,d:'11월 27일',t:'기술과 스탯을 따로',l:[
+    '힘·몸·손·다리를 스탯 창으로 옮겼어요. 이제 스탯 점수로 찍어요.',
+    '몸은 기력 최대치, 다리는 걸음 빠르기와 이어져요. 싸우면 저절로도 올라요.',
+    '찍어 둔 단련은 스탯으로 바꿔 드리고 기술 점수는 돌려드려요.',
+    '갈래의 둘째 기술도 1단계는 바로 찍을 수 있어요.']},
   {v:174,d:'11월 27일',t:'다시 나는 숲',l:[
     '기술로 부순 나무와 바위가 얼마 뒤 제자리에 다시 생겨요.',
     '사냥터의 짐승도 잡고 나면 조금씩 다시 나와요(하루 한도 있음).',
@@ -2250,6 +2259,7 @@ function fixState(s){
   if(!s.stats){s.stats={};s.sp=Math.max(0,((s.level||1)-1)*2)}
   s.stx=s.stx||{};
   for(const k in STATS){s.stats[k]=s.stats[k]|0;s.stx[k]=+s.stx[k]||0}
+  if(s.sk&&typeof s.sk==='object')for(const id of Object.keys(s.sk)){const m=/_t([1-4])$/.exec(id);if(m){const k=TRN_K[m[1]];s.stats[k]=Math.min(STAT_MAX,Math.max(s.stats[k]|0,(s.sk[id]|0)*2));delete s.sk[id]}}
   s.sp=s.sp|0;if(!s.job||!JOBS[s.job.k])s.job=null;
   // 왕실의 길(court={rank,done 수련한 횟수,day 마지막 수련한 날,mate 배필 'prince'|'princess'})은 수라간과 따로 간다
   if(!s.court||typeof s.court!=='object')s.court=null;
@@ -2501,7 +2511,7 @@ const sellPrice=id=>id==='ssal'?ricePrice(S.day):id==='sogeum'?saltPrice(S.day):
 const setHas=k=>SETS[k].ids.every(id=>S.placed.some(f=>f.id===id)),setsDone=()=>Object.keys(SETS).filter(setHas);
 const comfort=()=>S.placed.reduce((a,f)=>a+FURN[f.id].c,0)+setsDone().reduce((a,k)=>a+SETS[k].c,0);
 // 기력: 일을 하면 줄고, 음식을 먹거나 자면 찬다
-const maxEn=()=>Math.min(250,Math.min(190,100+(S.level-1)*6)+se('arms')*2+rk('mil')*10+S.kids.filter(k=>k.gift==='thread').length*10+(relic('c_pouch')?10:0)+gearFx('en'));
+const maxEn=()=>Math.min(250,Math.min(190,100+(S.level-1)*6)+se('arms')*2+Math.round(sv('body')*2)+rk('mil')*10+S.kids.filter(k=>k.gift==='thread').length*10+(relic('c_pouch')?10:0)+gearFx('en'));
 function useEn(n){
   if(S.en<n){toast('기력이 모자라요. 가방에서 음식을 먹거나 이부자리에서 자요');sfx('err');return false}
   S.en-=n;touch();hud();return true;
@@ -9294,8 +9304,13 @@ function openStatus(){
     }
     body.appendChild(el('p','sub','스탯 · 남은 점수 '+S.sp+'점'));
     body.appendChild(el('p','note','레벨이 오를 때마다 점수를 1점 받아요. 관련된 일을 해도 조금씩 저절로 올라요. 스탯 하나는 '+STAT_MAX+'까지 올릴 수 있어요. 20 위로는 효과가 절반만 붙어요.'));
+    {const d=el('div','doll trn'),sp=charSprite(playerLook(),'front',0),m=el('canvas');m.width=16;m.height=24;m.getContext('2d').drawImage(sp,0,0);m.className='dollme';
+      const mk=(k,area)=>{const s=STATS[k],v=S.stats[k]|0,b=el('button','slot rnd');b.type='button';b.style.gridArea=area;b.title=s.d;b.appendChild(trnIcon(s.b));b.appendChild(el('b',null,String(v)));b.appendChild(el('small',null,s.n+' '+v+'/'+STAT_MAX));
+        b.disabled=S.sp<1||v>=STAT_MAX;b.onclick=()=>{if(S.sp<1||S.stats[k]>=STAT_MAX)return;S.sp--;S.stats[k]++;S.en=Math.min(S.en,maxEn());sfx('level');touch();hud();openStatus()};return b};
+      d.appendChild(mk('pow','w'));d.appendChild(mk('leg','t'));d.appendChild(m);d.appendChild(mk('body','h'));d.appendChild(mk('hand','a'));body.appendChild(d);
+      body.appendChild(el('p','note','힘: 5마다 공격의 힘 +1 · 몸: 기력 최대치 +2, 덜 다침 · 손: 공격 빠르기 · 다리: 걸음 빠르기 · 싸우면 저절로도 조금씩 올라요'))}
     for(const k in STATS){
-      const s=STATS[k],v=S.stats[k];
+      const s=STATS[k],v=S.stats[k];if(s.b)continue;
       row(body,el('span','badge',s.n[0]),s.n+' '+v,[s.d,v>=STAT_MAX?'끝까지 올렸어요':'저절로 오르는 중 '+Math.floor(S.stx[k]*10)+'%'],
         [['+1',()=>{if(S.sp<1||S.stats[k]>=STAT_MAX)return;S.sp--;S.stats[k]++;sfx('pick');touch();hud();openStatus()},S.sp<1||v>=STAT_MAX]]);
     }
@@ -9468,8 +9483,8 @@ const SKILLS={ /* v156: 갈래마다 첫째는 늘 붙는 힘, 둘째는 단추�
   dosa:[['뇌법',[['d_bolt','벼락','늘 · 부적의 힘 +1(3단계 +2)'],['d_chain','연쇄 벼락','단추 · 겨눈 짐승에 2~3, 둘레에 1씩']]],['부적',[['d_bind','결박','늘 · 묶는 시간이 늘어요(3단계: 둘레 세 칸)'],['d_ward','호신부','단추 · 2~3초 동안 다치지 않아요']]],['선술',[['d_far','축지부','늘 · 부적 사거리 +1칸씩'],['d_heal','치유부','단추 · 기력을 되찾아요(하루 세 번)']]]]};
 /* v163(사용자 요청: 직업 쪽 성장을 더 다양하게 · 그쪽 스탯을 늘리게): 기술은 다섯 단계까지, 점수는 레벨마다 1점. 직업마다 "단련" 갈래(힘·몸·손, 열 단계)를 더했다 —
    힘 기르기 trn(1): 두 단계마다 모든 공격의 힘 +1 · 몸 다지기 trn(2): 단계마다 3% 덜 다침 · 손 익히기 trn(3): 단계마다 공격이 3% 빨라짐 */
-for(const k in SKILLS){const q=k.charAt(0);SKILLS[k].push(['단련',[[q+'_t1','힘 기르기','늘 · 두 단계마다 모든 공격의 힘 +1'],[q+'_t2','몸 다지기','늘 · 단계마다 3% 덜 다쳐요'],[q+'_t3','손 익히기','늘 · 단계마다 공격이 3% 빨라져요'],[q+'_t4','다리 기르기','늘 · 단계마다 걸음이 2% 빨라져요'],[q+'_t5','터 닦기','단추 4 · 사냥터에서 둘레의 나무·바위를 한 번에 캐요 · 기력 8 · 3·6·9단계에 넓어져요']]])} /* v168(사용자 요청: 다리도 늘리게 — 속도): trn(4) */
-const skMax=id=>/_t\d$/.test(id)?10:SK_MAX,trn=n=>S&&S.cls?sk(S.cls.charAt(0)+'_t'+n):0;
+for(const k in SKILLS){const q=k.charAt(0);SKILLS[k].push(['공통',[[q+'_t5','터 닦기','단추 4 · 사냥터에서 둘레의 나무·바위를 한 번에 캐요 · 기력 8 · 3·6·9단계에 넓어져요']]])} /* v168(사용자 요청: 다리도 늘리게 — 속도): trn(4) */
+const skMax=id=>/_t\d$/.test(id)?10:SK_MAX,trn=n=>!S?0:n===5?(S.cls?sk(S.cls.charAt(0)+'_t5'):0):sv(TRN_K[n])/2.5;
 const SK_MAX=5,sk=id=>S&&S.cls&&S.sk&&id.charAt(0)===S.cls.charAt(0)?S.sk[id]|0:0,isCls=k=>!!S&&S.cls===k;
 const skTotal=()=>S.level|0,skUsed=()=>Object.keys(S.sk||{}).reduce((a,k)=>a+(S.sk[k]|0),0),skLeft=()=>Math.max(0,skTotal()-skUsed());
 const clsFx=k=>(k==='aim'?(isCls('gung')?1.5+.7*sk('g_aim'):isCls('musa')?-1.5:0):k==='spd'?(isCls('hyeop')?.04:0)+(skOn('h_step')?.45:0)+.02*trn(4):0)+(k==='aim'?.6*sk('h_throw'):0);
@@ -9580,6 +9595,7 @@ function clsHit(h){
   if(skOn('m_wide')||skOn('d_ward')){fxAdd('ward',px,py);float('막았어요!',px,py-40,'#f7d24a');return 0} /* v156: 버티기·호신부를 쓴 동안 */
   if(skOn('h_smoke')){fxAdd('smoke',px,py);float('피했어요!',px,py-40,'#cfd6dc');return 0}
 
+  train('body',.4);
   return Math.max(1,Math.round(h*clsHurt()));
 }
 function milAuto(){ /* 무관의 길은 누구나 걷는다: 레벨이 되면 조건 없이 들어선다 */
@@ -9653,17 +9669,12 @@ function openSkills(){
   openModal('직업과 기술',body=>{
     const C=CLS[S.cls],left=skLeft();
     row(body,el('span','badge',C.ic),'내 직업 · '+C.n,C.d,[['직업 바꾸기',()=>openClass()]]);
-    body.appendChild(el('p','note','남은 기술 점수 '+left+' · 레벨마다 1점 · 기술 다섯 단계 · 단련 열 단계'));
-    body.appendChild(el('p','note','갈래의 둘째 기술은 싸울 때 단추로 써요 · 컴퓨터는 1·2·3 키 · 기력 2 · 터 닦기는 4 키'));
-    /* v165(사용자 요청: 가운데 캐릭터, 단련을 눌러 올리는 느낌): 단련 판. 힘·몸·손 동그라미를 누르면 한 단계 오른다 */
-    {const d=el('div','doll trn'),q=S.cls.charAt(0),sp=charSprite(playerLook(),'front',0),m=el('canvas');m.width=16;m.height=24;m.getContext('2d').drawImage(sp,0,0);m.className='dollme';
-      const mk=(n,ch,nm,area)=>{const id=q+'_t'+n,lv=S.sk[id]|0,b=el('button','slot rnd');b.type='button';b.style.gridArea=area;b.appendChild(trnIcon(n));b.appendChild(el('b',null,String(lv)));b.appendChild(el('small',null,nm+' '+lv+'/10'));
-        b.disabled=lv>=10||left<1;b.onclick=()=>{if(skLeft()<1||(S.sk[id]|0)>=10)return;S.sk[id]=(S.sk[id]|0)+1;sfx('level');saveAll();openSkills()};return b};
-      d.appendChild(mk(1,'힘','힘 기르기','w'));d.appendChild(mk(4,'다리','다리 기르기','t'));d.appendChild(m);d.appendChild(mk(2,'몸','몸 다지기','h'));d.appendChild(mk(3,'손','손 익히기','a'));d.appendChild(mk(5,'터','터 닦기','c'));body.appendChild(d)}
+    body.appendChild(el('p','note','남은 기술 점수 '+left+' · 레벨마다 1점 · 기술 다섯 단계 · 힘·몸·손·다리는 스탯 창에서 길러요'));
+    body.appendChild(el('p','note','갈래의 둘째 기술은 싸울 때 단추로 써요 · 컴퓨터는 1·2·3 키 · 기력 2 · 공통 기술 터 닦기는 4 키'));
     for(const [rn,list] of SKILLS[S.cls]){
       body.appendChild(el('p','sub',rn+' 갈래'));
-      list.forEach(([id,n,d],i)=>{const lv=S.sk[id]|0,pv=i>0?list[i-1]:null,lock=rn!=='단련'&&!!pv&&lv<skMax(id)&&(S.sk[pv[0]]|0)<skMax(pv[0]); /* v172(사용자 요청: 앞의 기술을 다 찍어야 다음 것을 찍게). 이미 찍어 둔 단계는 그대로 쓴다 */
-        row(body,el('span','badge',String(lv)),n+' '+lv+'/'+skMax(id),lock?'"'+pv[1]+'"을(를) 다 찍어야 해요 ('+(S.sk[pv[0]]|0)+'/'+skMax(pv[0])+')':d,[[lv>=skMax(id)?'다 찍음':'찍기',()=>{if(skLeft()<1||(S.sk[id]|0)>=skMax(id)||lock)return;S.sk[id]=(S.sk[id]|0)+1;sfx('level');saveAll();openSkills()},lock||lv>=skMax(id)||left<1]])});
+      list.forEach(([id,n,d],i)=>{const lv=S.sk[id]|0,pv=i>0?list[i-1]:null,pl=pv?S.sk[pv[0]]|0:0,lock=!!pv&&lv<skMax(id)&&(lv<1?pl<1:pl<skMax(pv[0])); /* v172(사용자 요청: 앞의 기술을 다 찍어야 다음 것을 찍게) · v175(초반에 하나씩은 찍을 수 있게): 첫 단계는 앞의 기술을 한 번만 찍으면 열리고, 둘째 단계부터는 앞의 것을 다 찍어야 한다 */
+        row(body,el('span','badge',String(lv)),n+' '+lv+'/'+skMax(id),lock?(lv<1?'"'+pv[1]+'"을(를) 먼저 한 번 찍어요':'더 올리려면 "'+pv[1]+'"을(를) 다 찍어야 해요 ('+pl+'/'+skMax(pv[0])+')'):d,[[lv>=skMax(id)?'다 찍음':'찍기',()=>{if(skLeft()<1||(S.sk[id]|0)>=skMax(id)||lock)return;S.sk[id]=(S.sk[id]|0)+1;sfx('level');saveAll();openSkills()},lock||lv>=skMax(id)||left<1]])});
     }
     if(skUsed())row(body,el('span','badge','↺'),'기술 다시 찍기','찍은 점수를 모두 돌려받아요 · 삯 500냥',[['되돌리기',()=>{if(S.coins<500)return;addCoins(-500);S.sk={};sfx('pick');saveAll();openSkills()},S.coins<500]]);
   });
@@ -9719,7 +9730,7 @@ function fightLine(b){ /* 쏠 수 있나. v159(사용자 요청: 굳이 일직�
 const fightNear=b=>{const ad=Math.abs(b.x-P.x)+Math.abs(b.y-P.y);return ad>=1&&ad<=meleeReach()};
 const fightNew=b=>{if(!b.mhp)b.mhp=Math.max(b.hp,BEASTS[b.k].hp);return{kind:'hunt',b,o:b,cd:.12,sw:0,far:0,i:0,pb:0,mel:'',note:''}};
 function fightHit(b,dmg,o){ /* 기운을 깎고, 번쩍이고, 숫자를 띄운다. 쓰러졌으면 true */
-  o=o||{};const bx=rx(b)*T+16,by=ry(b)*T+12;if(!b.mhp)b.mhp=Math.max(b.hp,BEASTS[b.k].hp);
+  o=o||{};const bx=rx(b)*T+16,by=ry(b)*T+12;if(!b.mhp)b.mhp=Math.max(b.hp,BEASTS[b.k].hp);train('pow',.08);train('hand',.08);train('leg',.08);
   frayT=now+20;b.hp-=dmg;b.mad=1;b.wound=1;b.hit=.16;b.kb=[Math.sign(b.x-P.x),Math.sign(b.y-P.y)];
   float('-'+dmg,bx+ri(-7,7),by-24,o.col||'#fffbe8');sfx(o.sfx||'hit');if(o.big)shakeT=.2;
   if(b.hp<=0){if(mg&&mg.b===b)mg=null;huntKill(b,!!o.mel);return true}
