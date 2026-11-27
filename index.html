@@ -602,7 +602,7 @@ const FEED_PRICE=15;
 // 스탯: 레벨이 오를 때 받는 점수로 찍고, 관련된 일을 하면 조금씩 저절로도 오른다 (하나에 20까지)
 const STATS={cook:{n:'손맛',d:'요리할 때 알맞은 불의 폭이 넓어져요'},grace:{n:'기품',d:'이웃·왕실과 더 빨리 가까워져요 (10까지 1마다 +4%, 그 위로는 +2%)'},
   lore:{n:'학식',d:'경험치를 더 많이 얻어요 (10까지 1마다 +3%, 그 위로는 +1.5%)'},arms:{n:'무예',d:'기력 최대치가 늘고 사냥 과녁이 커져요'},trade:{n:'수완',d:'물건을 더 비싸게 팔아요 (10까지 1마다 +2%, 그 위로는 +1%)'}};
-const STAT_MAX=20;
+const STAT_MAX=30; /* v163(사용자 요청: 스탯을 더 올릴 수 있게): 20 → 30. 20 위로는 효과가 절반만 붙는다(sv) */
 /* 길에서 자리가 오를 때 갖춰야 하는 레벨(v80 균형): [처음, 둘째 자리, 으뜸 자리]. 전에는 레벨 조건이 없어서 스탯만 채우면 초반에 으뜸 자리까지 갔다 */
 /* v90(사용자 의견: 초반에는 여러 길을 맛볼 수 있어야 한다): 스탯이 레벨마다 1점이 되면서, 길에 들어서는 스탯 조건은 없애고(2 → 0) 둘째 자리는 낮췄다(6~8 → 4~5).
    으뜸 자리(12~14)와 높은 자리(15~20)는 그대로라, 뒤로 갈수록 한 길에 힘을 실어야 한다. 조건 숫자는 JOBS·TRADE·COURT·무관/문관의 need에 있다 */
@@ -1481,6 +1481,13 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:163,d:'11월 27일',t:'더 높은 성장',l:[
+    '사람과 무기를 작게 그려 나무·집과 크기가 어울리게 했어요.',
+    '스탯을 30까지 올릴 수 있어요. 20 위로는 효과가 절반이에요.',
+    '기술은 다섯 단계까지, 점수는 레벨마다 1점이에요.',
+    '직업마다 "단련" 갈래가 생겼어요: 힘·몸·손을 열 단계까지 길러요.',
+    '대장간에서 장비를 +5까지 벼릴 수 있어요.',
+    '귀신골이 스무 층이 됐고, 가장 센 것들에게서 전설 장비가 나와요.']},
   {v:162,d:'11월 27일',t:'PC 크기 줄이기와 무기 그림',l:[
     'PC에서 놀이판이 덜 확대돼 보여요. − 와 + 키로 작게·보통·크게를 고를 수 있어요.',
     'PC의 위아래 단추와 글자도 조금 작아졌어요.',
@@ -2333,7 +2340,7 @@ const perk=id=>hearts(id)>=3;
    하루에 600쯤 번다고 치면 레벨 10은 엿새, 12는 열흘, 16은 스무 날, 20은 마흔 날쯤 — 높은 자리가 바라는 일 횟수(20·30·42·56번)와 걸음이 맞는다 */
 const needXp=l=>60+40*(l-1)+8*(l-1)*(l-1);
 // 스탯 값과, 일을 하면서 저절로 오르는 몫(열 번 쌓이면 1 오른다)
-const sv=k=>S.stats?S.stats[k]||0:0;
+const sv=k=>{const v=S.stats?S.stats[k]||0:0;return v>20?20+(v-20)/2:v}; /* 셈에 쓰는 값: 20 위로는 절반 */
 /* 스탯이 곱으로 붙는 큰 덤(경험치·친해지는 빠르기·파는 값·기력 최대치)을 셈할 때 쓰는 값(v80 균형): 10까지는 그대로, 그 위로는 절반만 친다(20이면 15).
    전에는 학식 20이면 경험치 +60%, 기품 20이면 친밀도 +80%라 중반부터 너무 셌다. 자리의 조건(스탯 몇 이상)은 그대로 sv로 본다 */
 const se=k=>{const v=sv(k);return v<=10?v:10+(v-10)*.5};
@@ -3872,7 +3879,10 @@ function charSprite(o,view,fr){
   if(o.gem&&!back&&!side&&!o.small){dot(7,12,o.gem);dot(8,12,o.gem);dot(7,11,shade(o.gem,.75))}
   return sprCache[key]=cvs;
 }
-function drawChar(c,cx,fy,o,dir,walk,t){
+/* v163(사용자 의견: 사람이 나무와 거의 같은 크기라 너무 크다 · 무기도 너무 크다): 사람은 발밑을 축으로 CH_K배로 줄여 그린다(옷장·도감의 작은 그림은 그대로). 무기는 WP_K배 */
+const CH_K=.82,WP_K=.72;
+function drawChar(c,cx,fy,o,dir,walk,t){c.save();c.translate(cx,fy);c.scale(CH_K,CH_K);c.translate(-cx,-fy);drawChar0(c,cx,fy,o,dir,walk,t);c.restore()}
+function drawChar0(c,cx,fy,o,dir,walk,t){
   const view=dir[1]<0?'back':dir[0]?'side':'front',ph=walk?Math.floor(t*9)%4:0;
   const fr=view==='side'?ph%2:ph%2,flip=view==='side'?dir[0]<0:ph===3;
   blit(c,shadowSpr(9),cx,fy);
@@ -6415,9 +6425,9 @@ function drawMgIn(c,labels){
     drawArm(c);
     if(m.mel){
       const u=m.sw>0?1-m.sw/.22:1;c.save();c.translate(h[0],h[1]);c.rotate(a+(m.sw>0?-1.25+u*2.1:-.55+Math.sin(now*3)*.05));
-      {const ws=wpSpr(m.mel,col),sm2=c.imageSmoothingEnabled;c.imageSmoothingEnabled=false;c.drawImage(ws,-ws.ox,-ws.oy,ws.width*2,ws.height*2);c.imageSmoothingEnabled=sm2}
+      {const ws=wpSpr(m.mel,col),sm2=c.imageSmoothingEnabled;c.imageSmoothingEnabled=false;c.scale(WP_K,WP_K);c.drawImage(ws,-ws.ox,-ws.oy,ws.width*2,ws.height*2);c.imageSmoothingEnabled=sm2}
       c.restore();
-      if(m.sw>0)slashArt(c,h[0],h[1],27,a-1.25,a-1.25+u*2.1,'rgba(255,255,255,.5)'); /* 휘두른 자국: 초승달꼴 칼바람 */
+      if(m.sw>0)slashArt(c,h[0],h[1],21,a-1.25,a-1.25+u*2.1,'rgba(255,255,255,.5)'); /* 휘두른 자국: 초승달꼴 칼바람 */
     }
     else if(isCls('dosa'))drawBujeok(c,h[0],h[1]-6,Math.sin(now*6)*.15);
     else if(isCls('hyeop'))sprRot(c,pyoSpr(0,'#cfd6dc'),h[0]+P.dir[0]*3,h[1]-3,now*2);
@@ -8387,7 +8397,7 @@ function workUse(k){
    처음 물리친 층에는 상금(GH_PRIZE). 하루에 한 번 물리친 층은 그날 다시 들어가도 비어 있다(S.ghost.done) → 경험치가 끝없이 불어나지 않는다.
    귀신은 BEASTS에 얹는다(deep이라 숲·마을에는 저절로 나오지 않는다): 도깨비불 8 · 달걀귀신 10 · 처녀귀신 13 · 몽달귀신 16 · 구미호 19 · 장산범 22 · 저승사자 25(10층의 우두머리).
    사병은 귀신골에도 따라 들어온다(guardParty). 기력이 다하면 굴 밖으로 물러난다(updFight) */
-const GH_MAX=10,GH_LV=f=>8+(f-1)*2,GH_PRIZE={1:300,3:900,5:2000,7:3500,10:7000};
+const GH_MAX=20,GH_LV=f=>8+(f-1)*2,GH_PRIZE={1:300,3:900,5:2000,7:3500,10:7000,12:9000,15:14000,17:20000,20:40000}; /* v163: 열 층 → 스무 층(11층부터는 같은 귀신이 훨씬 세고 더 많이 나온다. 20층은 레벨 46) */
 Object.assign(BEASTS,{
   wisp:{n:'도깨비불',lv:8,hp:2,loot:[],s:[0,1,2,3],xp:26,arms:3,aim:[3.4,24,9,2.6],bite:8,hunt:7,sp:2.9,deep:1,ghost:1},
   eggghost:{n:'달걀귀신',lv:10,hp:3,loot:[],s:[0,1,2,3],xp:34,arms:4,aim:[2.8,22,8,1.9],bite:11,hunt:7,sp:2.4,deep:1,ghost:1},
@@ -8397,7 +8407,7 @@ Object.assign(BEASTS,{
   jangsan:{n:'장산범',lv:22,hp:12,loot:['tigerskin'],s:[0,1,2,3],xp:170,arms:12,aim:[3,25,8,2.1],bite:34,hunt:9,sp:3,deep:1,big:1,ghost:1},
   reaper:{n:'저승사자',lv:25,hp:16,loot:['jade','jade'],s:[0,1,2,3],xp:260,arms:14,aim:[2.8,24,8,1.8],bite:40,hunt:10,sp:2.8,deep:1,big:1,ghost:1}});
 const GH_PLAN=f=>[['wisp','wisp','wisp'],['wisp','wisp','eggghost','eggghost'],['eggghost','eggghost','eggghost','maiden'],['maiden','maiden','wisp','wisp','eggghost'],['gumiho','maiden','maiden','mongdal'],
-  ['mongdal','mongdal','mongdal','eggghost','eggghost'],['gumiho','mongdal','mongdal','maiden','maiden'],['jangsan','gumiho','maiden','maiden','mongdal'],['jangsan','jangsan','mongdal','mongdal','gumiho'],['reaper','mongdal','mongdal','maiden','maiden']][Math.min(GH_MAX,f)-1];
+  ['mongdal','mongdal','mongdal','eggghost','eggghost'],['gumiho','mongdal','mongdal','maiden','maiden'],['jangsan','gumiho','maiden','maiden','mongdal'],['jangsan','jangsan','mongdal','mongdal','gumiho'],['reaper','mongdal','mongdal','maiden','maiden']][(Math.min(GH_MAX,f)-1)%10];
 const ghDone=f=>!!(S.ghost.day===S.day&&S.ghost.done&&S.ghost.done.includes(f));
 function genGhost(f){
   const rng=mulberry(S.day*173+f*1291+5),tile=[],objAt=[],ROCKS=[],X0=8,X1=27,Y0=6,Y1=19;
@@ -8410,12 +8420,12 @@ function genGhost(f){
   for(let i=cells.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[cells[i],cells[j]]=[cells[j],cells[i]]}
   const nR=Math.floor(cells.length*.07);for(let i=0;i<nR;i++){const [x,y]=cells[i],o={t:'crock',x,y,sh:0,ore:null};ROCKS.push(o);objAt[y][x]=o} /* 드문드문 놓인 바위(몸을 숨길 자리) */
   const open=cells.slice(nR),mobs=[];
-  if(!ghDone(f))GH_PLAN(f).forEach((k,i)=>{const q=open[i];if(q)mobs.push(mkBeast(k,q[0],q[1]))});
+  if(!ghDone(f))GH_PLAN(f).concat(f>15?['gumiho','mongdal']:f>10?['mongdal']:[]).forEach((k,i)=>{const q=open[i];if(!q)return;const b=mkBeast(k,q[0],q[1]);if(f>10){b.hp=Math.round(b.hp*(1.5+.08*(f-10)));b.lvx=20+(f-10)*2-Math.min(20,BEASTS[k].lv)+Math.max(0,BEASTS[k].lv-20)}mobs.push(b)}); /* 11층부터: 기운 1.5배 넘게, 표시 레벨도 올린다(lvx) */
   const far=open.filter(q=>q[0]>X0+12),h=(far.length?far:open)[Math.floor(rng()*(far.length||open.length))];
   cave={floor:f,ghost:1,map:{tile,objAt,TREES:[],ROCKS,GRASS:[],SAND:[]},sp,up,hid:[h[0],h[1]],found:false,glint:null,mobs};
 }
 function ghostTalk(){
-  const lv=S.level,top=Math.min(GH_MAX,(S.ghost.max|0)+1),fs=[1];if(top>1)fs.push(top);if(top>4&&!fs.includes(4))fs.splice(1,0,4);
+  const lv=S.level,top=Math.min(GH_MAX,(S.ghost.max|0)+1),fs=[1];if(top>1)fs.push(top);if(top>4&&!fs.includes(4))fs.splice(1,0,4);if(top>11&&!fs.includes(11))fs.splice(fs.length-1,0,11);
   if(lv<GH_LV(1)){dialog({who:'귀신골 어귀',text:'음산한 바람이 새어 나오는 무너진 굴이에요.\n금줄이 쳐져 있고, 안에서 푸른 불이 어른거려요.\n(레벨 '+GH_LV(1)+'부터 들어갈 수 있어요)'});return}
   dialog({who:'귀신골 어귀',role:'가장 깊이 물리친 곳 '+(S.ghost.max|0)+'층',text:'귀신이 나온다는 옛 굴이에요.\n· 층의 귀신을 모두 물리치면 내려가는 길이 열려요\n· 내려갈수록 세요 · 층마다 들어갈 레벨이 있어요\n· 기력이 다하면 밖으로 물러나요',
     choices:fs.map(f=>[f+'층 (레벨 '+GH_LV(f)+')',()=>{if(S.level<GH_LV(f)){toast('레벨 '+GH_LV(f)+'부터 내려갈 수 있어요');return}enterGhost(f)}]).concat([['그만',null]])});
@@ -8454,13 +8464,18 @@ function ghostMood(c,lx,ly){
   {const v=c.createRadialGradient(view.w/2,view.h/2,Math.min(view.w,view.h)*.35,view.w/2,view.h/2,Math.max(view.w,view.h)*.75);v.addColorStop(0,'rgba(30,10,50,0)');v.addColorStop(1,'rgba(30,10,50,.55)');c.fillStyle=v;c.fillRect(0,0,view.w,view.h)}
   plaque(c,10,10,'귀신골 '+cave.floor+'층 · '+(beasts.length?'남은 귀신 '+beasts.length:'고요해요'),true);
 }
-function ghostGateArt(c){
-  rr(c,-22,-34,9,36,2,'#6a6f78');rr(c,13,-34,9,36,2,'#5a5f68');poly(c,[-26,-34,0,-48,26,-34,22,-30,-22,-30],'#4a4f58'); /* 무너진 돌문 */
-  rr(c,-13,-30,26,32,3,'#14161c');poly(c,[-13,2,-6,-6,2,2],'#2a2d36');poly(c,[4,2,10,-4,13,2],'#2a2d36'); /* 어두운 굴과 굴러 내린 돌 */
-  c.strokeStyle='#c9b98a';c.lineWidth=1.6;c.beginPath();c.moveTo(-20,-26);c.quadraticCurveTo(0,-20,20,-26);c.stroke();
-  for(const x of [-12,-4,4,12])poly(c,[x-2,-23,x+2,-23,x+1,-15,x-1,-15],x%8?'#f6f1e6':'#c8392f'); /* 금줄의 종이 */
+function ghostGateArt(c){ /* v163(사용자 의견: 귀신골 어귀가 다른 그림과 안 어울린다): 이끼 낀 바위 굴에 금줄과 부적, 쓰러진 비석과 해골. bake로 구워 도트 그림으로 찍는다 */
+  ell(c,0,-16,30,22,'#4e4a48');ell(c,-9,-22,17,13,'#625d5a');ell(c,12,-12,15,12,'#5a5552');ell(c,-16,-6,12,8,'#44403e');
+  ell(c,-12,-29,7,3,'#55704a');ell(c,10,-25,6,2.6,'#4a6440');ell(c,20,-9,5,2.2,'#55704a'); /* 이끼 */
+  poly(c,[-13,2,-13,-14,-9,-24,0,-28,9,-24,13,-14,13,2],'#0d0b12');poly(c,[-9,2,-9,-12,-6,-20,0,-23,6,-20,9,-12,9,2],'#1c1826');
+  rr(c,-17,-20,3,22,1,'#6b4a2a');rr(c,14,-20,3,22,1,'#6b4a2a'); /* 금줄을 맨 말뚝 */
+  c.strokeStyle='#cbb98a';c.lineWidth=2;c.beginPath();c.moveTo(-16,-18);c.quadraticCurveTo(0,-11,16,-18);c.stroke();
+  for(const q of [[-10,-15,'#f6f1e6'],[-4,-13,'#c8392f'],[3,-13,'#f6f1e6'],[9,-15,'#c8392f']])rr(c,q[0]-1.5,q[1],3,8,.6,q[2]);
+  rr(c,-30,-12,8,13,1.5,'#7a7672');rr(c,-29,-10,6,2,.5,'#55514e');rr(c,-29,-6,6,2,.5,'#55514e'); /* 비석 */
+  circ(c,24,-3,3.6,'#d8d6cc');rr(c,22,-1,4.4,3,.8,'#d8d6cc');rr(c,22.4,-4,1.6,1.6,.4,'#1c1826');rr(c,24.6,-4,1.6,1.6,.4,'#1c1826'); /* 해골 */
 }
-function ghostGateArt2(c,x,y){c.save();c.translate(x,y);ghostGateArt(c);c.restore();ghostFlame(c,x-27,y-8,.7);ghostFlame(c,x+28,y-10,.6)}
+function ghostFlameArt(c,f){poly(c,[-5,0,-3.4,-9,f,-17,3.4,-9,5,0,0,3],'#5fb8f0');poly(c,[-2.6,0,f*.5,-10,2.6,0,0,2],'#dff4ff')}
+function ghostGateArt2(c,x,y){blit(c,spr('ghgate',()=>bake(72,64,36,56,0,0,ghostGateArt)),x,y);const fr=Math.floor(now*6)%2;for(const q of [[-34,-10],[34,-14]]){c.globalAlpha=.3;circ(c,x+q[0],y+q[1]-7,8,'#7fd0ff');c.globalAlpha=1;blit(c,spr('ghflame'+fr,()=>bake(20,28,10,22,0,0,c2=>ghostFlameArt(c2,fr?1.5:-1.5))),x+q[0],y+q[1])}}
 function ghostFlame(c,x,y,s){
   const f=Math.sin(now*7+x)*1.5;c.globalAlpha=.3;circ(c,x,y-6,9*s,'#7fd0ff');c.globalAlpha=1;
   poly(c,[x-5*s,y,x-3*s,y-9*s,x+f,y-17*s,x+3*s,y-9*s,x+5*s,y,x,y+3*s],'#5fb8f0');poly(c,[x-2.5*s,y,x+f*.5,y-10*s,x+2.5*s,y,x,y+2*s],'#dff4ff');
@@ -9228,7 +9243,7 @@ function openStatus(){
         k.gift?'돌잡이: '+DOL[k.gift].n+' ('+DOL[k.gift].d+') · '+DOL[k.gift].h:kidAge(k)>=7?'돌잡이를 할 때예요. 집에서 아이에게 말을 걸어요':'돌잡이까지 '+(7-kidAge(k))+'일 · 날마다 안아 주고 먹여요'],[['이름',()=>kidName(S.kids.indexOf(k))]]);
     }
     body.appendChild(el('p','sub','스탯 · 남은 점수 '+S.sp+'점'));
-    body.appendChild(el('p','note','레벨이 오를 때마다 점수를 1점 받아요. 관련된 일을 해도 조금씩 저절로 올라요. 스탯 하나는 '+STAT_MAX+'까지 올릴 수 있어요.'));
+    body.appendChild(el('p','note','레벨이 오를 때마다 점수를 1점 받아요. 관련된 일을 해도 조금씩 저절로 올라요. 스탯 하나는 '+STAT_MAX+'까지 올릴 수 있어요. 20 위로는 효과가 절반만 붙어요.'));
     for(const k in STATS){
       const s=STATS[k],v=S.stats[k];
       row(body,el('span','badge',s.n[0]),s.n+' '+v,[s.d,v>=STAT_MAX?'끝까지 올렸어요':'저절로 오르는 중 '+Math.floor(S.stx[k]*10)+'%'],
@@ -9401,12 +9416,16 @@ const SKILLS={ /* v156: 갈래마다 첫째는 늘 붙는 힘, 둘째는 단추�
   musa:[['검객',[['m_power','강타 수련','늘 · 휘두르는 힘이 세져요'],['m_chain','연격','단추 · 2~3번 연달아 베요']]],['철벽',[['m_guard','철벽','늘 · 단계마다 5% 덜 다쳐요'],['m_wide','버티기','단추 · 2~3초 동안 다치지 않아요']]],['기백',[['m_heal','투지','늘 · 네 번 휘두를 때마다 기력을 되찾아요'],['m_roar','기합','단추 · 둘레 짐승이 멈칫해요']]]],
   hyeop:[['암습',[['h_amb','급습','늘 · 기습의 힘이 단계마다 +1'],['h_smoke','연막','단추 · 2~3초 동안 공격을 피해요']]],['경공',[['h_quiet','숨죽이기','늘 · 순한 짐승이 늦게 달아나요'],['h_step','질풍','단추 · 4~6초 동안 걸음과 손이 빨라져요']]],['표창',[['h_throw','표창술','늘 · 표창이 더 잘 맞아요'],['h_twin','쌍표창','단추 · 표창 2~3개를 따다닥']]]],
   dosa:[['뇌법',[['d_bolt','벼락','늘 · 부적의 힘 +1(3단계 +2)'],['d_chain','연쇄 벼락','단추 · 겨눈 짐승에 2~3, 둘레에 1씩']]],['부적',[['d_bind','결박','늘 · 묶는 시간이 늘어요(3단계: 둘레 세 칸)'],['d_ward','호신부','단추 · 2~3초 동안 다치지 않아요']]],['선술',[['d_far','축지부','늘 · 부적 사거리 +1칸씩'],['d_heal','치유부','단추 · 기력을 되찾아요(하루 세 번)']]]]};
-const SK_MAX=3,sk=id=>S&&S.cls&&S.sk&&id.charAt(0)===S.cls.charAt(0)?S.sk[id]|0:0,isCls=k=>!!S&&S.cls===k;
-const skTotal=()=>Math.floor(S.level/2),skUsed=()=>Object.keys(S.sk||{}).reduce((a,k)=>a+(S.sk[k]|0),0),skLeft=()=>Math.max(0,skTotal()-skUsed());
+/* v163(사용자 요청: 직업 쪽 성장을 더 다양하게 · 그쪽 스탯을 늘리게): 기술은 다섯 단계까지, 점수는 레벨마다 1점. 직업마다 "단련" 갈래(힘·몸·손, 열 단계)를 더했다 —
+   힘 기르기 trn(1): 두 단계마다 모든 공격의 힘 +1 · 몸 다지기 trn(2): 단계마다 3% 덜 다침 · 손 익히기 trn(3): 단계마다 공격이 3% 빨라짐 */
+for(const k in SKILLS){const q=k.charAt(0);SKILLS[k].push(['단련',[[q+'_t1','힘 기르기','늘 · 두 단계마다 모든 공격의 힘 +1'],[q+'_t2','몸 다지기','늘 · 단계마다 3% 덜 다쳐요'],[q+'_t3','손 익히기','늘 · 단계마다 공격이 3% 빨라져요']]])}
+const skMax=id=>/_t\d$/.test(id)?10:SK_MAX,trn=n=>S&&S.cls?sk(S.cls.charAt(0)+'_t'+n):0;
+const SK_MAX=5,sk=id=>S&&S.cls&&S.sk&&id.charAt(0)===S.cls.charAt(0)?S.sk[id]|0:0,isCls=k=>!!S&&S.cls===k;
+const skTotal=()=>S.level|0,skUsed=()=>Object.keys(S.sk||{}).reduce((a,k)=>a+(S.sk[k]|0),0),skLeft=()=>Math.max(0,skTotal()-skUsed());
 const clsFx=k=>(k==='aim'?(isCls('gung')?1.5+.7*sk('g_aim'):isCls('musa')?-1.5:0):k==='spd'?(isCls('hyeop')?.04:0)+(skOn('h_step')?.45:0):0)+(k==='aim'?.6*sk('h_throw'):0);
-const clsHurt=()=>Math.max(.5,(isCls('musa')?.85:isCls('hyeop')?1.1:isCls('dosa')?1.2:1)-.05*sk('m_guard'));
+const clsHurt=()=>Math.max(.35,(isCls('musa')?.85:isCls('hyeop')?1.1:isCls('dosa')?1.2:1)-.05*sk('m_guard')-.03*trn(2));
 const bowRange=()=>isCls('dosa')?5+sk('d_far'):4+tl('bow')+(isCls('gung')?1+Math.ceil(sk('g_far')/2):0);
-const bujeokDmg=()=>1+Math.floor(sv('lore')/14)+Math.ceil(sk('d_bolt')/2),shotDmg=()=>(isCls('dosa')?bujeokDmg():isCls('gung')?2:1)+gearFx('dmg'); /* v158 밸런스: 궁사는 화살 힘 +1(평타가 가장 약했다), 도사는 학식 14마다 +1(전에는 7마다라 한 장에 6까지 나왔다) */ /* v155: 무기는 직업 것만 걸치므로 도사도 제 무기(지팡이)의 힘을 받는다 */
+const bujeokDmg=()=>1+Math.floor(sv('lore')/14)+Math.ceil(sk('d_bolt')/2),shotDmg=()=>(isCls('dosa')?bujeokDmg():isCls('gung')?2:1)+gearFx('dmg')+Math.floor(trn(1)/2); /* v158 밸런스: 궁사는 화살 힘 +1(평타가 가장 약했다), 도사는 학식 14마다 +1(전에는 7마다라 한 장에 6까지 나왔다) */ /* v155: 무기는 직업 것만 걸치므로 도사도 제 무기(지팡이)의 힘을 받는다 */
 /* 직업 무기(v155, 사용자 요청: 직업에 따라 장비를 다르게 · 가는 길에 맞게 걸치게): 무기 칸의 장비는 직업이 정해져 있다(gearCls).
    활·화살=궁사, 칼·창·도끼=무사, 비수(ic dagger)=협객, 부적·지팡이(ic staff)=도사. 길에서 받는 연장(route)과 부채는 누구나 걸친다. 갑옷·쓰개·신발·장신구는 그대로 누구나.
    직업을 고르거나 바꾸면 맞지 않는 무기는 벗고 가진 것 가운데 가장 좋은 제 무기를 쥔다. 하나도 없으면 기본 무기(CLS_BASE)를 받는다. 좋은 것은 찾아서만 얻는다 */
@@ -9482,7 +9501,7 @@ function slashArt(c,x,y,r,a0,a1,col,al){
    어두운 테두리를 두른 도트 그림으로 만들고, 돌려서 찍는다(sprRot). 칼·비수·창·도끼·지팡이(wpSpr), 화살(arrowSpr), 표창 세 가지(pyoSpr: 사방·육방·비도), 부적(bujeokSpr), 활(drawBow) */
 function sprRot(c,s,x,y,rot){const sm=c.imageSmoothingEnabled;c.save();c.translate(x,y);if(rot)c.rotate(rot);c.imageSmoothingEnabled=false;c.drawImage(s,-s.ox,-s.oy,s.width*2,s.height*2);c.imageSmoothingEnabled=sm;c.restore()}
 const wpSpr=(k,col)=>spr('wp_'+k+col,()=>bake(72,40,20,20,0,0,c2=>weaponArt(c2,k,col)));
-const wpDraw=(c,k,col,x,y,rot)=>sprRot(c,wpSpr(k,col),x,y,rot);
+const wpDraw=(c,k,col,x,y,rot)=>{const s=wpSpr(k,col),sm=c.imageSmoothingEnabled;c.save();c.translate(x,y);c.rotate(rot);c.scale(WP_K,WP_K);c.imageSmoothingEnabled=false;c.drawImage(s,-s.ox,-s.oy,s.width*2,s.height*2);c.imageSmoothingEnabled=sm;c.restore()};
 function arrowArt(c){rr(c,-14,-1,15,2,.6,'#b98a5a');poly(c,[5,0,-1,-3,-1,3],'#dfe9ee');poly(c,[-14,0,-11,-3.4,-8,-3.4,-10,0],'#f3ead6');poly(c,[-14,0,-11,3.4,-8,3.4,-10,0],'#e2d9c6')}
 const arrowSpr=()=>spr('arrow',()=>bake(44,20,28,10,0,0,arrowArt));
 function pyoArt(c,v,col){
@@ -9565,7 +9584,7 @@ function openClassDemo(k){
   openModal(C.n+' 맛보기',body=>{
     const cv2=el('canvas');cv2.width=480;cv2.height=200;cv2.style.cssText='width:100%;max-width:480px;display:block;margin:0 auto 8px;border-radius:12px;border:1.5px solid var(--line);image-rendering:pixelated';body.appendChild(cv2);
     body.appendChild(el('p','note',C.d.join(' · ')));
-    body.appendChild(el('p','note','누르는 기술: '+SKILLS[k].map(r=>ACTIVE[r[1][1][0]].n).join(' · ')+' (그림은 맛보기예요)'));
+    body.appendChild(el('p','note','누르는 기술: '+SKILLS[k].slice(0,3).map(r=>ACTIVE[r[1][1][0]].n).join(' · ')+' (그림은 맛보기예요)'));
     const t=el('div','tabs'),b1=el('button','btn pri',S.cls===k?'지금 직업':first?'이 직업 고르기':'이 직업으로 바꾸기'),b2=el('button','btn','다른 직업 보기');b1.type='button';b2.type='button';
     b1.disabled=S.cls===k||(!first&&S.coins<fee);b1.onclick=()=>clsPick(k);b2.onclick=()=>openClass();t.appendChild(b1);t.appendChild(b2);body.appendChild(t);
     const c=cv2.getContext('2d'),t0=performance.now(),loop=()=>{if(!cv2.isConnected||$('modal').hidden)return;try{clsDemoDraw(c,k,(performance.now()-t0)/1000)}catch(e){return}requestAnimationFrame(loop)};loop();
@@ -9584,12 +9603,12 @@ function openSkills(){
   openModal('직업과 기술',body=>{
     const C=CLS[S.cls],left=skLeft();
     row(body,el('span','badge',C.ic),'내 직업 · '+C.n,C.d,[['직업 바꾸기',()=>openClass()]]);
-    body.appendChild(el('p','note','남은 기술 점수 '+left+' · 레벨 둘마다 1점 · 기술마다 '+SK_MAX+'단계'));
+    body.appendChild(el('p','note','남은 기술 점수 '+left+' · 레벨마다 1점 · 기술 다섯 단계 · 단련 열 단계'));
     body.appendChild(el('p','note','갈래의 둘째 기술은 싸울 때 단추로 써요 · 컴퓨터는 1·2·3 키 · 기력 2'));
     for(const [rn,list] of SKILLS[S.cls]){
       body.appendChild(el('p','sub',rn+' 갈래'));
-      list.forEach(([id,n,d],i)=>{const lv=S.sk[id]|0,lock=i>0&&!(S.sk[list[i-1][0]]|0);
-        row(body,el('span','badge',String(lv)),n+' '+lv+'/'+SK_MAX,lock?'앞의 기술을 먼저 찍어요':d,[[lv>=SK_MAX?'다 찍음':'찍기',()=>{if(skLeft()<1||(S.sk[id]|0)>=SK_MAX||lock)return;S.sk[id]=(S.sk[id]|0)+1;sfx('level');saveAll();openSkills()},lock||lv>=SK_MAX||left<1]])});
+      list.forEach(([id,n,d],i)=>{const lv=S.sk[id]|0,lock=rn!=='단련'&&i>0&&!(S.sk[list[i-1][0]]|0);
+        row(body,el('span','badge',String(lv)),n+' '+lv+'/'+skMax(id),lock?'앞의 기술을 먼저 찍어요':d,[[lv>=skMax(id)?'다 찍음':'찍기',()=>{if(skLeft()<1||(S.sk[id]|0)>=skMax(id)||lock)return;S.sk[id]=(S.sk[id]|0)+1;sfx('level');saveAll();openSkills()},lock||lv>=skMax(id)||left<1]])});
     }
     if(skUsed())row(body,el('span','badge','↺'),'기술 다시 찍기','찍은 점수를 모두 돌려받아요 · 삯 500냥',[['되돌리기',()=>{if(S.coins<500)return;addCoins(-500);S.sk={};sfx('pick');saveAll();openSkills()},S.coins<500]]);
   });
@@ -9623,7 +9642,7 @@ const meleeReach=()=>meleeKind()==='spear'?(specMaster('mil','spear')?3:2):1; /*
 const meleeWin=m=>Math.max(.09,MELEE[m.mel].w-(BEASTS[m.b.k].lv|0)*.004+sv('arms')*.0015+specMw(m.mel)+(isCls('musa')?.02:isCls('gung')||isCls('dosa')?-.02:0)); /* 전문 갈래(검술·창술·주먹패)가 틈을 늘린다 */
 const meleeDur=k=>clamp(1.35-(BEASTS[k].sp||2)*.13,.8,1.2);
 const meleeFeint=k=>{const l=BEASTS[k].lv|0;return l>=14?.25:l>=9?.15:0};
-const meleeDmg=k=>MELEE[k].d+(k==='fist'?0:gearFx('dmg'))+((k==='sword'&&specMaster('mil','sword'))||(k==='fist'&&specMaster('rogue','jumeok'))?1:0)+(isCls('musa')?1+Math.ceil(sk('m_power')/2):0); /* 검술·주먹패 달인은 한 번에 1 더. v154: 무사의 강타 */
+const meleeDmg=k=>MELEE[k].d+(k==='fist'?0:gearFx('dmg'))+((k==='sword'&&specMaster('mil','sword'))||(k==='fist'&&specMaster('rogue','jumeok'))?1:0)+(isCls('musa')?1+Math.ceil(sk('m_power')/2):0)+Math.floor(trn(1)/2); /* 검술·주먹패 달인은 한 번에 1 더. v154: 무사의 강타 */
 const beastAtk=k=>BEASTS[k].bite||3+(BEASTS[k].lv|0); /* 덤비지 않는 짐승도 붙들리면 발길질쯤은 한다 */
 const GUARD_MAX=.6; /* 장비가 짐승의 공격을 덜어 주는 한도(v76: 0.75에서 낮춤. 곰 가죽 한 벌이면 한도를 넘겨서 물려도 아프지 않았다) */
 /* ───────── 싸움(v156) ─────────
@@ -9660,7 +9679,7 @@ function startHunt(b){
 function startMelee(b){startHunt(b)}
 function fightPress(m){if(!m.pb){m.pb=1;m.cd-=.22}} /* 공격을 더 누르면 다음 한 번이 조금 빨리 나간다 */
 function fightSwing(m){
-  const b=m.b,k=m.mel,bx=rx(b)*T+16,by=ry(b)*T+10;m.cd=SWING[k]*(skOn('h_step')?.67:1);m.sw=.22;m.pb=0;m.i++;
+  const b=m.b,k=m.mel,bx=rx(b)*T+16,by=ry(b)*T+10;m.cd=SWING[k]*(skOn('h_step')?.67:1)*(1-.03*trn(3));m.sw=.22;m.pb=0;m.i++;
   let dmg=Math.max(1,Math.ceil(meleeDmg(k)*.75));const o={mel:1,sfx:k==='sword'||k==='dagger'?'sword':k==='spear'?'spear':k==='axe'?'axe':'fist'};
   if(isCls('hyeop')&&!b.amb){b.amb=1;dmg=meleeDmg(k)*2+sk('h_amb');fxAdd('slash2',bx,by);float('기습!',bx,by-40,'#f7d24a');o.big=1;o.col='#f7d24a'} /* 협객의 특기: 그 짐승을 처음 칠 때 */
   fxAdd('slash',bx,by);
@@ -9668,7 +9687,7 @@ function fightSwing(m){
   fightHit(b,dmg,o);
 }
 function fightShot(m){
-  const b=m.b,D=BEASTS[b.k],bx=rx(b)*T+16,by=ry(b)*T+14,dosa=isCls('dosa');m.cd=shotGap()*(skOn('h_step')?.67:1);m.sw=.18;m.pb=0;
+  const b=m.b,D=BEASTS[b.k],bx=rx(b)*T+16,by=ry(b)*T+14,dosa=isCls('dosa');m.cd=shotGap()*(skOn('h_step')?.67:1)*(1-.03*trn(3));m.sw=.18;m.pb=0;
   const p=clamp(.5+(aimR()-8.5)/8.5*.42-Math.max(0,D.lv-S.level)*.04,.2,.93),hit=Math.random()<p;sfx('bow');
   shotFire(hit?bx:bx+ri(-16,16),hit?by:by+ri(8,16),hit,dosa||(isCls('hyeop')?2:0));
   if(!hit){float('빗나감',bx,by-24,'#cfd6dc');if(!D.bite)b.flee=Math.max(b.flee,1.6);else b.mad=1;return}
@@ -9690,7 +9709,7 @@ function updFight(m,dt){
 /* 누르는 기술: 갈래의 둘째 기술이 그 갈래의 단추가 된다(skSlots). need r=겨눌 짐승(붙어 있거나 일직선) · m=붙은 짐승 */
 const ACTIVE={g_crit:{n:'급소',cd:9,need:'r'},g_twin:{n:'연사',cd:9,need:'r'},g_fire:{n:'불화살',cd:10,need:'r'},m_chain:{n:'연격',cd:8,need:'m'},m_wide:{n:'버티기',cd:16},m_roar:{n:'기합',cd:13},
   h_smoke:{n:'연막',cd:15},h_step:{n:'질풍',cd:14},h_twin:{n:'쌍표창',cd:8,need:'r'},d_chain:{n:'벼락',cd:13,need:'r'},d_ward:{n:'호신부',cd:17},d_heal:{n:'치유',cd:25}};
-const skSlots=()=>S&&S.cls?SKILLS[S.cls].map(r=>r[1][1][0]):[];
+const skSlots=()=>S&&S.cls?SKILLS[S.cls].slice(0,3).map(r=>r[1][1][0]):[];
 function skTarget(){
   if(mg&&mg.kind==='hunt'&&beasts.includes(mg.b))return mg.b;const b=beastInLine();if(b)return b;
   let best=null,bd=99;for(const q of beasts){const d=Math.abs(q.x-P.x)+Math.abs(q.y-P.y);if(d<bd){bd=d;best=q}}return bd<=meleeReach()?best:null;
@@ -9746,7 +9765,7 @@ let huntStreak=0; /* 놓치지 않고 이어서 잡은 수 (저장하지 않는�
 // 맞으면 그 자리에서 불꽃이 튀고, 빗나가면 화살이 땅에 꽂혀 잠깐 남는다. 맞고 안 맞고는 쏘는 순간 이미 정해졌고 이것은 보기용이다
 let shots=[];
 const bowCol=()=>{const G=GEAR[S.gear.on.w];return G&&G.look&&G.look.bow?G.look.bow:'#8a5a34'};
-const handAt=()=>[(rx(P)+.5)*T+P.dir[0]*9,(ry(P)+.9)*T-15+P.dir[1]*6];
+const handAt=()=>[(rx(P)+.5)*T+P.dir[0]*8,(ry(P)+.9)*T-12+P.dir[1]*5];
 function shotFire(x,y,hit,bj){const h=handAt();shots.push({x0:h[0],y0:h[1],x1:x,y1:y,t:0,hit,bj,v:(Math.random()*3)|0}); /* v: 표창의 모양(사방·육방·비도) */if(shots.length>8)shots.shift()}
 function updShots(dt){if(!shots.length)return;for(const s of shots)s.t+=dt;shots=shots.filter(s=>s.t<(s.hit?.5:1.3))}
 function drawShots(c){
@@ -9853,7 +9872,7 @@ function zoneBanner(c){
   plaque(c,10,10,(scene==='cave'?'동굴 '+cave.floor+'층':ZONE_N[wz]||'사냥터')+(n?' · 짐승 '+n:''),false);
 }
 function beastTag(c,b){
-  const D=BEASTS[b.k],x=rx(b)*T+16,y=ry(b)*T-(D.man?40:D.big?34:20),t='Lv.'+D.lv,hi=D.lv>S.level+3,mid=D.lv>S.level;
+  const D=BEASTS[b.k],L=D.lv+(b.lvx|0),x=rx(b)*T+16,y=ry(b)*T-(D.man?40:D.big?34:20),t='Lv.'+L,hi=L>S.level+3,mid=L>S.level;
   c.font='10px '+FONT;c.textAlign='center';c.textBaseline='middle';const w=c.measureText(t).width+9;
   rr(c,x-w/2-1,y-7,w+2,14,4,hi?'#8a2a22':mid?'#8a6a2a':'#6b4a2a');rr(c,x-w/2,y-6,w,12,3,'rgba(251,245,230,.96)');c.fillStyle=hi?'#b5332a':mid?'#8a5a12':'#33261c';c.fillText(t,x,y+.5);
   if(b.mhp&&b.hp<b.mhp){const u=clamp(b.hp/b.mhp,0,1),bw=30;rr(c,x-bw/2-1,y+8,bw+2,6,2,'#4a3324');rr(c,x-bw/2,y+9,bw,4,1.5,'#e9dcc0');if(u>0)rr(c,x-bw/2,y+9,Math.max(2,bw*u),4,1.5,u>.5?'#b5332a':u>.25?'#c9722a':'#7a1f1a')} /* 다친 짐승의 기운 막대 */
@@ -11512,6 +11531,12 @@ const GEAR={
   w_buj:{n:'닳은 부적 묶음',s:'w',g:0,lv:1,fx:{aim:.5},look:{bow:'#f1d75a'},ic:'staff',cls:'dosa',base:1},
   w_buj2:{n:'복숭아나무 지팡이',s:'w',g:1,lv:5,fx:{aim:1,en:4},find:'shake',look:{bow:'#c98a6a'},ic:'staff',cls:'dosa'},
   w_buj3:{n:'벼락 맞은 대추나무 지팡이',s:'w',g:2,lv:9,fx:{aim:1.5,dmg:1},dig:'cave',look:{bow:'#7a5a4a'},ic:'staff',cls:'dosa'},
+  /* v163 전설 장비: 가장 센 것들에게서만 드물게 나온다 */
+  w_gungL:{n:'신궁',s:'w',g:4,lv:20,fx:{aim:3.2,dmg:2,luck:.05},drop:['gtiger',.5],look:{bow:'#f2cf5a'}},
+  w_musaL:{n:'사인검',s:'w',g:4,lv:20,fx:{guard:.3,aim:1.5,dmg:2,en:10},drop:['reaper',.6],look:{bow:'#e9f7ff'},ic:'sword'},
+  w_hyeopL:{n:'귀살 비수',s:'w',g:4,lv:20,fx:{aim:2.6,dmg:2,spd:.05},drop:['jangsan',.5],look:{bow:'#b9a6e0'},ic:'dagger',cls:'hyeop'},
+  w_dosaL:{n:'벽사의 천부인',s:'w',g:4,lv:20,fx:{aim:2.8,dmg:2,xp:.05},drop:['imugi',.5],look:{bow:'#7fd0ff'},ic:'staff',cls:'dosa'},
+  a_ghost:{n:'귀갑 갑옷',s:'a',g:4,lv:20,fx:{en:44,guard:.6},drop:['reaper',.5],look:{top:'#2f3a4a',rib:'#7fd0ff'}},
   w_buj4:{n:'신선의 청려장',s:'w',g:3,lv:13,fx:{aim:2.1,dmg:1,xp:.04},drop:['wtiger',.4],look:{bow:'#5fbf7a'},ic:'staff',cls:'dosa'},
   // v81: 길의 일에 좋은 장비는 길에서 받지 않고 사냥으로 구한다(수확·채집에서는 나오지 않는다. 너무 자주 나온다는 사용자 의견)
   h_farm:{n:'꿩 깃 꽂은 농립',s:'h',g:1,lv:4,fx:{en:8,xp:.03},drop:['pheasant',.06],look:{hat:'straw'}},
@@ -11563,7 +11588,7 @@ function syncRouteGear(quiet){
 const GEAR_SLOTS=[['w','무기·도구'],['a','갑옷·옷'],['h','쓰개'],['s','신발'],['t','장신구']],GEAR_GRADE=['수수한','쓸 만한','귀한','으뜸','전설의'],GEAR_COL=['#8a7a5a','#3f8fc4','#8a63c9','#dd6a1c','#d9304a'];
 const FX_TXT={aim:v=>'사냥 과녁 +'+v,dmg:v=>'화살 힘 +'+v,en:v=>'기력 최대치 +'+v,spd:v=>'걷는 빠르기 +'+Math.round(v*100)+'%',guard:v=>'사나운 짐승에게 덜 다침 '+Math.round(v*100)+'%',luck:v=>'귀한 것이 나올 운 +'+Math.round(v*100)+'%',xp:v=>'경험치 +'+Math.round(v*100)+'%',
   cook:v=>'요리 불의 폭 +'+Math.round(v/.12*100)+'%',friend:v=>'가까워지는 빠르기 +'+Math.round(v*100)+'%',sell:v=>'파는 값 +'+Math.round(v*100)+'%'};
-const gearFx=k=>{let v=clsFx(k);if(S&&S.gear)for(const s in S.gear.on){const G=GEAR[S.gear.on[s]];if(G&&G.fx[k])v+=G.fx[k]} /* v154: 직업과 기술의 덤(clsFx)도 여기에 얹는다 */
+const gearFx=k=>{let v=clsFx(k);if(S&&S.gear){for(const s in S.gear.on){const G=GEAR[S.gear.on[s]];if(G&&G.fx[k])v+=G.fx[k]*(k==='dmg'?1:1+.15*upLv(S.gear.on[s]))}if(k==='dmg'&&GEAR[S.gear.on.w])v+=Math.floor(upLv(S.gear.on.w)/2)} /* v163: 벼린 단계마다 효과 +15%, 무기는 두 단계마다 힘 +1 */ /* v154: 직업과 기술의 덤(clsFx)도 여기에 얹는다 */
   if(S&&S.fortune&&S.fortune.day===S.day&&S.fortune.k===k)v+=S.fortune.v; /* 점집에서 본 오늘의 운세도 여기에 얹는다 */
   if(S&&S.stayDay===S.day&&STAY_FX[k])v+=STAY_FX[k]; /* 별서에서 묵고 난 날의 덤 */
   v+=specFx(k); /* 전문 갈래의 덤 */
@@ -11647,9 +11672,24 @@ function gearDrop(kind){
     if(gearGet(id))setTimeout(()=>{if(S&&!busy())gearSay(id,BEASTS[kind].n+'에게서')},900);return}
 }
 // 대장간에서 짓기: 연장 벼리기와 같은 두드리기 놀이를 한다. 재료와 삯은 다 두드려 냈을 때만 든다
+/* 장비 벼리기(v163, 사용자 요청: 스탯이 다 찬 뒤에도 강해질 길 · 장비를 강하게): 대장간에서 가진 장비를 +1~+5까지 벼린다(S.gear.up[장비]=단계).
+   단계마다 그 장비의 효과가 15%씩 늘고(gearFx), 무기는 두 단계마다 힘이 1 더 붙는다. 재료와 삯은 단계가 오를수록 많이 든다(UP_COST). 실패는 없다 */
+const UP_MAX=5,UP_COST=[{iron:4},{iron:6,silver:3},{silver:5,jade:2},{jade:4,gold:2},{gold:4,jade:4}],upLv=id=>(S&&S.gear&&S.gear.up&&S.gear.up[id])|0,upFee=(id,n)=>(n+1)*(n+1)*400*(1+(GEAR[id].g|0));
+function openForgeUp(){
+  openModal('장비 벼리기',body=>{
+    body.appendChild(el('p','note','가진 장비를 더 세게 벼려요 · 한 단계에 효과 +15% · 무기는 두 단계마다 힘 +1 · 다섯 단계까지'));
+    body.appendChild(el('p','note','가진 돈 '+won(S.coins)));
+    const ids=Object.keys(S.gear.own).filter(k=>GEAR[k]).sort((a,b)=>(S.gear.on[GEAR[b].s]===b)-(S.gear.on[GEAR[a].s]===a)||GEAR[b].g-GEAR[a].g);
+    if(!ids.length)body.appendChild(el('p',null,'가진 장비가 없어요.'));
+    for(const id of ids){const G=GEAR[id],n=upLv(id),full=n>=UP_MAX,need=full?null:UP_COST[n],fee=full?0:upFee(id,n),ok=!full&&S.coins>=fee&&hasNeed(need);
+      row(body,gearBadge(id),G.n+(n?' +'+n:'')+(S.gear.on[G.s]===id?' · 걸치는 중':''),full?'끝까지 벼렸어요':needText(need)+' · 삯 '+won(fee),
+        [[full?'다 벼림':'벼리기',()=>{if(upLv(id)!==n||S.coins<fee||!hasNeed(need))return;for(const k in need)gain(k,-need[k]);addCoins(-fee);S.gear.up=S.gear.up||{};S.gear.up[id]=n+1;S.en=Math.min(S.en,maxEn());sfx('level');saveAll();hud();openForgeUp()},!ok]])}
+  });
+}
 function openSmith(){
   openModal('장비 짓기',body=>{
     body.appendChild(el('p','note','재료와 삯을 대면 모루와 함께 두드려 장비를 지어요. 다 두드려 냈을 때만 재료가 들고, 한 번 달굴 때마다 기력이 5 들어요. 짐승을 잡거나 반짝이는 곳을 파야만 나오는 장비도 있어요. 장비를 누르면 설명을 볼 수 있어요.'));
+    row(body,el('span','badge','벼'),'장비 벼리기','가진 장비를 다섯 단계까지 더 세게 벼려요',[['열기',()=>openForgeUp()]]); /* v163 */
     // 내 레벨보다 두 단계 위까지만 보여 준다. 더 좋은 것은 레벨이 오르면 모루가 꺼내 놓는다
     let later=0;
     for(const [s,sn] of GEAR_SLOTS){
