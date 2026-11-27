@@ -1489,6 +1489,9 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:182,d:'11월 27일',t:'귀신골 우두머리',l:[
+    '귀신골 5·10·15·20층에 우두머리가 나와요. 크고 붉은 기운이 돌아요.',
+    '처음 물리치면 스탯 점수 2점과 벼릴 재료를 받아요.']},
   {v:181,d:'11월 27일',t:'직업 승급',l:[
     '갈래의 기술을 다 찍으면 승급할 수 있어요(직업 창).',
     '귀신골 5·10·15층까지 내려가야 하고 삯이 들어요.',
@@ -8499,6 +8502,9 @@ Object.assign(BEASTS,{
 const GH_PLAN=f=>[['wisp','wisp','wisp'],['wisp','wisp','eggghost','eggghost'],['eggghost','eggghost','eggghost','maiden'],['maiden','maiden','wisp','wisp','eggghost'],['gumiho','maiden','maiden','mongdal'],
   ['mongdal','mongdal','mongdal','eggghost','eggghost'],['gumiho','mongdal','mongdal','maiden','maiden'],['jangsan','gumiho','maiden','maiden','mongdal'],['jangsan','jangsan','mongdal','mongdal','gumiho'],['reaper','mongdal','mongdal','maiden','maiden']][(Math.min(GH_MAX,f)-1)%10];
 const ghDone=f=>!!(S.ghost.day===S.day&&S.ghost.done&&S.ghost.done.includes(f));
+/* 귀신골 우두머리(v182, 개선점 2번: 내려갈 까닭과 끝): 다섯 층마다 그 층의 첫 귀신이 우두머리다(b.boss) — 더 크게 그리고 발밑에 붉은 기운, 머리 위에 이름. 기운 2.5배, 표시 레벨 +3.
+   처음 물리치면 스탯 점수 2점과 벼릴 재료(S.ghost.boss[층]=1), 그 뒤로는 하루 한 번 옥 하나(층은 하루에 한 번만 물리칠 수 있다) */
+const GH_BOSS={5:['gumiho','천년 구미호',{jade:3}],10:['reaper','저승사자',{jade:4,silver:4}],15:['jangsan','장산범 왕',{jade:4,gold:2}],20:['reaper','염라의 사자',{jade:6,gold:4}]};
 function genGhost(f){
   const rng=mulberry(S.day*173+f*1291+5),tile=[],objAt=[],ROCKS=[],X0=8,X1=27,Y0=6,Y1=19;
   for(let y=0;y<H;y++){tile.push(new Array(W).fill(9));objAt.push(new Array(W).fill(null))}
@@ -8510,14 +8516,15 @@ function genGhost(f){
   for(let i=cells.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[cells[i],cells[j]]=[cells[j],cells[i]]}
   const nR=Math.floor(cells.length*.07);for(let i=0;i<nR;i++){const [x,y]=cells[i],o={t:'crock',x,y,sh:0,ore:null};ROCKS.push(o);objAt[y][x]=o} /* 드문드문 놓인 바위(몸을 숨길 자리) */
   const open=cells.slice(nR),mobs=[];
-  if(!ghDone(f))GH_PLAN(f).concat(f>15?['gumiho','mongdal']:f>10?['mongdal']:[]).forEach((k,i)=>{const q=open[i];if(!q)return;const b=mkBeast(k,q[0],q[1]);if(f>10){b.hp=Math.round(b.hp*(1.5+.08*(f-10)));b.lvx=20+(f-10)*2-Math.min(20,BEASTS[k].lv)+Math.max(0,BEASTS[k].lv-20)}mobs.push(b)}); /* 11층부터: 기운 1.5배 넘게, 표시 레벨도 올린다(lvx) */
+  const gplan=GH_PLAN(f).concat(f>15?['gumiho','mongdal']:f>10?['mongdal']:[]),GB=GH_BOSS[f];if(GB)gplan[0]=GB[0];
+  if(!ghDone(f))gplan.forEach((k,i)=>{const q=open[i];if(!q)return;const b=mkBeast(k,q[0],q[1]);if(f>10){b.hp=Math.round(b.hp*(1.5+.08*(f-10)));b.lvx=20+(f-10)*2-Math.min(20,BEASTS[k].lv)+Math.max(0,BEASTS[k].lv-20)}if(GB&&i===0){b.boss=1;b.bn=GB[1];b.hp=Math.round(b.hp*2.5);b.lvx=(b.lvx|0)+3}mobs.push(b)}); /* 11층부터: 기운 1.5배 넘게, 표시 레벨도 올린다(lvx) */
   const far=open.filter(q=>q[0]>X0+12),h=(far.length?far:open)[Math.floor(rng()*(far.length||open.length))];
   cave={floor:f,ghost:1,map:{tile,objAt,TREES:[],ROCKS,GRASS:[],SAND:[]},sp,up,hid:[h[0],h[1]],found:false,glint:null,mobs};
 }
 function ghostTalk(){
   const lv=S.level,top=Math.min(GH_MAX,(S.ghost.max|0)+1),fs=[1];if(top>1)fs.push(top);if(top>4&&!fs.includes(4))fs.splice(1,0,4);if(top>11&&!fs.includes(11))fs.splice(fs.length-1,0,11);
   if(lv<GH_LV(1)){dialog({who:'귀신골 어귀',text:'음산한 바람이 새어 나오는 무너진 굴이에요.\n금줄이 쳐져 있고, 안에서 푸른 불이 어른거려요.\n(레벨 '+GH_LV(1)+'부터 들어갈 수 있어요)'});return}
-  dialog({who:'귀신골 어귀',role:'가장 깊이 물리친 곳 '+(S.ghost.max|0)+'층',text:'귀신이 나온다는 옛 굴이에요.\n· 층의 귀신을 모두 물리치면 내려가는 길이 열려요\n· 내려갈수록 세요 · 층마다 들어갈 레벨이 있어요\n· 기력이 다하면 밖으로 물러나요',
+  dialog({who:'귀신골 어귀',role:'가장 깊이 물리친 곳 '+(S.ghost.max|0)+'층',text:'귀신이 나온다는 옛 굴이에요.\n· 층의 귀신을 모두 물리치면 내려가는 길이 열려요\n· 내려갈수록 세요 · 층마다 들어갈 레벨이 있어요\n· 다섯 층마다 우두머리 · '+(()=>{const B=(S.ghost&&S.ghost.boss)||{},nx=[5,10,15,20].find(q=>!B[q]);return nx?'다음: '+nx+'층 '+GH_BOSS[nx][1]:'넷을 모두 물리쳤어요'})()+'\n· 기력이 다하면 밖으로 물러나요',
     choices:fs.map(f=>[f+'층 (레벨 '+GH_LV(f)+')',()=>{if(S.level<GH_LV(f)){toast('레벨 '+GH_LV(f)+'부터 내려갈 수 있어요');return}enterGhost(f)}]).concat([['그만',null]])});
 }
 function enterGhost(f){
@@ -8537,6 +8544,9 @@ function ghostKill(){
   if(!cave||!cave.ghost||beasts.length)return;const f=cave.floor;
   if(S.ghost.day!==S.day){S.ghost.day=S.day;S.ghost.done=[]}if(!S.ghost.done.includes(f))S.ghost.done.push(f);
   ghostLadder();sfx('level');
+  if(GH_BOSS[f]){const GB=GH_BOSS[f];S.ghost.boss=S.ghost.boss||{};
+    if(!S.ghost.boss[f]){S.ghost.boss[f]=1;S.sp=(S.sp|0)+2;for(const k in GB[2])gain(k,GB[2][k]);setTimeout(()=>{if(S)toast(GB[1]+' 처치! 스탯 점수 +2 · '+needText(GB[2]))},1600)}
+    else{gain('jade',1);float('옥 +1')}}
   if(f>(S.ghost.max|0)){S.ghost.max=f;const pz=GH_PRIZE[f];if(pz)addCoins(pz);toast('귀신골 '+f+'층을 처음 물리쳤어요!'+(pz?' · 상금 '+won(pz):'')+(f>=GH_MAX?' · 저승사자가 물러갔어요':''))}
   else float(f<GH_MAX?'내려가는 길이 열렸어요':'귀신골이 조용해졌어요');
   saveAll();
@@ -10018,7 +10028,9 @@ function drawBeast(c,b){
   }
   const fl=BEASTS[b.k].ghost?3+Math.sin(now*3+b.x*2)*2.5:0; /* v161: 귀신은 그림자 없이 떠서 흔들리고 조금 비친다 */
   if(!fl)blit(c,shadowSpr(b.k==='rabbit'||b.k==='pheasant'||b.k==='raccoon'||b.k==='marten'?7:b.k==='kboar'||b.k==='bear'||BEASTS[b.k].big?15:11),gx,gy);
+  if(b.boss){const pu=.5+Math.sin(now*4)*.2;c.globalAlpha=pu*.5;ell(c,gx,gy+2,24,9,'#b5332a');c.globalAlpha=pu*.5;ell(c,gx,gy+2,15,5.5,'#f08a2a');c.globalAlpha=1;c.save();c.translate(gx,gy);c.scale(1.35,1.35);c.translate(-gx,-gy)} /* v182: 우두머리는 크게, 발밑에 붉은 기운 */
   if(fl)c.globalAlpha=.86;blit(c,beastSpr(b.k),gx,y-fl,b.dir[0]<0);c.globalAlpha=1;if(hk){c.globalCompositeOperation='lighter';c.globalAlpha=.7;blit(c,beastSpr(b.k),gx,y-fl,b.dir[0]<0);c.globalAlpha=1;c.globalCompositeOperation='source-over'}
+  if(b.boss)c.restore();
   if(b.stun>0&&b.bj)drawBujeok(c,gx,y-18,Math.sin(now*5)*.12);
   else if(b.stun>0)for(let i=0;i<3;i++)star(c,gx+Math.cos(now*6+i*2.1)*9,y-26+Math.sin(now*6+i*2.1)*3,2.6,'#f7d24a');
   else if(b.mad&&BEASTS[b.k].mild){const X=gx+(b.dir[0]<0?-12:12),Y=y-(BEASTS[b.k].big?40:34)+Math.sin(now*9)*1.5;c.fillStyle='#d9412e';c.fillRect(X-1,Y-6,3,7);c.fillRect(X-1,Y+3,3,3)} /* 성난 짐승 머리 위의 느낌표 */
@@ -10055,7 +10067,7 @@ function zoneBanner(c){
   plaque(c,10,10,(scene==='cave'?'동굴 '+cave.floor+'층':ZONE_N[wz]||'사냥터')+(n?' · 짐승 '+n:''),false);
 }
 function beastTag(c,b){
-  const D=BEASTS[b.k],L=D.lv+(b.lvx|0),x=rx(b)*T+16,y=ry(b)*T-(D.man?40:D.big?34:20),t='Lv.'+L,hi=L>S.level+3,mid=L>S.level;
+  const D=BEASTS[b.k],L=D.lv+(b.lvx|0),x=rx(b)*T+16,y=ry(b)*T-(D.man?40:D.big?34:20)-(b.boss?16:0),t=(b.boss?b.bn+' ':'')+'Lv.'+L,hi=L>S.level+3,mid=L>S.level;
   c.font='10px '+FONT;c.textAlign='center';c.textBaseline='middle';const w=c.measureText(t).width+9;
   rr(c,x-w/2-1,y-7,w+2,14,4,hi?'#8a2a22':mid?'#8a6a2a':'#6b4a2a');rr(c,x-w/2,y-6,w,12,3,'rgba(251,245,230,.96)');c.fillStyle=hi?'#b5332a':mid?'#8a5a12':'#33261c';c.fillText(t,x,y+.5);
   if(b.mhp&&b.hp<b.mhp){const u=clamp(b.hp/b.mhp,0,1),bw=30;rr(c,x-bw/2-1,y+8,bw+2,6,2,'#4a3324');rr(c,x-bw/2,y+9,bw,4,1.5,'#e9dcc0');if(u>0)rr(c,x-bw/2,y+9,Math.max(2,bw*u),4,1.5,u>.5?'#b5332a':u>.25?'#c9722a':'#7a1f1a')} /* 다친 짐승의 기운 막대 */
