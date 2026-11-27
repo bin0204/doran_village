@@ -28,6 +28,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15p
   box-sizing:border-box;overflow:hidden;overscroll-behavior:none;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 *{box-sizing:border-box}
 #app{height:100%;max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:8px;min-height:0}
+@media (min-width:1000px){#app{max-width:none}} /* v161(사용자 요청: PC에서는 창 전체로): 넓은 화면에서는 너비 제한을 풀어 창을 가득 채운다 */
 #hud{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;min-width:0}
 .brand{font-family:var(--display);font-size:22px;color:var(--leaf);letter-spacing:.02em;margin-right:auto}
 .stats{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font-family:var(--display);font-size:15px;font-variant-numeric:tabular-nums}
@@ -67,6 +68,7 @@ button.chip{font:inherit;color:inherit;cursor:pointer;line-height:inherit}
 #actBtn.idle{opacity:.42} /* 지금 할 것이 없으면 흐리게 */
 /* 싸움 단추(v156): 싸우는 동안 공격 단추가 커지고, 그 둘레에 기술 단추 셋이 부채꼴로 놓인다 */
 #actBtn.fight{width:74px;height:74px;font-size:18px}
+#stage.ghost{border-color:#2a2440;box-shadow:0 0 0 1.5px #15121f,inset 0 0 26px rgba(90,60,170,.6)} /* v161: 귀신골에 있는 동안 놀이판 테두리가 검보랏빛으로 */
 #skPad button{position:absolute;width:48px;height:48px;border-radius:50%;border:2px solid var(--wood);background:var(--surface);color:var(--ink);font-family:var(--display);font-size:12px;line-height:1.05;padding:0;cursor:pointer;box-shadow:0 2px 0 var(--shade);touch-action:manipulation}
 #skPad button:nth-child(1){right:92px;bottom:10px}#skPad button:nth-child(2){right:78px;bottom:66px}#skPad button:nth-child(3){right:20px;bottom:94px}
 #skPad button:active{transform:translateY(2px)}#skPad button.cool{opacity:.55;font-size:16px}#skPad button.off{opacity:.3}#skPad button.on{border-color:var(--accent-ink);background:var(--accent);color:var(--accent-ink)}
@@ -1466,6 +1468,12 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:161,d:'11월 27일',t:'PC에서는 창 가득',l:[
+    '넓은 화면(PC)에서는 놀이판이 창을 가득 채워요.',
+    '크게 보이는 화면에서는 이름표 글씨를 조금 줄였어요.',
+    '귀신골이 으스스해졌어요. 등불이 좁아지고 안개와 푸른 불이 떠다녀요.',
+    '어둠 속에서 붉은 눈이 깜빡이고, 벽에는 부적과 거미줄이 있어요.',
+    '도사의 평타는 굵은 노란 줄 대신 푸른 불꽃이 튀어요. 벼락은 기술에서만 쳐요.']},
   {v:160,d:'11월 27일',t:'윗숲과 아랫숲',l:[
     '사냥터 숲의 북쪽 길 끝에 윗숲, 남쪽 길 끝에 아랫숲이 생겼어요.',
     '내 레벨이 오를수록 센 짐승이 섞여 나와요. 여기서 레벨을 올려요.',
@@ -4067,8 +4075,11 @@ function buildGround(){
         c.fillStyle='#8a5a34';c.fillRect(px+1,py-10,4,10);c.fillRect(px+T-5,py-10,4,10);c.fillStyle='#6b4226';c.fillRect(px,py-14,6,6);c.fillRect(px+T-6,py-14,6,6);c.fillStyle='rgba(60,40,20,.22)';c.fillRect(px+1,py-11,T-2,2)}}
     // 동굴: 9는 바위벽(아래가 바닥이면 벽의 앞면이 보인다), 10은 바닥
     if(t===9){
-      c.fillStyle='#231d1a';c.fillRect(px,py,T,T);if(h>.5)dot(px+4+h*20,py+6+h2*18,4,2,'#2e2623');
-      if(tile[y+1]&&tile[y+1][x]===10){c.fillStyle='#4a3f38';c.fillRect(px,py+12,T,T-12);c.fillStyle='#5a4d44';c.fillRect(px,py+12,T,3);c.fillStyle='#3a312c';c.fillRect(px+(x%2?8:20),py+18,2,10)}
+      const gh=scene==='cave'&&cave&&cave.ghost; /* v161: 귀신골은 검푸른 돌에 부적과 거미줄 */
+      c.fillStyle=gh?'#0f0e17':'#231d1a';c.fillRect(px,py,T,T);if(h>.5)dot(px+4+h*20,py+6+h2*18,4,2,gh?'#1a1926':'#2e2623');
+      if(tile[y+1]&&tile[y+1][x]===10){c.fillStyle=gh?'#2e2d42':'#4a3f38';c.fillRect(px,py+12,T,T-12);c.fillStyle=gh?'#3d3c56':'#5a4d44';c.fillRect(px,py+12,T,3);c.fillStyle=gh?'#1c1b2a':'#3a312c';c.fillRect(px+(x%2?8:20),py+18,2,10);
+        if(gh&&h>.72){c.fillStyle='#d9c25a';c.fillRect(px+12,py+15,7,13);c.fillStyle='#8a2a22';c.fillRect(px+15,py+17,1,9);c.fillRect(px+13,py+20,5,1);c.fillRect(px+13,py+23,5,1)}
+        else if(gh&&h2>.78){c.strokeStyle='rgba(205,205,225,.38)';c.lineWidth=1;c.beginPath();c.moveTo(px,py+12);c.lineTo(px+15,py+27);c.moveTo(px,py+21);c.lineTo(px+11,py+12);c.moveTo(px+2,py+27);c.lineTo(px+13,py+13);c.moveTo(px+3,py+16);c.lineTo(px+8,py+19);c.stroke()}}
     }
     /* 언덕(v107): 12 위의 풀밭(조금 밝다) · 13 벼랑(돌 벽. 남쪽 줄은 앞면이 보이고, 나머지는 바위 둘레) · 14 돌계단 */
     /* v108(사용자 의견: 돌담처럼 이질적이다): 언덕을 풀 덮인 둔덕으로 다시 그렸다. 위는 둘레 풀밭과 같은 풀빛에 조금만 밝게, 뒤·옆 가장자리는 둥근 풀 둔덕과 흙 턱·덤불(그래서 못 지나감),
@@ -4129,7 +4140,10 @@ function buildGround(){
         for(const ex of [px+6.5,px+T-9.5]){circ(c,ex+1.5,sy2+2.2,2,'#a08e74');circ(c,ex+1.5,sy2+2.2,1,'#6e5f4c')}}
       for(const ex of [px+1,px+T-6]){rr(c,ex,py-3,5,T+1,2,'#55483a');rr(c,ex+.8,py-2,3.4,T-1,1.5,'#7a6a55');c.fillStyle='#93826b';c.fillRect(ex+1.2,py-1,1,T-4);c.fillStyle='#6f8a4a';c.fillRect(ex+.8,py+T-9,3.4,2);c.fillRect(ex+1.8,py+T-12,1.6,2)}
     }
-    if(t===10){c.fillStyle=(x+y)%2?'#6b5d52':'#64574d';c.fillRect(px,py,T,T);if(h>.45)dot(px+4+h*22,py+6+h2*20,2,2,'#7d6e62');if(h2>.8)dot(px+6+h2*14,py+18,4,2,'#55493f')}
+    if(t===10){const gh=scene==='cave'&&cave&&cave.ghost;c.fillStyle=gh?((x+y)%2?'#3f3f52':'#39394b'):(x+y)%2?'#6b5d52':'#64574d';c.fillRect(px,py,T,T);if(h>.45)dot(px+4+h*22,py+6+h2*20,2,2,gh?'#4d4d63':'#7d6e62');if(h2>.8)dot(px+6+h2*14,py+18,4,2,gh?'#2c2c3a':'#55493f');
+      if(gh&&h>.94){c.fillStyle='#cfcfc4';c.fillRect(px+11,py+12,9,7);c.fillRect(px+13,py+19,5,3);c.fillStyle='#1a1926';c.fillRect(px+13,py+14,2,2);c.fillRect(px+17,py+14,2,2)} /* 해골 */
+      else if(gh&&h2>.92){c.fillStyle='#bdbdb2';c.fillRect(px+8,py+16,14,2);c.fillRect(px+7,py+15,2,4);c.fillRect(px+21,py+15,2,4)} /* 뼈 */
+      else if(gh&&h>.87){c.fillStyle='rgba(90,20,24,.5)';c.fillRect(px+9,py+13,10,6);c.fillRect(px+13,py+19,5,3)}} /* 검붉은 얼룩 */
     // 궁궐: 박석 마당과 기와를 얹은 담
     if(t===7){
       /* v108(사용자 의견: 흰 돌바닥이 뜬금없다): 궁궐·저잣거리의 박석. 풀밭 위에 누런 돌빛의 크고 작은 돌을 깔고, 돌 틈에는 흙과 풀이 비치고, 바깥 모서리는 둥글게 깎아 풀밭과 잇는다 */
@@ -4972,11 +4986,13 @@ let lblT=null; /* 키운 미니게임 판(v82)의 이름표: 자리는 판을 �
 function label(c,x,y,txt){
   if(lblT){const t=lblT;lblT=null;c.font='12px '+FONT;const w=c.measureText(txt).width+10,L=Math.max(.8,Math.min(t.K,1.3,(view.w-10)/w)),X=clamp(t.cx+(x-t.cx)*t.K,cam.x+w*L/2+3,cam.x+view.w-w*L/2-3),Y=t.cy+(y-t.cy)*t.K;
     c.save();c.translate(X,Y);c.scale(L,L);label(c,0,0,txt);c.restore();lblT=t;return}
-  c.font='12px '+FONT;c.textAlign='center';c.textBaseline='middle';const w=c.measureText(txt).width+10;rr(c,x-w/2,y-8,w,16,5,'rgba(251,245,230,.93)');c.fillStyle='#33261c';c.fillText(txt,x,y+1)} /* 이름표: 한지 빛 바탕에 먹빛 글씨 */
+  const fs=zoom>=1.5?10:12,hh=fs+4;c.font=fs+'px '+FONT;c.textAlign='center';c.textBaseline='middle';const w=c.measureText(txt).width+(fs<12?8:10);rr(c,x-w/2,y-hh/2,w,hh,fs<12?4:5,'rgba(251,245,230,.93)');c.fillStyle='#33261c';c.fillText(txt,x,y+1)} /* 이름표: 한지 빛 바탕에 먹빛 글씨. v161: 크게 보이는 화면(PC)에서는 글씨를 조금 줄인다 */
 function resize(){
   const r=$('stage').getBoundingClientRect();dpr=Math.min(window.devicePixelRatio||1,2);
   // 도트가 뭉개지지 않게 화면 배율을 0.5 단위로 맞춘다 (도트 한 칸 = 화면 정수 픽셀)
-  KPX=Math.max(1,Math.round(dpr*clamp(r.width/540,1,1.7)*2)/2);zoom=KPX/dpr;
+  KPX=Math.max(1,Math.round(dpr*clamp(r.width/540,1,1.7)*2)/2);
+  {const need=dpr*Math.max(r.width/(W*T),r.height/(H*T));if(KPX<need)KPX=Math.ceil(need*2)/2} /* v161: 창이 아주 넓어도 화면이 지도보다 넓어지지 않게 배율을 올린다 */
+  zoom=KPX/dpr;
   cv.width=Math.max(1,Math.round(r.width*dpr));cv.height=Math.max(1,Math.round(r.height*dpr));view.w=r.width/zoom;view.h=r.height/zoom;
 }
 function renderTown(c){
@@ -5378,8 +5394,8 @@ function render(){
   if(!town)a*=.55;
   if(scene==='cave'){
     // 동굴 안은 낮밤이 없다. 내 둘레만 등불로 밝고 멀수록 어둡다
-    a=0;const lx=pcx-cam.x,ly=pcy-cam.y,g=c.createRadialGradient(lx,ly,50,lx,ly,210);
-    g.addColorStop(0,'rgba(8,6,5,0)');g.addColorStop(1,'rgba(8,6,5,.82)');c.fillStyle=g;c.fillRect(0,0,view.w,view.h);
+    a=0;const gh=!!(cave&&cave.ghost),lx=pcx-cam.x,ly=pcy-cam.y,g=c.createRadialGradient(lx,ly,gh?34:50,lx,ly,gh?150+Math.sin(now*7)*5+Math.sin(now*2.3)*8:210); /* v161: 귀신골은 등불이 좁고 흔들리며 어둠이 검푸르다 */
+    g.addColorStop(0,gh?'rgba(8,8,26,0)':'rgba(8,6,5,0)');g.addColorStop(1,gh?'rgba(5,5,16,.93)':'rgba(8,6,5,.82)');c.fillStyle=g;c.fillRect(0,0,view.w,view.h);if(gh)ghostMood(c,lx,ly);
   }
   if(a>0){c.fillStyle='rgba('+col+','+a+')';c.fillRect(0,0,view.w,view.h)}
   if(a>.1&&m>=1050){
@@ -6380,7 +6396,7 @@ function drawMgIn(c,labels){
       else if(m.mel==='staff'){rr(c,-10,-1.4,32,2.8,1,'#8a5a34');circ(c,23,0,3.6,col);circ(c,23,0,1.6,'#f7d24a')}
       else circ(c,6+(m.sw>0?7:0),0,4.2,'#f3cfb0');
       c.restore();
-      if(m.sw>0){c.strokeStyle='rgba(255,247,194,.9)';c.lineWidth=3;c.lineCap='round';c.beginPath();c.arc(h[0],h[1],23,a-1.25,a-1.25+u*2.1);c.stroke();c.lineCap='butt'} /* 휘두른 자국 */
+      if(m.sw>0){c.strokeStyle='rgba(255,255,255,.7)';c.lineWidth=2;c.lineCap='round';c.beginPath();c.arc(h[0],h[1],23,a-1.25,a-1.25+u*2.1);c.stroke();c.lineCap='butt'} /* 휘두른 자국(v161: 희고 가늘게) */
     }
     else if(isCls('dosa'))drawBujeok(c,h[0],h[1]-6,Math.sin(now*6)*.15);
     else if(isCls('hyeop')){star(c,h[0]+P.dir[0]*3,h[1]-3,5,'#cfd6dc');circ(c,h[0]+P.dir[0]*3,h[1]-3,1.4,'#3a3a40')}
@@ -8404,6 +8420,21 @@ function ghostKill(){
   else float(f<GH_MAX?'내려가는 길이 열렸어요':'귀신골이 조용해졌어요');
   saveAll();
 }
+/* 귀신골의 으스스한 기운(v161, 사용자 의견: 그냥 굴 같다 · 더 으스스하게): 화면 좌표에 그린다. 바닥을 기는 안개, 등불 밖 어둠에서 깜빡이는 붉은 눈, 떠다니는 푸른 불,
+   가장자리의 검보랏빛 테, 위쪽의 층 이름과 남은 귀신 수. 바닥과 벽의 빛깔·부적·거미줄·해골은 buildGround가 굽는다 */
+function ghostMood(c,lx,ly){
+  for(let i=0;i<7;i++){const x=((now*(8+i*3)+i*173)%(view.w+240))-120,y=view.h*(.18+.11*i)+Math.sin(now*.6+i)*10;c.fillStyle='rgba(150,160,210,.07)';c.beginPath();c.ellipse(x,y,90+i*8,13,0,0,7);c.fill()}
+  for(let i=0;i<6;i++){const wx=(9+((i*7+cave.floor*3)%17))*T+16-cam.x,wy=(7+((i*5+cave.floor)%11))*T+8-cam.y,bl=(now*.5+i*.37)%1;if(Math.hypot(wx-lx,wy-ly)<170||bl>.82)continue;
+    c.fillStyle='rgba(225,45,45,'+(.55+.3*Math.sin(now*2+i)).toFixed(2)+')';c.fillRect(Math.round(wx)-4,Math.round(wy),3,2);c.fillRect(Math.round(wx)+2,Math.round(wy),3,2)}
+  c.globalCompositeOperation='lighter';
+  for(let i=0;i<4;i++){const wx=(10+((i*11+cave.floor*5)%16))*T+Math.sin(now*.7+i*2)*18-cam.x,wy=(8+((i*7+cave.floor*2)%10))*T+Math.cos(now*.5+i)*12-cam.y,g=c.createRadialGradient(wx,wy,1,wx,wy,22);
+    g.addColorStop(0,'rgba(120,200,255,.5)');g.addColorStop(1,'rgba(120,200,255,0)');c.fillStyle=g;c.fillRect(wx-22,wy-22,44,44)}
+  c.globalCompositeOperation='source-over';
+  {const v=c.createRadialGradient(view.w/2,view.h/2,Math.min(view.w,view.h)*.35,view.w/2,view.h/2,Math.max(view.w,view.h)*.75);v.addColorStop(0,'rgba(30,10,50,0)');v.addColorStop(1,'rgba(30,10,50,.55)');c.fillStyle=v;c.fillRect(0,0,view.w,view.h)}
+  {const n=beasts.length,t='귀신골 '+cave.floor+'층 · '+(n?'남은 귀신 '+n:'고요해요');c.font='14px '+FONT;c.textAlign='center';c.textBaseline='middle';const w=c.measureText(t).width+28,x=w/2+12,y=24+Math.sin(now*1.3)*1.5; /* 알림과 작은 지도를 피해 왼쪽 위에 */
+    rr(c,x-w/2,y-12,w,24,6,'rgba(12,10,24,.78)');c.strokeStyle='rgba(120,200,255,.45)';c.lineWidth=1;c.strokeRect(Math.round(x-w/2)+.5,Math.round(y-12)+.5,Math.round(w)-1,23);
+    c.shadowColor='rgba(120,200,255,.9)';c.shadowBlur=8;c.fillStyle=n?'#cfe9ff':'#9fd6a8';c.fillText(t,x,y+1);c.shadowBlur=0}
+}
 function ghostGateArt(c){
   rr(c,-22,-34,9,36,2,'#6a6f78');rr(c,13,-34,9,36,2,'#5a5f68');poly(c,[-26,-34,0,-48,26,-34,22,-30,-22,-30],'#4a4f58'); /* 무너진 돌문 */
   rr(c,-13,-30,26,32,3,'#14161c');poly(c,[-13,2,-6,-6,2,2],'#2a2d36');poly(c,[4,2,10,-4,13,2],'#2a2d36'); /* 어두운 굴과 굴러 내린 돌 */
@@ -9380,7 +9411,8 @@ function updFx(dt){if(!fxs.length)return;for(const f of fxs)f.t+=dt;fxs=fxs.filt
 function drawFx(c){
   for(const f of fxs){
     if(f.t<0)continue;const u=f.t/.6,x=f.x,y=f.y;c.globalAlpha=Math.max(0,1-u);
-    if(f.k==='bolt'){c.strokeStyle='#fff7b0';c.lineWidth=3.2;c.lineJoin='miter';c.beginPath();c.moveTo(x-10,y-96);c.lineTo(x+7,y-66);c.lineTo(x-6,y-44);c.lineTo(x+5,y-22);c.lineTo(x,y);c.stroke();c.strokeStyle='#fff';c.lineWidth=1.2;c.stroke();circ(c,x,y,7+u*9,'rgba(255,247,176,.7)')}
+    if(f.k==='bolt'){c.lineJoin='round';for(const q of [['rgba(127,208,255,.5)',6.5],['#e9f7ff',2.2]]){c.strokeStyle=q[0];c.lineWidth=q[1];c.beginPath();c.moveTo(x-9,y-96);c.lineTo(x+6,y-70);c.lineTo(x-5,y-50);c.lineTo(x+7,y-30);c.lineTo(x,y);c.moveTo(x+6,y-70);c.lineTo(x+17,y-58);c.moveTo(x-5,y-50);c.lineTo(x-16,y-40);c.stroke()}circ(c,x,y,7+u*9,'rgba(200,235,255,.6)')} /* v161: 벼락은 가지 친 푸른빛 번개로 */
+    else if(f.k==='spark'){for(let i=0;i<7;i++){const q=i*.9+.2,r0=3+u*6,r1=7+u*13;line(c,x+Math.cos(q)*r0,y-4+Math.sin(q)*r0,x+Math.cos(q)*r1,y-4+Math.sin(q)*r1,i%2?'#dff4ff':'#7fd0ff',1.8)}circ(c,x,y-4,3+u*3,'rgba(223,244,255,.7)')}
     else if(f.k==='slash'||f.k==='slash2'){c.strokeStyle=f.k==='slash2'?'#f7d24a':'#fff';c.lineWidth=3.4;c.lineCap='round';c.beginPath();c.arc(x,y,15+u*7,-2.3+u*2.2,-.7+u*2.2);c.stroke();c.lineCap='butt'}
     else if(f.k==='crit'){for(let i=0;i<8;i++){const q=i*.785+.3;line(c,x+Math.cos(q)*(6+u*8),y+Math.sin(q)*(6+u*8),x+Math.cos(q)*(13+u*17),y+Math.sin(q)*(13+u*17),i%2?'#d9412e':'#f7d24a',2.6)}}
     else if(f.k==='smoke'){for(let i=0;i<6;i++){const q=i*1.05;circ(c,x+Math.cos(q)*(5+u*15),y-12+Math.sin(q)*(4+u*10),6+u*5,'rgba(190,190,196,.8)')}}
@@ -9555,7 +9587,7 @@ function fightShot(m){
   const p=clamp(.5+(aimR()-8.5)/8.5*.42-Math.max(0,D.lv-S.level)*.04,.2,.93),hit=Math.random()<p;sfx('bow');
   shotFire(hit?bx:bx+ri(-16,16),hit?by:by+ri(8,16),hit,dosa||(isCls('hyeop')?2:0));
   if(!hit){float('빗나감',bx,by-24,'#cfd6dc');if(!D.bite)b.flee=Math.max(b.flee,1.6);else b.mad=1;return}
-  m.i++;if(dosa)fxAdd('bolt',bx,by,.12);
+  m.i++;if(dosa)fxAdd('spark',bx,by,.12); /* v161(사용자 의견: 그냥 공격할 때 노란 봉 같은 것이 별로다): 평타에는 굵은 벼락 줄 대신 푸른 불꽃만 튄다. 벼락은 기술을 쓸 때만 */
   if(fightHit(b,shotDmg(),{}))return;
   if(dosa&&Math.random()<.25){const dur=1.2+.4*sk('d_bind'),R=sk('d_bind')>=3?3:2;for(const q of beasts)if(q.hp>0&&Math.abs(q.x-b.x)+Math.abs(q.y-b.y)<=R){q.stun=Math.max(q.stun||0,dur);q.bj=1}} /* 도사의 특기: 부적에 묶인다 */
   else if(sk('g_pin'))b.stun=Math.max(b.stun||0,.3*sk('g_pin'));
@@ -9610,7 +9642,7 @@ function skUse(i){
   skCd[id]=now+A.cd-(l-1);float(A.n+'!',px,py-46,'#f7d24a');sfx('level');SK_DO[id](l,b);skPadT=0;
 }
 function skPad(dt){ /* 기술 단추: 짐승이 가까이 있거나 싸우는 동안에만 보인다. 쉬는 동안에는 남은 초를 적는다 */
-  skPadT-=dt;if(skPadT>0)return;skPadT=.15;const pad=$('skPad'),fight=!!(mg&&mg.kind==='hunt');
+  skPadT-=dt;if(skPadT>0)return;skPadT=.15;const pad=$('skPad'),fight=!!(mg&&mg.kind==='hunt');$('stage').classList.toggle('ghost',scene==='cave'&&!!cave&&!!cave.ghost);
   const show=!!(S&&S.cls&&started&&!busy()&&scene!=='home'&&(fight||skDesk.matches||beasts.some(b=>Math.abs(b.x-P.x)+Math.abs(b.y-P.y)<=7))); /* v157: 컴퓨터에서는 아래 가로 줄로 늘 보인다 */
   if(pad.hidden===show)pad.hidden=!show;$('actBtn').classList.toggle('fight',fight&&!busy());if(!show)return;
   const ids=skSlots();[...pad.children].forEach((bt,i)=>{const id=ids[i],A=ACTIVE[id],l=id?sk(id):0,left=Math.ceil((skCd[id]||0)-now),t=!A?'':left>0&&l?String(left):A.n;if(bt.textContent!==t)bt.textContent=t;const cl=!l?'off':left>0?'cool':skOn(id)?'on':'';if(bt.className!==cl)bt.className=cl});
@@ -9635,7 +9667,7 @@ function updShots(dt){if(!shots.length)return;for(const s of shots)s.t+=dt;shots
 function drawShots(c){
   for(const s of shots){
     const u=Math.min(1,s.t/.14),x=lerp(s.x0,s.x1,u),y=lerp(s.y0,s.y1,u),a=Math.atan2(s.y1-s.y0,s.x1-s.x0),ca=Math.cos(a),sa=Math.sin(a);
-    if(s.bj===true){if(u<1||!s.hit){c.globalAlpha=u<1?1:Math.max(0,1-(s.t-.14)/1.1);drawBujeok(c,x,y,u<1?s.t*30:.4);c.globalAlpha=1}continue} /* v154: 도사의 부적(벼락은 fxs가 그린다) */
+    if(s.bj===true){if(u<1||!s.hit){c.globalAlpha=u<1?1:Math.max(0,1-(s.t-.14)/1.1);drawBujeok(c,x,y,u<1?Math.sin(s.t*26)*.35:.4);c.globalAlpha=1}continue} /* v154: 도사의 부적(벼락은 fxs가 그린다) */
     if(s.bj===2){if(u<1||!s.hit){c.globalAlpha=u<1?1:Math.max(0,1-(s.t-.14)/1.1);c.save();c.translate(x,y);c.rotate(s.t*40);star(c,0,0,5,'#cfd6dc');circ(c,0,0,1.4,'#3a3a40');c.restore();c.globalAlpha=1}} /* v155: 협객의 표창 */
     else if(u<1||!s.hit){
       c.globalAlpha=u<1?1:Math.max(0,1-(s.t-.14)/1.1);
@@ -9713,8 +9745,9 @@ function drawBeast(c,b){
     else if(b.stun>0)for(let i=0;i<3;i++)star(c,gx+Math.cos(now*6+i*2.1)*9,gy-44+Math.sin(now*6+i*2.1)*3,2.6,'#f7d24a');
     return;
   }
-  blit(c,shadowSpr(b.k==='rabbit'||b.k==='pheasant'||b.k==='raccoon'||b.k==='marten'?7:b.k==='kboar'||b.k==='bear'||BEASTS[b.k].big?15:11),gx,gy);
-  blit(c,beastSpr(b.k),gx,y,b.dir[0]<0);if(hk){c.globalCompositeOperation='lighter';c.globalAlpha=.7;blit(c,beastSpr(b.k),gx,y,b.dir[0]<0);c.globalAlpha=1;c.globalCompositeOperation='source-over'}
+  const fl=BEASTS[b.k].ghost?3+Math.sin(now*3+b.x*2)*2.5:0; /* v161: 귀신은 그림자 없이 떠서 흔들리고 조금 비친다 */
+  if(!fl)blit(c,shadowSpr(b.k==='rabbit'||b.k==='pheasant'||b.k==='raccoon'||b.k==='marten'?7:b.k==='kboar'||b.k==='bear'||BEASTS[b.k].big?15:11),gx,gy);
+  if(fl)c.globalAlpha=.86;blit(c,beastSpr(b.k),gx,y-fl,b.dir[0]<0);c.globalAlpha=1;if(hk){c.globalCompositeOperation='lighter';c.globalAlpha=.7;blit(c,beastSpr(b.k),gx,y-fl,b.dir[0]<0);c.globalAlpha=1;c.globalCompositeOperation='source-over'}
   if(b.stun>0&&b.bj)drawBujeok(c,gx,y-18,Math.sin(now*5)*.12);
   else if(b.stun>0)for(let i=0;i<3;i++)star(c,gx+Math.cos(now*6+i*2.1)*9,y-26+Math.sin(now*6+i*2.1)*3,2.6,'#f7d24a');
   else if(b.mad&&BEASTS[b.k].mild){const X=gx+(b.dir[0]<0?-12:12),Y=y-(BEASTS[b.k].big?40:34)+Math.sin(now*9)*1.5;c.fillStyle='#d9412e';c.fillRect(X-1,Y-6,3,7);c.fillRect(X-1,Y+3,3,3)} /* 성난 짐승 머리 위의 느낌표 */
