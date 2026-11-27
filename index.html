@@ -1415,9 +1415,12 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:148,d:'11월 27일',t:'길의 목표 다듬기',l:[
+    '"손맛 13만큼 닦기" 같은 목표를 없앴어요. 스탯은 20이 최고라 말이 안 맞았어요.',
+    '대신 그 길에서 실제로 하는 일이 나와요: 음식 만들기, 궁궐 사람과 가까워지기, 짐승·산적 물리치기, 도감 적기.']},
   {v:147,d:'11월 27일',t:'철과 길에 맞는 목표',l:[
     '철마다 목표가 계절에 맞게 나와요. 봄에는 심기와 줍기, 여름에는 낚시, 가을에는 거두기와 사냥, 겨울에는 나무·돌·음식.',
-    '내가 가는 길의 일도 하나 나와요. 수라상 올리기, 글공부, 활쏘기 수련처럼 그 길의 다음 자리에 필요한 일이에요.',
+    '내가 가는 길의 일도 하나 나와요. 수라상 올리기, 글공부, 활쏘기 수련처럼 그 길에서 실제로 하는 일이에요.',
     '레벨이 오르면 산적·상단·도깨비·가문 같은 목표가 더해져요. 지난 철과 같은 목표는 되도록 안 나와요.',
     '"나"에 "길" 칸이 생겼어요. 지금 자리, 다음 자리, 오르려면 남은 것을 하나씩 보여 줘요.']},
   {v:146,d:'11월 27일',t:'바위 옮기기',l:[
@@ -2181,7 +2184,6 @@ function statCut(s,n){
   for(const k of ks)s.stats[k]=(s.stats[k]|0)-dn[k];
 }
 function train(k,n){
-  cnt('tr_'+k,n); /* v147: 길의 재주를 닦은 만큼(철마다 목표) */
   if(!S.stats||S.stats[k]>=STAT_MAX)return;
   if((k==='grace'&&perk('queen'))||(k==='lore'&&perk('princess')))n*=2;
   S.stx[k]+=n;
@@ -3058,15 +3060,15 @@ const GOALS={
   hunt:{t:n=>'짐승 '+n+'마리 사냥하기',v:()=>S.kills|0,n:L=>3+Math.floor(L/2),ok:()=>S.level>=2,s:[2,3]},
   cook:{t:n=>'음식 '+n+'번 만들기',v:()=>S.cnt.cook|0,n:L=>3+Math.floor(L/6),ok:()=>S.level>=4,s:[2,3]},
   job_cook:{t:n=>'수라상 '+n+'번 올리기',v:()=>S.job?S.job.served|0:0,n:()=>2,ok:()=>!!S.job,r:'수라간'},
-  tr_cook:{t:n=>'손맛 '+n+'만큼 닦기',v:()=>S.cnt.tr_cook|0,n:L=>6+Math.floor(L/2),ok:()=>!!S.job,r:'수라간'},
+  cook_r:{t:n=>'음식 '+n+'번 만들기',v:()=>S.cnt.cook|0,n:L=>3+Math.floor(L/6),ok:()=>!!S.job,r:'수라간'}, /* v148(사용자 의견: 스탯은 20이 최고인데 "손맛 13만큼 닦기"는 말이 안 된다): 재주 닦기 목표는 없애고 그 길에서 실제로 하는 일로 바꿨다 */
   job_court:{t:n=>'예법 수련 '+n+'번 하기',v:()=>S.court?S.court.done|0:0,n:()=>2,ok:()=>!!S.court,r:'왕실'},
-  tr_grace:{t:n=>'기품 '+n+'만큼 닦기',v:()=>S.cnt.tr_grace|0,n:L=>6+Math.floor(L/2),ok:()=>!!S.court,r:'왕실'},
+  court_r:{t:n=>'궁궐 사람과 ♥ '+n+'개 더 가까워지기',v:()=>NPC_IDS.filter(id=>NPCS[id].at==='palace'&&S.npcs[id]).reduce((a,id)=>a+hearts(id),0),n:()=>1,ok:()=>!!S.court&&NPC_IDS.some(id=>NPCS[id].at==='palace'&&S.npcs[id]&&hearts(id)<5),r:'왕실'},
   job_merch:{t:n=>'안목 겨루기 '+n+'번 하기',v:()=>S.merch?S.merch.done|0:0,n:()=>2,ok:()=>!!S.merch,r:'상인'},
   sold_merch:{t:n=>'은하에게 '+n+'번 납품하기',v:()=>S.merch?S.merch.sold|0:0,n:()=>2,ok:()=>!!S.merch,r:'상인'},
   job_mil:{t:n=>'활쏘기 수련 '+n+'번 하기',v:()=>S.mil?S.mil.done|0:0,n:()=>2,ok:()=>!!S.mil,r:'무관'},
-  tr_arms:{t:n=>'무예 '+n+'만큼 닦기',v:()=>S.cnt.tr_arms|0,n:L=>6+Math.floor(L/2),ok:()=>!!S.mil,r:'무관'},
+  mil_r:{t:n=>'짐승이나 산적 '+n+'을 물리치기',v:()=>(S.kills|0)+(S.bandits|0),n:L=>4+Math.floor(L/2),ok:()=>!!S.mil,r:'무관'},
   job_civ:{t:n=>'글공부 '+n+'번 하기',v:()=>S.civ?S.civ.done|0:0,n:()=>2,ok:()=>!!S.civ,r:'문관'},
-  tr_lore:{t:n=>'학식 '+n+'만큼 닦기',v:()=>S.cnt.tr_lore|0,n:L=>6+Math.floor(L/2),ok:()=>!!S.civ,r:'문관'},
+  civ_r:{t:n=>'도감에 새로 '+n+'가지 적기',v:()=>Object.keys(S.dex).length,n:()=>3,ok:()=>!!S.civ,r:'문관'},
   dex:{t:n=>'도감에 새로 '+n+'가지 올리기',v:()=>Object.keys(S.dex).length,n:()=>2,ok:()=>true},
   hearts:{t:n=>'이웃과 ♥ '+n+'개 더 가까워지기',v:()=>TOWN_IDS.reduce((a,id)=>a+hearts(id),0),n:()=>1,ok:()=>TOWN_IDS.some(id=>hearts(id)<5)},
   level:{t:n=>'레벨 '+n+' 올리기',v:()=>S.level,n:()=>1,ok:()=>S.level<12},
