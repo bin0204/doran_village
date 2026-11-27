@@ -34,7 +34,7 @@ body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15p
   box-sizing:border-box;overflow:hidden;overscroll-behavior:none;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 *{box-sizing:border-box}
 #app{height:100%;max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:8px;min-height:0}
-@media (min-width:1000px){#app{max-width:none;gap:6px}.brand{font-size:18px}.stats{font-size:13px;gap:5px}.chip{padding:1px 9px}.bar{width:64px;height:8px}#bar .btn{font-size:13px;padding:3px 11px;min-width:42px}#skPad button,#skPad button:nth-child(1),#skPad button:nth-child(2),#skPad button:nth-child(3){width:84px;height:34px;font-size:12.5px}body{padding-top:6px;padding-bottom:6px}} /* v162: PC에서는 위아래 단추와 글자도 조금 작게 */
+@media (min-width:1000px){#app{max-width:none;gap:6px}.brand{font-size:18px}.stats{font-size:13px;gap:5px}.chip{padding:1px 9px}.bar{width:64px;height:8px}#bar .btn{font-size:13px;padding:3px 11px;min-width:42px}#skPad button,#skPad button:nth-child(1),#skPad button:nth-child(2),#skPad button:nth-child(3),#skPad button:nth-child(4){width:84px;height:34px;font-size:12.5px}body{padding-top:6px;padding-bottom:6px}} /* v162: PC에서는 위아래 단추와 글자도 조금 작게 */
 .pc{display:none}#bar .btn i{font-style:normal;opacity:.6;font-size:.85em}
 /* v165(사용자 요청: 아래 단추 줄도 놀이판 안에): PC에서는 단추 줄을 놀이판 왼쪽 아래에 얹어 놀이판이 창 끝까지 내려온다 */
 @media (min-width:1000px) and (hover:hover) and (pointer:fine){#app{position:relative}#bar{position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:3;flex-wrap:nowrap;gap:3px;padding:3px 4px;border-radius:10px;background:rgba(251,245,230,.72);border:1.5px solid var(--wood);opacity:.82;transition:opacity .15s}#bar:hover{opacity:1}#bar .sp{margin-left:0}#bar .btn{flex:none;min-width:0;font-size:12px;padding:1px 8px;border-radius:7px;box-shadow:none;border-width:1px}#bar .btn i{color:var(--accent);opacity:1;font-size:.82em}#stage #skPad{bottom:50px}} /* v166(사용자 의견: 화면을 가리는 느낌 · 가운데로): 단추 줄은 작고 조금 비치는 한 줄로 가운데 아래에, 기술 단추는 바로 그 위에 */
@@ -81,20 +81,21 @@ button.chip{font:inherit;color:inherit;cursor:pointer;line-height:inherit}
 #actBtn.fight{width:74px;height:74px;font-size:18px}
 /* 장비 칸과 단련 판(v165): 가운데 내 모습, 둘레에 한지 칸 */
 .doll{display:grid;grid-template-columns:84px 112px 84px;grid-template-rows:repeat(3,84px);grid-template-areas:"w me h" "t me a" ". me s";gap:44px 18px;justify-content:center;margin:14px auto 44px}
-.doll.trn{grid-template-rows:repeat(2,84px);grid-template-areas:"w me h" "t me a";gap:36px 26px;margin:22px auto 40px}
+.doll.trn{grid-template-rows:repeat(3,84px);grid-template-areas:"w me h" "t me a" ". c .";gap:36px 26px;margin:22px auto 40px}
+.doll.trn .dollme{grid-row:1/3}
 .dollme{grid-area:me;width:112px;height:168px;align-self:center;image-rendering:pixelated;background:var(--bg);border:2px solid var(--wood);border-radius:14px}
 .slot{position:relative;width:84px;height:84px;padding:0;border:3px solid var(--wood);border-radius:12px;background:var(--bg);box-shadow:inset 0 0 0 2px var(--surface),0 2px 0 var(--shade);cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:12.5px;color:var(--muted);touch-action:manipulation}
 .slot:hover{border-color:var(--wood-dk)}.slot b{position:absolute;right:3px;bottom:1px;font-size:13px;color:var(--accent);background:var(--surface);border-radius:6px;padding:0 3px}.slot em{position:absolute;left:6px;top:-10px;font-style:normal;font-size:11px;line-height:1.3;padding:0 6px;border-radius:6px;background:var(--wood);color:var(--surface)}.slot small{position:absolute;left:-14px;right:-14px;top:100%;margin-top:4px;font-size:13px;line-height:1.2;color:var(--ink);text-align:center;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .slot.rnd{border-radius:50%;width:72px;height:72px;justify-self:center;align-self:center}.slot.rnd canvas{width:44px;height:44px;image-rendering:pixelated}.slot.rnd:disabled{opacity:.55;cursor:default}
 #stage.ghost{border-color:#2a2440;box-shadow:0 0 0 1.5px #15121f,inset 0 0 26px rgba(90,60,170,.6)} /* v161: 귀신골에 있는 동안 놀이판 테두리가 검보랏빛으로 */
 #skPad button{position:absolute;width:48px;height:48px;border-radius:50%;border:2px solid var(--wood);background:linear-gradient(to top,rgba(74,46,24,.34) calc(var(--cd,0)*100%),transparent 0),var(--surface);color:var(--ink);font-family:var(--display);font-size:12px;line-height:1.05;padding:0;cursor:pointer;box-shadow:0 2px 0 var(--shade);touch-action:manipulation}
-#skPad button:nth-child(1){right:92px;bottom:10px}#skPad button:nth-child(2){right:78px;bottom:66px}#skPad button:nth-child(3){right:20px;bottom:94px}
+#skPad button:nth-child(1){right:92px;bottom:10px}#skPad button:nth-child(2){right:78px;bottom:66px}#skPad button:nth-child(3){right:20px;bottom:94px}#skPad button:nth-child(4){right:136px;bottom:58px;width:42px;height:42px;font-size:11px}
 #skPad button:active{transform:translateY(2px)}#skPad button.cool{color:var(--muted);font-size:16px}#skPad button.off{opacity:.35}#skPad button.on{border-color:var(--accent-ink);background:var(--accent);color:var(--accent-ink)}
 /* 컴퓨터(v157, 사용자 요청): 기술 단추를 화면 아래 가운데에 가로 한 줄로 늘 보여 준다. 왼쪽 위의 작은 숫자가 누를 키 */
 @media (hover:hover) and (pointer:fine) and (min-width:700px){
   #skPad{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);display:flex;gap:5px;padding:4px 5px;border-radius:12px;background:var(--surface);border:2px solid var(--wood);box-shadow:0 3px 0 var(--shade)}
   #skPad[hidden]{display:none}
-  #skPad button,#skPad button:nth-child(1),#skPad button:nth-child(2),#skPad button:nth-child(3){position:relative;right:auto;bottom:auto;width:98px;height:40px;border-radius:8px;font-size:13.5px;border:1.5px solid var(--line);box-shadow:none}
+  #skPad button,#skPad button:nth-child(1),#skPad button:nth-child(2),#skPad button:nth-child(3),#skPad button:nth-child(4){position:relative;right:auto;bottom:auto;width:98px;height:40px;border-radius:8px;font-size:13.5px;border:1.5px solid var(--line);box-shadow:none}
   #skPad button::before{content:attr(data-k);position:absolute;left:4px;top:3px;width:14px;height:14px;border-radius:50%;background:var(--accent);color:var(--accent-ink);font-size:9.5px;line-height:14px;text-align:center}
   #skPad button.cool{font-size:17px}
 }
@@ -243,7 +244,7 @@ ul.help{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
     <div id="fade"></div>
     <div id="toasts" aria-live="polite"></div>
     <button id="actBtn" type="button" aria-label="행동하기">행동</button>
-    <div id="skPad" hidden><button type="button" data-k="1" aria-label="첫째 기술"></button><button type="button" data-k="2" aria-label="둘째 기술"></button><button type="button" data-k="3" aria-label="셋째 기술"></button></div>
+    <div id="skPad" hidden><button type="button" data-k="1" aria-label="첫째 기술"></button><button type="button" data-k="2" aria-label="둘째 기술"></button><button type="button" data-k="3" aria-label="셋째 기술"></button><button type="button" data-k="4" aria-label="터 닦기"></button></div>
     <button id="undoBtn" type="button" hidden>되돌리기</button>
     <div id="dlg" hidden>
       <div id="dlgWho"></div>
@@ -1490,6 +1491,9 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:171,d:'11월 27일',t:'터 닦기',l:[
+    '모든 직업의 넷째 기술 "터 닦기": 사냥터에서 둘레의 나무와 바위를 한 번에 캐요(4 키).',
+    '단련에서 찍어야 쓰고, 3·6·9단계에 넓어져요. 기력 8, 나무와 돌은 둘에 하나꼴로 얻어요.']},
   {v:170,d:'11월 27일',t:'단련 그림',l:[
     '단련 판에 팔·몸통·손·다리 그림이 생겼어요.',
     '단련 판의 동그라미와 내 모습을 가운데로 맞췄어요.']},
@@ -9454,7 +9458,7 @@ const SKILLS={ /* v156: 갈래마다 첫째는 늘 붙는 힘, 둘째는 단추�
   dosa:[['뇌법',[['d_bolt','벼락','늘 · 부적의 힘 +1(3단계 +2)'],['d_chain','연쇄 벼락','단추 · 겨눈 짐승에 2~3, 둘레에 1씩']]],['부적',[['d_bind','결박','늘 · 묶는 시간이 늘어요(3단계: 둘레 세 칸)'],['d_ward','호신부','단추 · 2~3초 동안 다치지 않아요']]],['선술',[['d_far','축지부','늘 · 부적 사거리 +1칸씩'],['d_heal','치유부','단추 · 기력을 되찾아요(하루 세 번)']]]]};
 /* v163(사용자 요청: 직업 쪽 성장을 더 다양하게 · 그쪽 스탯을 늘리게): 기술은 다섯 단계까지, 점수는 레벨마다 1점. 직업마다 "단련" 갈래(힘·몸·손, 열 단계)를 더했다 —
    힘 기르기 trn(1): 두 단계마다 모든 공격의 힘 +1 · 몸 다지기 trn(2): 단계마다 3% 덜 다침 · 손 익히기 trn(3): 단계마다 공격이 3% 빨라짐 */
-for(const k in SKILLS){const q=k.charAt(0);SKILLS[k].push(['단련',[[q+'_t1','힘 기르기','늘 · 두 단계마다 모든 공격의 힘 +1'],[q+'_t2','몸 다지기','늘 · 단계마다 3% 덜 다쳐요'],[q+'_t3','손 익히기','늘 · 단계마다 공격이 3% 빨라져요'],[q+'_t4','다리 기르기','늘 · 단계마다 걸음이 2% 빨라져요']]])} /* v168(사용자 요청: 다리도 늘리게 — 속도): trn(4) */
+for(const k in SKILLS){const q=k.charAt(0);SKILLS[k].push(['단련',[[q+'_t1','힘 기르기','늘 · 두 단계마다 모든 공격의 힘 +1'],[q+'_t2','몸 다지기','늘 · 단계마다 3% 덜 다쳐요'],[q+'_t3','손 익히기','늘 · 단계마다 공격이 3% 빨라져요'],[q+'_t4','다리 기르기','늘 · 단계마다 걸음이 2% 빨라져요'],[q+'_t5','터 닦기','단추 4 · 사냥터에서 둘레의 나무·바위를 한 번에 캐요 · 기력 8 · 3·6·9단계에 넓어져요']]])} /* v168(사용자 요청: 다리도 늘리게 — 속도): trn(4) */
 const skMax=id=>/_t\d$/.test(id)?10:SK_MAX,trn=n=>S&&S.cls?sk(S.cls.charAt(0)+'_t'+n):0;
 const SK_MAX=5,sk=id=>S&&S.cls&&S.sk&&id.charAt(0)===S.cls.charAt(0)?S.sk[id]|0:0,isCls=k=>!!S&&S.cls===k;
 const skTotal=()=>S.level|0,skUsed=()=>Object.keys(S.sk||{}).reduce((a,k)=>a+(S.sk[k]|0),0),skLeft=()=>Math.max(0,skTotal()-skUsed());
@@ -9640,12 +9644,12 @@ function openSkills(){
     const C=CLS[S.cls],left=skLeft();
     row(body,el('span','badge',C.ic),'내 직업 · '+C.n,C.d,[['직업 바꾸기',()=>openClass()]]);
     body.appendChild(el('p','note','남은 기술 점수 '+left+' · 레벨마다 1점 · 기술 다섯 단계 · 단련 열 단계'));
-    body.appendChild(el('p','note','갈래의 둘째 기술은 싸울 때 단추로 써요 · 컴퓨터는 1·2·3 키 · 기력 2'));
+    body.appendChild(el('p','note','갈래의 둘째 기술은 싸울 때 단추로 써요 · 컴퓨터는 1·2·3 키 · 기력 2 · 터 닦기는 4 키'));
     /* v165(사용자 요청: 가운데 캐릭터, 단련을 눌러 올리는 느낌): 단련 판. 힘·몸·손 동그라미를 누르면 한 단계 오른다 */
     {const d=el('div','doll trn'),q=S.cls.charAt(0),sp=charSprite(playerLook(),'front',0),m=el('canvas');m.width=16;m.height=24;m.getContext('2d').drawImage(sp,0,0);m.className='dollme';
       const mk=(n,ch,nm,area)=>{const id=q+'_t'+n,lv=S.sk[id]|0,b=el('button','slot rnd');b.type='button';b.style.gridArea=area;b.appendChild(trnIcon(n));b.appendChild(el('b',null,String(lv)));b.appendChild(el('small',null,nm+' '+lv+'/10'));
         b.disabled=lv>=10||left<1;b.onclick=()=>{if(skLeft()<1||(S.sk[id]|0)>=10)return;S.sk[id]=(S.sk[id]|0)+1;sfx('level');saveAll();openSkills()};return b};
-      d.appendChild(mk(1,'힘','힘 기르기','w'));d.appendChild(mk(4,'다리','다리 기르기','t'));d.appendChild(m);d.appendChild(mk(2,'몸','몸 다지기','h'));d.appendChild(mk(3,'손','손 익히기','a'));body.appendChild(d)}
+      d.appendChild(mk(1,'힘','힘 기르기','w'));d.appendChild(mk(4,'다리','다리 기르기','t'));d.appendChild(m);d.appendChild(mk(2,'몸','몸 다지기','h'));d.appendChild(mk(3,'손','손 익히기','a'));d.appendChild(mk(5,'터','터 닦기','c'));body.appendChild(d)}
     for(const [rn,list] of SKILLS[S.cls]){
       body.appendChild(el('p','sub',rn+' 갈래'));
       list.forEach(([id,n,d],i)=>{const lv=S.sk[id]|0,lock=rn!=='단련'&&i>0&&!(S.sk[list[i-1][0]]|0);
@@ -9749,8 +9753,10 @@ function updFight(m,dt){
 }
 /* 누르는 기술: 갈래의 둘째 기술이 그 갈래의 단추가 된다(skSlots). need r=겨눌 짐승(붙어 있거나 일직선) · m=붙은 짐승 */
 const ACTIVE={g_crit:{n:'급소',cd:9,need:'r'},g_twin:{n:'연사',cd:9,need:'r'},g_fire:{n:'불화살',cd:10,need:'r'},m_chain:{n:'연격',cd:8,need:'m'},m_wide:{n:'버티기',cd:16},m_roar:{n:'기합',cd:13},
-  h_smoke:{n:'연막',cd:15},h_step:{n:'질풍',cd:14},h_twin:{n:'쌍표창',cd:8,need:'r'},d_chain:{n:'벼락',cd:13,need:'r'},d_ward:{n:'호신부',cd:17},d_heal:{n:'치유',cd:25}};
-const skSlots=()=>S&&S.cls?SKILLS[S.cls].slice(0,3).map(r=>r[1][1][0]):[];
+  h_smoke:{n:'연막',cd:15},h_step:{n:'질풍',cd:14},h_twin:{n:'쌍표창',cd:8,need:'r'},d_chain:{n:'벼락',cd:13,need:'r'},d_ward:{n:'호신부',cd:17},d_heal:{n:'치유',cd:25},c_clear:{n:'터 닦기',cd:20}};
+/* v171(사용자 요청: 모든 직업이 쓰는 공통 기술로 특정 범위의 나무·바위를 한 번에 · 조금 얻고 기력은 많이 · 범위는 단련 단계로): 넷째 단추 c_clear. 단계는 단련 _t5(trn(5)), 넓이 clearR */
+const skLv=id=>id==='c_clear'?trn(5):id?sk(id):0,clearR=l=>1+(l>=3)+(l>=6)+(l>=9);
+const skSlots=()=>S&&S.cls?SKILLS[S.cls].slice(0,3).map(r=>r[1][1][0]).concat('c_clear'):[];
 function skTarget(){
   if(mg&&mg.kind==='hunt'&&beasts.includes(mg.b))return mg.b;const b=beastInLine();if(b)return b;
   let best=null,bd=99;for(const q of beasts){const d=Math.abs(q.x-P.x)+Math.abs(q.y-P.y);if(d<bd){bd=d;best=q}}return bd<=meleeReach()?best:null;
@@ -9773,23 +9779,28 @@ const SK_DO={
   h_smoke:l=>{skT.h_smoke=now+1.5+.5*l;fxAdd('smoke',(rx(P)+.5)*T,(ry(P)+.9)*T)},
   m_roar:l=>{fxAdd('roar',(rx(P)+.5)*T,(ry(P)+.9)*T);shakeT=.2;for(const q of beasts)if(q.hp>0&&Math.abs(q.x-P.x)+Math.abs(q.y-P.y)<=3){q.stun=Math.max(q.stun||0,.8+.6*l);q.bj=0}},
   d_chain:(l,b)=>{const R=sk('d_bind')>=3?3:2;shakeT=.22;for(const q of beasts.slice())if(q.hp>0&&Math.abs(q.x-b.x)+Math.abs(q.y-b.y)<=R){fxAdd('bolt',rx(q)*T+16,ry(q)*T+14);q.stun=Math.max(q.stun||0,.5);const dm=q===b?2+l:Math.min(1+(l>1?1:0),q.hp-1);if(dm>0)fightHit(q,dm,{col:'#fff7b0'})}}, /* v158(사용자 의견: 벼락 한 방에 다 죽는다): 겨눈 짐승만 2~3, 둘레는 1씩이고 둘레 짐승은 벼락으로 쓰러지지 않는다 */
-  d_heal:l=>{S.en=Math.min(maxEn(),S.en+8*l);hud();fxAdd('heal',(rx(P)+.5)*T,(ry(P)+.9)*T)}};
+  d_heal:l=>{S.en=Math.min(maxEn(),S.en+8*l);hud();fxAdd('heal',(rx(P)+.5)*T,(ry(P)+.9)*T)},
+  c_clear:l=>{fxAdd('roar',(rx(P)+.5)*T,(ry(P)+.9)*T);shakeT=.25;skClear(P.x,P.y,clearR(l),true)}};
 /* v169(사용자 요청: 사냥터의 나무 같은 것도 기술로 없앨 수 있게): 사냥터(숲·깊은 산·눈고개·윗숲·아랫숲)에서 기술을 쓰면 그 둘레의 풍경 나무·바위(deco, 저장 상태 없음)가 부서진다.
    겨누는 기술은 겨눈 짐승 둘레 한 칸, 기합은 내 둘레 두 칸, 연쇄 벼락은 벼락이 닿는 넓이. 나무·돌은 얻지 못한다(끝없이 캐지 못하게). 그곳을 나갔다 다시 열면(다음에 놀이를 열면) 풍경은 돌아온다 */
-function skClear(cx,cy,R){
-  if(scene!=='wild'||![0,1,3,7,8].includes(wz))return;let n=0;
-  for(let y=cy-R;y<=cy+R;y++)for(let x=cx-R;x<=cx+R;x++){const o=objAt[y]&&objAt[y][x];if(!o||o.t!=='deco'||o.i!==-1)continue;const a=o.k==='rock'?ROCKS:TREES,j=a.indexOf(o);if(j>=0)a.splice(j,1);objAt[y][x]=null;fxAdd('crit',x*T+16,y*T+8,n*.04);n++}
+function skClear(cx,cy,R,get){
+  if(scene!=='wild'||![0,1,3,7,8].includes(wz))return;let n=0,nr=0;
+  for(let y=cy-R;y<=cy+R;y++)for(let x=cx-R;x<=cx+R;x++){const o=objAt[y]&&objAt[y][x];if(!o||o.t!=='deco'||o.i!==-1)continue;const a=o.k==='rock'?ROCKS:TREES,j=a.indexOf(o);if(j>=0)a.splice(j,1);objAt[y][x]=null;fxAdd('crit',x*T+16,y*T+8,n*.04);n++;if(o.k==='rock')nr++}
   if(n){shakeT=.2;sfx('chop');miniRef=null}
+  if(get){const w=Math.ceil((n-nr)/2),s=Math.ceil(nr/2),px=(rx(P)+.5)*T,py=(ry(P)+.9)*T; /* 둘에 하나꼴로만 얻는다(조금 얻기) */
+    if(w)gain('wood',w);if(s)gain('stone',s);float(n?[w?'나무 +'+w:'',s?'돌 +'+s:''].filter(Boolean).join(' · '):'캘 것이 없어요',px,py-62,n?'#fff7ea':'#cfd6dc');if(n){saveAll();hud()}}
 }
 function skUse(i){
   if(!S||!S.cls||!started||busy()||fishing||scene==='home'||(mg&&mg.kind!=='hunt'))return;
-  const id=skSlots()[i],A=ACTIVE[id],l=id?sk(id):0,px=(rx(P)+.5)*T,py=(ry(P)+.9)*T;if(!A)return;
+  const id=skSlots()[i],A=ACTIVE[id],l=skLv(id),px=(rx(P)+.5)*T,py=(ry(P)+.9)*T;if(!A)return;
   if(!l){float('아직 안 배운 기술',px,py-40,'#cfd6dc');return}
   if(now<(skCd[id]||0))return;
+  if(id==='c_clear'&&(scene!=='wild'||![0,1,3,7,8].includes(wz))){float('사냥터 숲에서만 써요',px,py-40,'#cfd6dc');return}
+  if(id==='c_clear'){const R=clearR(l);let k=0;for(let y=P.y-R;y<=P.y+R;y++)for(let x=P.x-R;x<=P.x+R;x++){const o=objAt[y]&&objAt[y][x];if(o&&o.t==='deco'&&o.i===-1)k++}if(!k){float('둘레에 캘 것이 없어요',px,py-40,'#cfd6dc');return}} /* 헛손질에는 기력을 쓰지 않는다 */
   let b=null;
   if(A.need){b=skTarget();if(!b||(A.need==='m'?!fightNear(b):!fightNear(b)&&!fightLine(b))){float(A.need==='m'?'붙어야 써요':'더 가까이 가요',px,py-40,'#cfd6dc');return}}
   if(id==='d_heal'){if(S.healDay!==S.day){S.healDay=S.day;S.healN=0}if((S.healN|0)>=3){float('오늘은 더 못 써요',px,py-40,'#cfd6dc');return}if(S.en>=maxEn())return;S.healN=(S.healN|0)+1}
-  else if(!useEn(2))return;
+  else if(!useEn(id==='c_clear'?8:2))return;
   if(b){if(!(mg&&mg.kind==='hunt'&&mg.b===b)){mg=fightNew(b);mg.cd=.5;P.path=[];P.after=null}const dx=b.x-P.x,dy=b.y-P.y;if(!dx||!dy)P.dir=[Math.sign(dx),Math.sign(dy)]}
   skCd[id]=now+A.cd-(l-1);float(A.n+'!',px,py-46,'#f7d24a');sfx('level');SK_DO[id](l,b);skPadT=0;if(b)skClear(b.x,b.y,id==='d_chain'?(sk('d_bind')>=3?3:2):1);else if(id==='m_roar')skClear(P.x,P.y,2);
 }
@@ -9797,7 +9808,7 @@ function skPad(dt){ /* 기술 단추: 짐승이 가까이 있거나 싸우는 �
   skPadT-=dt;if(skPadT>0)return;skPadT=.15;const pad=$('skPad'),fight=!!(mg&&mg.kind==='hunt');$('stage').classList.toggle('ghost',scene==='cave'&&!!cave&&!!cave.ghost);
   const show=!!(S&&S.cls&&started&&!busy()&&scene!=='home'&&(fight||skDesk.matches||beasts.some(b=>Math.abs(b.x-P.x)+Math.abs(b.y-P.y)<=7))); /* v157: 컴퓨터에서는 아래 가로 줄로 늘 보인다 */
   if(pad.hidden===show)pad.hidden=!show;$('actBtn').classList.toggle('fight',fight&&!busy());if(!show)return;
-  const ids=skSlots();[...pad.children].forEach((bt,i)=>{const id=ids[i],A=ACTIVE[id],l=id?sk(id):0,left=Math.ceil((skCd[id]||0)-now),t=!A?'':left>0&&l?String(left):A.n;if(bt.textContent!==t)bt.textContent=t;bt.style.setProperty('--cd',l&&left>0?Math.min(1,((skCd[id]||0)-now)/Math.max(1,A.cd-(l-1))).toFixed(2):'0');const cl=!l?'off':left>0?'cool':skOn(id)?'on':'';if(bt.className!==cl)bt.className=cl});
+  const ids=skSlots();[...pad.children].forEach((bt,i)=>{const id=ids[i],A=ACTIVE[id],l=skLv(id),left=Math.ceil((skCd[id]||0)-now),t=!A?'':left>0&&l?String(left):A.n;if(bt.textContent!==t)bt.textContent=t;bt.style.setProperty('--cd',l&&left>0?Math.min(1,((skCd[id]||0)-now)/Math.max(1,A.cd-(l-1))).toFixed(2):'0');const cl=!l?'off':left>0?'cool':skOn(id)?'on':'';if(bt.className!==cl)bt.className=cl});
 }
 function skTick(dt){
   if(shakeT>0)shakeT-=dt;
@@ -9919,6 +9930,9 @@ const TRN_ART={
     poly(c,[13,31,5,23,7.5,19.5,16,25],s);line(c,16,29,27,25.5,d,1);line(c,17,33,26,32,d,1);line(c,16.4,10,16.4,20,d,.8);line(c,21.6,6,21.6,20,d,.8);line(c,26.6,8,26.6,20,d,.8)},
   4(c){const b='#efe7d2',d='#cfc4a8';poly(c,[9,3,26,3,33,20,23,27,12,16],b);poly(c,[22,19,33,20,28,35,18,34],b);line(c,13,15,23,26,d,1.2);line(c,24,21,21,33,d,1);rr(c,9,3,17,3,1,'#5b7fb0');
     rr(c,17,31,12,3.4,1,'#c8392f');poly(c,[17,34.4,28,35,30,38,16,38],'#fff7ea');poly(c,[14,38,30,37.6,38,41,38,43,14,43],'#c9a05a');line(c,18,40.5,36,41.5,'#8a6a34',1);line(c,3,22,8,22,'#9ab7d6',1.4);line(c,2,28,9,28,'#9ab7d6',1.4);line(c,4,34,9,34,'#9ab7d6',1.4)}
+,
+  5(c){const w='#9a6a3c',d='#6b4526',g='#9aa3a8';poly(c,[4,40,8,30,14,27,20,31,22,40],g);poly(c,[8,30,14,27,13,33],'#c3ccd1');rr(c,20,24,18,17,3,w);ell(c,29,24,9,4.5,'#d9b27a');ell(c,29,24,5.5,2.6,'#c0935a');circ(c,29,24,1.4,d);line(c,23,30,23,39,d,1.2);line(c,33,29,33,40,d,1.2);rr(c,18,39,5,3,1.5,w);rr(c,35,39,6,3,1.5,w);
+    line(c,22,4,30,17,'#8a5a34',2.6);poly(c,[18,2,27,1,30,7,24,11,20,8],'#cfd6dc');poly(c,[18,2,24,3,22,8,20,8],'#f6fbff');line(c,37,8,41,3,'#f7d24a',1.6);line(c,39,14,43,13,'#f7d24a',1.6);line(c,8,20,4,15,'#f7d24a',1.6)}
 };
 const trnSpr=n=>spr('trn'+n,()=>bake(44,44,0,0,0,0,TRN_ART[n]));
 function trnIcon(n){const s=trnSpr(n),m=el('canvas');m.width=s.width;m.height=s.height;m.getContext('2d').drawImage(s,0,0);return m}
@@ -13745,7 +13759,7 @@ window.addEventListener('keydown',e=>{
   if(!$('modal').hidden){if(BAR_KEYS[e.code]&&!e.repeat&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();closeModal()}return} /* 창이 열려 있을 때 단추 글쇠를 누르면 닫는다 */
   if((e.code==='Minus'||e.code==='Equal'||e.code==='NumpadSubtract'||e.code==='NumpadAdd')&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&$('modal').hidden){e.preventDefault();if(!e.repeat)zoomStep(e.code==='Minus'||e.code==='NumpadSubtract'?-1:1);return} /* v162: − · + 로 화면 크기 */
   if(BAR_KEYS[e.code]&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();if(e.repeat||mg||fishing)return;const b=$(BAR_KEYS[e.code]);if(e.code==='KeyE')openStatus();else if(e.code==='KeyK')openSkills();else if(b&&!b.hidden&&!b.disabled)b.click();return} /* v166: 아래 단추의 글쇠 */
-  if(/^(Digit|Numpad)[1-3]$/.test(e.code)&&$('modal').hidden&&!(e.target&&e.target.tagName==='BUTTON')){e.preventDefault();if(!e.repeat)skUse(+e.code.slice(-1)-1);return} /* v156: 기술 단추 */
+  if(/^(Digit|Numpad)[1-4]$/.test(e.code)&&$('modal').hidden&&!(e.target&&e.target.tagName==='BUTTON')){e.preventDefault();if(!e.repeat)skUse(+e.code.slice(-1)-1);return} /* v156: 기술 단추 */
   if(KEYDIR[e.code]){e.preventDefault();dirDown(e.code,e.repeat);return}
   if(go){if(e.target&&e.target.tagName==='BUTTON'&&e.code!=='KeyE')return;e.preventDefault();if(!e.repeat)interact();return}
   if(e.code==='KeyB')openBag();
