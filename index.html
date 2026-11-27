@@ -1445,6 +1445,15 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:158,d:'11월 27일',t:'기술 힘 고르기',l:[
+    '벼락 한 방에 다 쓰러지던 것을 고쳤어요.',
+    '연쇄 벼락은 겨눈 짐승에 2~3, 둘레에는 1씩만 들어가요.',
+    '둘레 짐승은 벼락만으로는 쓰러지지 않아요. 쉬는 시간도 늘었어요.',
+    '도사의 부적 힘이 줄었고, 연사·연격·쌍표창은 2~3번으로 줄었어요.',
+    '버티기·호신부·연막은 2~3초로 줄었고, 궁사는 화살 힘이 +1 됐어요.',
+    '곳마다 나오는 짐승이 절반쯤 늘었어요(내일 아침부터).',
+    '다친 사병은 낮에 행랑채 앞 멍석에 누워 치료받아요.',
+    '밤에는 머슴과 사병이 행랑채 안에서 자요.']},
   {v:157,d:'11월 27일',t:'컴퓨터용 기술 줄',l:[
     '컴퓨터에서는 기술 단추가 화면 아래에 가로 한 줄로 늘 보여요.',
     '단추 왼쪽 위의 숫자가 누를 키예요(1·2·3). 공격은 스페이스예요.',
@@ -2757,7 +2766,7 @@ function drawHands(c,list){
    다친 사병은 낮에도 자리에 누워 있고, 밤(저녁 7시~아침 6시 40분)에는 머슴과 사병이 모두 누워 잔다. 낮에는 일하러 나가 자리가 비어 있다. 누운 자리는 밟지 못하고(block), 곁에서 행동하면 한마디 뜬다 */
 function haengBeds(){
   const night=S.min>=1140||S.min<400,out=[],hurt=haengHurt(),gs=Math.max(0,(S.hh.guard|0)-guardsAway()-hurt),spots=[[1,0],[2,0],[3,0],[4,0],[5,0],[1,2],[5,2]];
-  for(let i=0;i<hurt;i++)out.push({k:'g',hurt:1});
+  if(night)for(let i=0;i<hurt;i++)out.push({k:'g',hurt:1}); /* v158: 다친 사병은 낮에는 집 앞 멍석에서 치료받고(haengCare), 밤에만 안에 눕는다 */
   if(night){for(let i=0;i<Math.min(4,S.hh.hand|0);i++)out.push({k:'h'});for(let i=0;i<gs;i++)out.push({k:'g'})}
   return out.slice(0,spots.length).map((o,i)=>Object.assign(o,{x:spots[i][0],y:spots[i][1]}));
 }
@@ -2775,7 +2784,7 @@ function haengBedArt(c,b){
   circ(c,X+16,Y+9,5.2,L.skin);rr(c,X+10.5,Y+3.5,11,4.5,2.2,L.hair);
   rr(c,X+6,Y+13-br,20,17+br,4,b.k==='g'?'#3a4a6a':'#b8ae92');rr(c,X+6,Y+13-br,20,3,2,b.k==='g'?'#4a5c82':'#cfc6ae'); /* 이불(숨 쉴 때마다 들썩인다) */
   if(b.hurt){rr(c,X+10.5,Y+6,11,2.6,1,'#f6f1e6');rr(c,X+19,Y+6,2.6,5,1,'#f6f1e6')} /* 머리에 싸맨 천 */
-  else{c.fillStyle='rgba(255,255,255,.75)';c.font='bold 8px sans-serif';c.textAlign='left';c.fillText('z',X+23,Y+6-((now*6+b.x*3)%6))}
+  else{c.font='bold 9px sans-serif';c.textAlign='left';for(let i=0;i<2;i++){const u=(now*.5+b.x*.3+i*.5)%1;c.fillStyle='rgba(255,255,255,'+(.85*(1-u)).toFixed(2)+')';c.fillText(i?'z':'Z',X+22+u*5+i*3,Y+8-u*13)}} /* v158: 코 고는 숨(z)이 두 개씩 피어오른다 */
 }
 function openSeedBin(){
   const B=S.hh.seeds=S.hh.seeds||{},sea=season();
@@ -2808,8 +2817,24 @@ function haengArt(c,h){
   poly(c,[x-3,by-25,x+10,by-43,x+54,by-43,x+67,by-25],'#c9a24a');poly(c,[x-3,by-25,x+67,by-25,x+64,by-21,x,by-21],'#a8822e');
   for(let i=0;i<9;i++)line(c,x+4+i*7,by-41+(i%2)*2,x+1+i*7.4,by-25,'rgba(120,90,30,.45)',1);
   rr(c,x+12,by-46,40,4,2,'#b08a3a'); /* 용마름 */
-  if((S.hh.hand|0)>0&&!handWork())drawChar(c,x+33,by-3,HAND_LOOK,[0,1],false,0); /* 일하지 않는 때에는 툇마루에 앉아 있다 */
-  if(hurt>0){drawChar(c,x+50,by-3,GUARD_LOOK,[0,1],false,0);rr(c,x+44,by-37,12,3,1,'#f6f1e6');rr(c,x+53,by-37,3,6,1,'#f6f1e6')} /* 머리를 싸맨 사병 */
+  /* v158(사용자 요청: 잘 때는 집 안에서 자는 모습 · 다치면 집 앞에 누워 치료받는 모습): 밤에는 툇마루가 비고 창에서 숨소리(z)가 새어 나온다. 안에 들어가면 누워 자는 모습이 보인다.
+     다친 사병은 낮 동안 행랑채 앞 멍석에 누워 치료받는다(haengCare). 밤에는 안에 들어가 눕는다(haengBeds) */
+  const night=S.min>=1140||S.min<400;
+  if(night){if((S.hh.hand|0)+(S.hh.guard|0)>0){rr(c,x+27,by-21,10,8,1,'#3a3a4a');c.font='bold 9px sans-serif';c.textAlign='left';for(let i=0;i<2;i++){const u=(now*.5+i*.5)%1;c.fillStyle='rgba(255,255,255,'+(.85*(1-u)).toFixed(2)+')';c.fillText('z',x+38+i*4+u*4,by-22-u*14)}}}
+  else if((S.hh.hand|0)>0&&!handWork())drawChar(c,x+33,by-3,HAND_LOOK,[0,1],false,0); /* 낮에 일하지 않는 때에는 툇마루에 앉아 있다 */
+}
+function haengCare(c,h){
+  const n=Math.min(3,haengHurt());if(!n||S.min>=1140||S.min<400)return;
+  /* 행랑채 앞의 빈 칸을 찾아 멍석을 편다(나무나 바위가 있는 칸은 비켜 간다). 한 칸에 한 사람, 그 옆 칸에 약탕기와 돌보는 사람 */
+  const free=[];for(const [a,b] of [[0,1],[1,1],[2,1],[-1,1],[3,1],[0,2],[1,2],[2,2],[-1,2],[3,2]]){const X=h.x+a,Y=h.y+b,t=TOWN.tile[Y]?TOWN.tile[Y][X]:-1;if((t===0||t===1||t===7)&&!TOWN.objAt[Y][X])free.push([X,Y])}
+  for(let i=0;i<n&&i<free.length;i++){const X=free[i][0]*T+2,Y=free[i][1]*T+10,br=Math.sin(now*1.5+i)*.7;
+    rr(c,X,Y,28,13,2,'#d9c89a');rr(c,X,Y,28,2,1,'#b8a67a'); /* 멍석 */
+    rr(c,X+9,Y+2.5-br*.5,17,8+br*.5,3,'#3a4a6a');rr(c,X+9,Y+2.5-br*.5,17,2,1,'#4a5c82'); /* 이불(숨 쉴 때마다 들썩인다) */
+    circ(c,X+6,Y+6,4.4,GUARD_LOOK.skin);rr(c,X+2,Y+2.5,5,4,2,GUARD_LOOK.hair);rr(c,X+3,Y+3.4,7,2.2,1,'#f6f1e6')} /* 머리와 싸맨 천 */
+  const q=free[Math.min(n,free.length-1)];if(!q||free.length<=n)return;
+  {const px=q[0]*T+9,py=q[1]*T+26;rr(c,px-5,py-2,10,3,1,'#5a4030');ell(c,px,py-6,6,5,'#7a5a3a');rr(c,px-4,py-12,8,2.5,1,'#5a4030'); /* 약탕기와 김 */
+    for(let i=0;i<2;i++){const u=(now*.7+i*.5)%1;c.globalAlpha=.6*(1-u);circ(c,px+Math.sin(u*6+i)*2.5,py-14-u*12,2+u*2,'#fff');c.globalAlpha=1}}
+  if((S.hh.hand|0)>0||(S.hh.guard|0)>haengHurt()){const who=(S.hh.hand|0)>0?HAND_LOOK:GUARD_LOOK,kx=q[0]*T+22,ky=q[1]*T+29;drawChar(c,kx,ky,who,[-1,0],false,0);rr(c,kx-11,ky-17+Math.sin(now*3)*1.5,6,3,1,'#f6f1e6')} /* 곁에서 물수건을 대 주는 사람 */
 }
 function openHousehold(){
   openModal('가솔',body=>{
@@ -5049,7 +5074,7 @@ function renderTown(c){
     list.push([q[1]+.08,()=>{rr(c,x-15,y-3,30,8,2,'#c9a86a');rr(c,x-15,y-3,30,2,1,'#b08a4a');if(k==='hang'){rr(c,x-12,y-8,8,7,1,'#8a6238');rr(c,x+3,y-9,9,8,2,'#d9d2bc')}else if(k==='gomul'){rr(c,x-12,y-7,7,5,1,'#8a9399');line(c,x+2,y-9,x+11,y-2,'#6a4a2a',2)}else{circ(c,x-8,y-4,3.2,'#5a7a4a');circ(c,x+8,y-4,3.2,'#8a6a4a');rr(c,x-2,y-8,5,7,1,'#f3ead6')}drawChar(c,x,y-5,f.look,near?[Math.sign(P.x-q[0])||0,Math.sign(P.x-q[0])?0:Math.sign(P.y-q[1])||1]:[0,1],false,now+q[0])}]);
     if(near&&!mg)labels.push(()=>label(c,x,y+9,f.n));
   }
-  if(haengAt&&scene==='town'){const hq=haengAt,hx=(hq.x+1)*T,hy=(hq.y+1)*T;list.push([hq.y+.3,()=>haengArt(c,hq)]);if(!mg&&Math.abs(P.x-hq.x-.5)+Math.abs(P.y-hq.y)<=3)labels.push(()=>label(c,hx,hy-56,haengHurt()?'행랑채 · 다친 사병 '+haengHurt()+'명':'행랑채'))} /* v139 행랑채 */
+  if(haengAt&&scene==='town'){const hq=haengAt,hx=(hq.x+1)*T,hy=(hq.y+1)*T;list.push([hq.y+.3,()=>haengArt(c,hq)]);list.push([hq.y+.95,()=>haengCare(c,hq)]);if(!mg&&Math.abs(P.x-hq.x-.5)+Math.abs(P.y-hq.y)<=3)labels.push(()=>label(c,hx,hy-56,haengHurt()?'행랑채 · 다친 사병 '+haengHurt()+'명':'행랑채'))} /* v139 행랑채 */
   if(scene==='wild'&&wz===4&&drillAt){const dx=(drillAt.x+drillAt.w/2)*T,dy=drillAt.y*T;list.push([drillAt.y+drillAt.h-.9,()=>drillYardArt(c)]);if(!mg&&Math.abs(P.x-drillAt.x-drillAt.w/2)+Math.abs(P.y-drillAt.y-drillAt.h/2)<=drillAt.w/2+4)labels.push(()=>label(c,dx,dy-22,'훈련장'))} /* v153 훈련장 */
   if(scene==='town'&&S.wae&&S.wae.day===S.day&&!S.wae.won&&S.min>=1020)waeCoast().forEach((q,i)=>list.push([q[1]+.1,()=>waeShipArt(c,(q[0]+.5)*T,(q[1]+.8)*T,i)])); /* v153 왜선: 저녁 5시부터 바다에 보인다 */
   {const pk=postHere(),ps=pk&&postSpot(pk);if(ps){const x=(ps[0]+.5)*T,y=(ps[1]+.9)*T,built=!!S.posts[pk];list.push([ps[1]+.1,()=>postArt(c,x,y,built)]);if(!mg&&Math.abs(P.x-ps[0])+Math.abs(P.y-ps[1])<=3)labels.push(()=>label(c,x,y-(built?52:40),built?'역참':'역참 터'))}} /* v137 역참 */
@@ -6793,7 +6818,7 @@ function wildPickups(){
 }
 function spawnWild(){
   if(wildBeasts){beasts=wildBeasts;return}
-  beasts=[];const sea=season(),kinds=['rabbit','rabbit','boar','boar','deer','pheasant','raccoon','raccoon','gorani','badger'].filter(k=>(k!=='pheasant'||sea>=2)&&BEASTS[k].s.includes(sea)&&(k!=='badger'||S.level>=BEASTS.badger.lv)),far=GRASS.filter(q=>q[0]>9);
+  beasts=[];const sea=season(),kinds=['rabbit','rabbit','boar','boar','deer','pheasant','raccoon','raccoon','gorani','badger','squirrel','squirrel'].filter(k=>(k!=='pheasant'||sea>=2)&&BEASTS[k].s.includes(sea)&&(k!=='badger'||S.level>=BEASTS.badger.lv)),far=GRASS.filter(q=>q[0]>9);
   for(let i=0,g=0;i<S.wildN&&g<400;g++){
     const [x,y]=pick(far);if(beasts.some(b=>b.x===x&&b.y===y))continue;
     const k=i===0&&S.wildN>=6?'tiger':pick(kinds);
@@ -6832,7 +6857,7 @@ function fieldPickups(){
 }
 function spawnField(){
   if(fieldBeasts){beasts=fieldBeasts;return}
-  beasts=[];const sea=season(),plan=['rabbit','deer','pheasant','gorani','rabbit','raccoon','deer','rabbit'].filter(k=>BEASTS[k]&&BEASTS[k].s.includes(sea));
+  beasts=[];const sea=season(),plan=['rabbit','deer','pheasant','gorani','rabbit','raccoon','deer','rabbit','squirrel','gorani','rabbit','squirrel'].filter(k=>BEASTS[k]&&BEASTS[k].s.includes(sea));
   for(const k of plan)for(let g=0;g<200;g++){const q=pick(GRASS);if(q[0]>W-8||beasts.some(b=>b.x===q[0]&&b.y===q[1]))continue;beasts.push(mkBeast(k,q[0],q[1]));break}
   fieldBeasts=beasts;
 }
@@ -9163,21 +9188,21 @@ function beastInLine(){
    · 도사: 활 대신 부적(학식으로 과녁과 힘이 정해진다, 사거리 다섯 칸). 맞으면 그 짐승과 둘레 두 칸의 짐승이 묶인다 / 20% 더 다치고 맞붙기 틈이 좁고 부적 한 장에 기력 3
    셈이 붙는 자리: aimRaw·aimRm·bowRange·meleeWin·meleeDmg·startMelee(기습)·meleePress(연격)·clsHit(다칠 때)·shoot·updBeasts(달아나는 거리)·gearFx(clsFx) */
 const CLS={
-  gung:{n:'궁사',ic:'弓',d:['특기: 멀리 쏘기 · 사거리 +1칸','화살이 잘 맞아요','약점: 없지만 붙으면 평범해요']},
+  gung:{n:'궁사',ic:'弓',d:['특기: 멀리 쏘기 · 사거리 +1칸','화살이 잘 맞고 힘이 +1이에요','약점: 붙으면 맨손이에요']},
   musa:{n:'무사',ic:'武',d:['특기: 강타 · 휘두르는 힘이 세요','15% 덜 다쳐요','약점: 활이 잘 안 맞아요']},
   hyeop:{n:'협객',ic:'俠',d:['특기: 기습 · 처음 칠 때 크게 베요','걸음과 손이 빠르고 순한 짐승이 늦게 달아나요','약점: 10% 더 다쳐요']},
   dosa:{n:'도사',ic:'道',d:['특기: 부적 · 맞으면 가끔 둘레 짐승까지 묶여요','활 대신 부적을 날려요 · 학식이 높을수록 세요','약점: 20% 더 다쳐요']}};
 const SKILLS={ /* v156: 갈래마다 첫째는 늘 붙는 힘, 둘째는 단추로 누르는 기술(ACTIVE)이다 */
-  gung:[['명궁',[['g_aim','정조준','늘 · 화살이 더 잘 맞아요'],['g_crit','급소','단추 · 센 화살 한 대(힘 2배, 단계마다 더)']]],['속사',[['g_far','먼 화살','늘 · 사거리 +1칸(3단계 +2칸)'],['g_twin','연사','단추 · 화살 3~5대를 따다닥']]],['사냥꾼',[['g_pin','발 묶는 화살','늘 · 맞은 짐승이 잠깐 멈칫해요'],['g_fire','불화살','단추 · 불붙는 화살(잠시 뒤 더 깎아요)']]]],
-  musa:[['검객',[['m_power','강타 수련','늘 · 휘두르는 힘이 세져요'],['m_chain','연격','단추 · 3~5번 연달아 베요']]],['철벽',[['m_guard','철벽','늘 · 단계마다 5% 덜 다쳐요'],['m_wide','버티기','단추 · 3~5초 동안 다치지 않아요']]],['기백',[['m_heal','투지','늘 · 세 번 휘두를 때마다 기력을 되찾아요'],['m_roar','기합','단추 · 둘레 짐승이 멈칫해요']]]],
-  hyeop:[['암습',[['h_amb','급습','늘 · 기습의 힘이 단계마다 +1'],['h_smoke','연막','단추 · 3~5초 동안 공격을 피해요']]],['경공',[['h_quiet','숨죽이기','늘 · 순한 짐승이 늦게 달아나요'],['h_step','질풍','단추 · 4~6초 동안 걸음과 손이 빨라져요']]],['표창',[['h_throw','표창술','늘 · 표창이 더 잘 맞아요'],['h_twin','쌍표창','단추 · 표창 2~4개를 따다닥']]]],
-  dosa:[['뇌법',[['d_bolt','벼락','늘 · 부적의 힘 +1(3단계 +2)'],['d_chain','연쇄 벼락','단추 · 겨눈 짐승과 둘레에 벼락']]],['부적',[['d_bind','결박','늘 · 묶는 시간이 늘어요(3단계: 둘레 세 칸)'],['d_ward','호신부','단추 · 3~5초 동안 다치지 않아요']]],['선술',[['d_far','축지부','늘 · 부적 사거리 +1칸씩'],['d_heal','치유부','단추 · 기력을 되찾아요(하루 세 번)']]]]};
+  gung:[['명궁',[['g_aim','정조준','늘 · 화살이 더 잘 맞아요'],['g_crit','급소','단추 · 센 화살 한 대(힘이 단계만큼 더)']]],['속사',[['g_far','먼 화살','늘 · 사거리 +1칸(3단계 +2칸)'],['g_twin','연사','단추 · 화살 2~3대를 따다닥']]],['사냥꾼',[['g_pin','발 묶는 화살','늘 · 맞은 짐승이 잠깐 멈칫해요'],['g_fire','불화살','단추 · 불붙는 화살(잠시 뒤 더 깎아요)']]]],
+  musa:[['검객',[['m_power','강타 수련','늘 · 휘두르는 힘이 세져요'],['m_chain','연격','단추 · 2~3번 연달아 베요']]],['철벽',[['m_guard','철벽','늘 · 단계마다 5% 덜 다쳐요'],['m_wide','버티기','단추 · 2~3초 동안 다치지 않아요']]],['기백',[['m_heal','투지','늘 · 네 번 휘두를 때마다 기력을 되찾아요'],['m_roar','기합','단추 · 둘레 짐승이 멈칫해요']]]],
+  hyeop:[['암습',[['h_amb','급습','늘 · 기습의 힘이 단계마다 +1'],['h_smoke','연막','단추 · 2~3초 동안 공격을 피해요']]],['경공',[['h_quiet','숨죽이기','늘 · 순한 짐승이 늦게 달아나요'],['h_step','질풍','단추 · 4~6초 동안 걸음과 손이 빨라져요']]],['표창',[['h_throw','표창술','늘 · 표창이 더 잘 맞아요'],['h_twin','쌍표창','단추 · 표창 2~3개를 따다닥']]]],
+  dosa:[['뇌법',[['d_bolt','벼락','늘 · 부적의 힘 +1(3단계 +2)'],['d_chain','연쇄 벼락','단추 · 겨눈 짐승에 2~3, 둘레에 1씩']]],['부적',[['d_bind','결박','늘 · 묶는 시간이 늘어요(3단계: 둘레 세 칸)'],['d_ward','호신부','단추 · 2~3초 동안 다치지 않아요']]],['선술',[['d_far','축지부','늘 · 부적 사거리 +1칸씩'],['d_heal','치유부','단추 · 기력을 되찾아요(하루 세 번)']]]]};
 const SK_MAX=3,sk=id=>S&&S.cls&&S.sk&&id.charAt(0)===S.cls.charAt(0)?S.sk[id]|0:0,isCls=k=>!!S&&S.cls===k;
 const skTotal=()=>Math.floor(S.level/2),skUsed=()=>Object.keys(S.sk||{}).reduce((a,k)=>a+(S.sk[k]|0),0),skLeft=()=>Math.max(0,skTotal()-skUsed());
 const clsFx=k=>(k==='aim'?(isCls('gung')?1.5+.7*sk('g_aim'):isCls('musa')?-1.5:0):k==='spd'?(isCls('hyeop')?.04:0)+(skOn('h_step')?.45:0):0)+(k==='aim'?.6*sk('h_throw'):0);
 const clsHurt=()=>Math.max(.5,(isCls('musa')?.85:isCls('hyeop')?1.1:isCls('dosa')?1.2:1)-.05*sk('m_guard'));
 const bowRange=()=>isCls('dosa')?5+sk('d_far'):4+tl('bow')+(isCls('gung')?1+Math.ceil(sk('g_far')/2):0);
-const bujeokDmg=()=>1+Math.floor(sv('lore')/7)+Math.ceil(sk('d_bolt')/2),shotDmg=()=>(isCls('dosa')?bujeokDmg():1)+gearFx('dmg'); /* v155: 무기는 직업 것만 걸치므로 도사도 제 무기(지팡이)의 힘을 받는다 */
+const bujeokDmg=()=>1+Math.floor(sv('lore')/14)+Math.ceil(sk('d_bolt')/2),shotDmg=()=>(isCls('dosa')?bujeokDmg():isCls('gung')?2:1)+gearFx('dmg'); /* v158 밸런스: 궁사는 화살 힘 +1(평타가 가장 약했다), 도사는 학식 14마다 +1(전에는 7마다라 한 장에 6까지 나왔다) */ /* v155: 무기는 직업 것만 걸치므로 도사도 제 무기(지팡이)의 힘을 받는다 */
 /* 직업 무기(v155, 사용자 요청: 직업에 따라 장비를 다르게 · 가는 길에 맞게 걸치게): 무기 칸의 장비는 직업이 정해져 있다(gearCls).
    활·화살=궁사, 칼·창·도끼=무사, 비수(ic dagger)=협객, 부적·지팡이(ic staff)=도사. 길에서 받는 연장(route)과 부채는 누구나 걸친다. 갑옷·쓰개·신발·장신구는 그대로 누구나.
    직업을 고르거나 바꾸면 맞지 않는 무기는 벗고 가진 것 가운데 가장 좋은 제 무기를 쥔다. 하나도 없으면 기본 무기(CLS_BASE)를 받는다. 좋은 것은 찾아서만 얻는다 */
@@ -9316,21 +9341,21 @@ function startHunt(b){
 function startMelee(b){startHunt(b)}
 function fightPress(m){if(!m.pb){m.pb=1;m.cd-=.22}} /* 공격을 더 누르면 다음 한 번이 조금 빨리 나간다 */
 function fightSwing(m){
-  const b=m.b,k=m.mel,bx=rx(b)*T+16,by=ry(b)*T+10;m.cd=SWING[k]*(skOn('h_step')?.5:1);m.sw=.22;m.pb=0;m.i++;
+  const b=m.b,k=m.mel,bx=rx(b)*T+16,by=ry(b)*T+10;m.cd=SWING[k]*(skOn('h_step')?.67:1);m.sw=.22;m.pb=0;m.i++;
   let dmg=Math.max(1,Math.ceil(meleeDmg(k)/2));const o={mel:1,sfx:k==='sword'||k==='dagger'?'sword':k==='spear'?'spear':k==='axe'?'axe':'fist'};
   if(isCls('hyeop')&&!b.amb){b.amb=1;dmg=meleeDmg(k)*2+sk('h_amb');fxAdd('slash2',bx,by);float('기습!',bx,by-40,'#f7d24a');o.big=1;o.col='#f7d24a'} /* 협객의 특기: 그 짐승을 처음 칠 때 */
   fxAdd('slash',bx,by);
-  if(sk('m_heal')&&m.i%3===0&&S.en<maxEn()){S.en=Math.min(maxEn(),S.en+sk('m_heal'));hud();fxAdd('heal',(rx(P)+.5)*T,(ry(P)+.9)*T)} /* 무사의 투지: 세 번 휘두를 때마다 */
+  if(sk('m_heal')&&m.i%4===0&&S.en<maxEn()){S.en=Math.min(maxEn(),S.en+sk('m_heal'));hud();fxAdd('heal',(rx(P)+.5)*T,(ry(P)+.9)*T)} /* 무사의 투지: 세 번 휘두를 때마다 */
   fightHit(b,dmg,o);
 }
 function fightShot(m){
-  const b=m.b,D=BEASTS[b.k],bx=rx(b)*T+16,by=ry(b)*T+14,dosa=isCls('dosa');m.cd=shotGap()*(skOn('h_step')?.5:1);m.sw=.18;m.pb=0;
+  const b=m.b,D=BEASTS[b.k],bx=rx(b)*T+16,by=ry(b)*T+14,dosa=isCls('dosa');m.cd=shotGap()*(skOn('h_step')?.67:1);m.sw=.18;m.pb=0;
   const p=clamp(.5+(aimR()-8.5)/8.5*.42-Math.max(0,D.lv-S.level)*.04,.2,.93),hit=Math.random()<p;sfx('bow');
   shotFire(hit?bx:bx+ri(-16,16),hit?by:by+ri(8,16),hit,dosa||(isCls('hyeop')?2:0));
   if(!hit){float('빗나감',bx,by-24,'#cfd6dc');if(!D.bite)b.flee=Math.max(b.flee,1.6);else b.mad=1;return}
   m.i++;if(dosa)fxAdd('bolt',bx,by,.12);
   if(fightHit(b,shotDmg(),{}))return;
-  if(dosa&&Math.random()<.4){const dur=1.4+.5*sk('d_bind'),R=sk('d_bind')>=3?3:2;for(const q of beasts)if(q.hp>0&&Math.abs(q.x-b.x)+Math.abs(q.y-b.y)<=R){q.stun=Math.max(q.stun||0,dur);q.bj=1}} /* 도사의 특기: 부적에 묶인다 */
+  if(dosa&&Math.random()<.25){const dur=1.2+.4*sk('d_bind'),R=sk('d_bind')>=3?3:2;for(const q of beasts)if(q.hp>0&&Math.abs(q.x-b.x)+Math.abs(q.y-b.y)<=R){q.stun=Math.max(q.stun||0,dur);q.bj=1}} /* 도사의 특기: 부적에 묶인다 */
   else if(sk('g_pin'))b.stun=Math.max(b.stun||0,.3*sk('g_pin'));
   if(D.bite)b.rage=4;else if(!(b.stun>0))b.flee=Math.max(b.flee,2);
 }
@@ -9344,7 +9369,7 @@ function updFight(m,dt){
 }
 /* 누르는 기술: 갈래의 둘째 기술이 그 갈래의 단추가 된다(skSlots). need r=겨눌 짐승(붙어 있거나 일직선) · m=붙은 짐승 */
 const ACTIVE={g_crit:{n:'급소',cd:9,need:'r'},g_twin:{n:'연사',cd:9,need:'r'},g_fire:{n:'불화살',cd:10,need:'r'},m_chain:{n:'연격',cd:8,need:'m'},m_wide:{n:'버티기',cd:16},m_roar:{n:'기합',cd:13},
-  h_smoke:{n:'연막',cd:15},h_step:{n:'질풍',cd:14},h_twin:{n:'쌍표창',cd:8,need:'r'},d_chain:{n:'벼락',cd:9,need:'r'},d_ward:{n:'호신부',cd:17},d_heal:{n:'치유',cd:25}};
+  h_smoke:{n:'연막',cd:15},h_step:{n:'질풍',cd:14},h_twin:{n:'쌍표창',cd:8,need:'r'},d_chain:{n:'벼락',cd:13,need:'r'},d_ward:{n:'호신부',cd:17},d_heal:{n:'치유',cd:25}};
 const skSlots=()=>S&&S.cls?SKILLS[S.cls].map(r=>r[1][1][0]):[];
 function skTarget(){
   if(mg&&mg.kind==='hunt'&&beasts.includes(mg.b))return mg.b;const b=beastInLine();if(b)return b;
@@ -9359,15 +9384,15 @@ function skSlash(b,dmg,i){
   return fightHit(b,dmg,{mel:1,sfx:'sword',big:i===0,col:'#f7d24a'});
 }
 const SK_DO={
-  g_crit:(l,b)=>skQ.push({t:now+.05,f:()=>skShot(b,Math.round(shotDmg()*(1.5+.5*l)),'crit','급소!')}),
-  g_twin:(l,b)=>{for(let i=0;i<2+l;i++)skQ.push({t:now+.05+i*.13,f:()=>skShot(b,shotDmg(),'',i?'':'연사!')})},
+  g_crit:(l,b)=>skQ.push({t:now+.05,f:()=>skShot(b,shotDmg()+l,'crit','급소!')}),
+  g_twin:(l,b)=>{for(let i=0;i<Math.min(3,1+l);i++)skQ.push({t:now+.05+i*.13,f:()=>skShot(b,Math.max(1,shotDmg()-1),'',i?'':'연사!')})},
   g_fire:(l,b)=>skQ.push({t:now+.05,f:()=>{if(!skShot(b,shotDmg(),'crit','불화살!')){b.burn=1.2;b.burnD=l}}}),
-  h_twin:(l,b)=>{for(let i=0;i<1+l;i++)skQ.push({t:now+.05+i*.12,f:()=>skShot(b,shotDmg(),'',i?'':'쌍표창!')})},
-  m_chain:(l,b)=>{for(let i=0;i<2+l;i++)skQ.push({t:now+.04+i*.13,f:()=>skSlash(b,Math.max(1,Math.ceil(meleeDmg(meleeKind())/2)),i)})},
-  m_wide:l=>{skT.m_wide=now+2+l},d_ward:l=>{skT.d_ward=now+2+l},h_step:l=>{skT.h_step=now+3+l},
-  h_smoke:l=>{skT.h_smoke=now+2+l;fxAdd('smoke',(rx(P)+.5)*T,(ry(P)+.9)*T)},
+  h_twin:(l,b)=>{for(let i=0;i<1+Math.ceil(l/2);i++)skQ.push({t:now+.05+i*.12,f:()=>skShot(b,shotDmg(),'',i?'':'쌍표창!')})},
+  m_chain:(l,b)=>{for(let i=0;i<Math.min(3,1+l);i++)skQ.push({t:now+.04+i*.13,f:()=>skSlash(b,Math.max(1,Math.ceil(meleeDmg(meleeKind())/2)-1),i)})},
+  m_wide:l=>{skT.m_wide=now+1.5+.5*l},d_ward:l=>{skT.d_ward=now+1.5+.5*l},h_step:l=>{skT.h_step=now+3+l},
+  h_smoke:l=>{skT.h_smoke=now+1.5+.5*l;fxAdd('smoke',(rx(P)+.5)*T,(ry(P)+.9)*T)},
   m_roar:l=>{fxAdd('roar',(rx(P)+.5)*T,(ry(P)+.9)*T);shakeT=.2;for(const q of beasts)if(q.hp>0&&Math.abs(q.x-P.x)+Math.abs(q.y-P.y)<=3){q.stun=Math.max(q.stun||0,.8+.6*l);q.bj=0}},
-  d_chain:(l,b)=>{const R=sk('d_bind')>=3?3:2;shakeT=.22;for(const q of beasts.slice())if(q.hp>0&&Math.abs(q.x-b.x)+Math.abs(q.y-b.y)<=R){fxAdd('bolt',rx(q)*T+16,ry(q)*T+14);q.stun=Math.max(q.stun||0,.6);fightHit(q,l+Math.ceil(sk('d_bolt')/2),{col:'#fff7b0'})}},
+  d_chain:(l,b)=>{const R=sk('d_bind')>=3?3:2;shakeT=.22;for(const q of beasts.slice())if(q.hp>0&&Math.abs(q.x-b.x)+Math.abs(q.y-b.y)<=R){fxAdd('bolt',rx(q)*T+16,ry(q)*T+14);q.stun=Math.max(q.stun||0,.5);const dm=q===b?1+Math.ceil(l/2):Math.min(1,q.hp-1);if(dm>0)fightHit(q,dm,{col:'#fff7b0'})}}, /* v158(사용자 의견: 벼락 한 방에 다 죽는다): 겨눈 짐승만 2~3, 둘레는 1씩이고 둘레 짐승은 벼락으로 쓰러지지 않는다 */
   d_heal:l=>{S.en=Math.min(maxEn(),S.en+8*l);hud();fxAdd('heal',(rx(P)+.5)*T,(ry(P)+.9)*T)}};
 function skUse(i){
   if(!S||!S.cls||!started||busy()||fishing||scene==='home'||(mg&&mg.kind!=='hunt'))return;
@@ -10611,7 +10636,7 @@ function nextDay(forced){
   if(scene==='wild')leaveWild(true);
   if(scene==='resort')leaveResort(true);
   if(scene==='palace')leavePalace(true);
-  S.wildN=10;wildBeasts=null;S.wpick=null;fieldBeasts=null;S.fpick=null;S.deepN=9;deepBeasts=null;S.dpick=null;S.snowN=8;snowBeasts=null;S.npick=null;S.royN=8;royalBeasts=null;S.rpick=null;wz=0;huntStreak=0;
+  S.wildN=16;wildBeasts=null;S.wpick=null;fieldBeasts=null;S.fpick=null;S.deepN=14;deepBeasts=null;S.dpick=null;S.snowN=12; /* v158(사용자 의견: 짐승이 너무 적다): 숲 10→16 · 깊은 산 9→14 · 눈고개 8→12 · 금원 8→11 · 마을 둘레 4~5→6~7 · 들판 8→12 */snowBeasts=null;S.npick=null;S.royN=11;royalBeasts=null;S.rpick=null;wz=0;huntStreak=0;
   const cupMsg=S.cup&&S.cup.on&&!S.cup.done?cupSettle(true):''; /* 마감하지 않고 잠든 사냥 대회는 아침에 셈한다 */
   const was=season(),prevW=S.weather;
   // 쫓지 못한 까마귀가 앉아 있던 밭은 쪼아 먹힌다(다 익은 것은 잃고, 자라던 것은 하루 뒷걸음). 가뭄 든 날 물을 못 준 작물도 하루 시든다
@@ -10668,7 +10693,7 @@ function nextDay(forced){
     S.pee=[];cop=null;if(S.wanted>0)S.wanted--;
     if(S.rogue&&ROGUE.rent[S.rogue.rank]){const r=Math.round(ROGUE.rent[S.rogue.rank]*mainMul('rogue'));S.coins+=r;msgs.push('자릿세 +'+r+'냥')}}
   if(S.lore.pal||S.seenPal){if(cupDay())msgs.push('오늘은 임금의 사냥 대회 · 궐문의 무진에게');else if(cupOn(S.day+1))msgs.push('내일은 임금의 사냥 대회')}
-  S.wild=sea===2?5:4;spawnBeasts();dayStock(msgs);
+  S.wild=sea===2?7:6;spawnBeasts();dayStock(msgs);
   if(S.merch)rollOrder();
   if(S.spouse)mateMorning(msgs);
   {const n=guideOpen().length;if(n&&S.day%3===0)msgs.push('새로 할 수 있는 일 '+n+'가지 · 기록의 길잡이')}
