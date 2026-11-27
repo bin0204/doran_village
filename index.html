@@ -367,6 +367,12 @@ const OUTLAW_WHO=['검은 수염 장칠','외눈박이 곽쇠','쌍도끼 마동
 const BANDITS={raider:{skin:'#d9a878',hair:'#2e2a2a',shirt:'#3a4a5a',bot:'#2a2a30',rib:'#c8392f',sex:'m',hat:'fur',hatC:'#cfc8b6',beard:1},
   outlaw:{skin:'#c99868',hair:'#2e2a2a',shirt:'#2a2a30',bot:'#2a2220',rib:'#8a2f2a',sex:'m',hat:'band',hatC:'#8a2f2a',beard:1},bandit:{skin:'#d9a878',hair:'#2e2a2a',shirt:'#4a3b32',bot:'#3a3a40',rib:'#8a2f2a',sex:'m',hat:'band',hatC:'#2a2a30',beard:1},
   chief:{skin:'#d9a878',hair:'#2e2a2a',shirt:'#5a2a22',bot:'#2a2220',rib:'#f7d24a',sex:'m',hat:'fur',hatC:'#6b4a32',beard:1}};
+/* 왜구(v153, 사용자 요청: 도적이나 왜군도 쳐들어오게): 철마다 한 번 바닷가로 올라오는 사람 적. 산이나 숲에는 살지 않는다(wae → 아무 데서도 저절로 나오지 않는다) */
+const WAE_LV=12;
+Object.assign(BEASTS,{waegu:{n:'왜구',lv:12,hp:3,loot:[],s:[0,1,2,3],xp:40,arms:5,aim:[3,23,8,2.1],bite:14,hunt:6,sp:2.8,man:1,wae:1,coin:[150,260],merit:1},
+  waejang:{n:'왜장',lv:15,hp:6,loot:[],s:[0,1,2,3],xp:90,arms:8,aim:[2.7,24,8,2.1],bite:20,hunt:7,sp:2.9,man:1,wae:1,coin:[700,1200],merit:4}});
+Object.assign(BANDITS,{waegu:{skin:'#d9a878',hair:'#1f1f24',shirt:'#2c3a52',bot:'#1f2430',rib:'#b5332a',sex:'m',hat:'band',hatC:'#f3ead6'},
+  waejang:{skin:'#d9a878',hair:'#1f1f24',shirt:'#6a1f1c',bot:'#1f1f24',rib:'#f7d24a',sex:'m',hat:'band',hatC:'#1f1f24',beard:1}});
 const DEX=[['물고기',['minnow','pirami','loach','crucian','carp','ssogari','gamulchi','scad','jogi','mackerel','galchi','snapper','neopchi','sweetfish','catfish','salmon','smelt','dodari','nongeo','jeoneo','daegu']],
   ['열매와 작물',['apple','persimmon','turnip','sangchu','carrot','strawberry','gochu','gaji','watermelon','baechu','goguma','pumpkin','bori']],
   ['나물과 열매',['ssuk','naengi','sanddalgi','deodeok','dotori','daechu','eunhaeng','solbangul']],
@@ -1415,6 +1421,12 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:153,d:'11월 27일',t:'왜구와 사병 키우기',l:[
+    '레벨 12부터 철마다 닷새째 저녁, 왜구가 바닷가로 쳐들어와요.',
+    '물결을 지어 오고, 물리칠수록 다음에는 더 세게 와요.',
+    '사병에게 이름과 레벨이 생겼어요. 함께 싸운 만큼 자라요.',
+    '서쪽 들판에 훈련장이 섰어요. 삯을 주고 사흘 맡기면 자라서 와요.',
+    '사병 레벨은 내 레벨의 절반까지예요. 나도 계속 자라야 해요.']},
   {v:152,d:'11월 27일',t:'머슴 한 사람에게 여러 일',l:[
     '머슴 한 사람에게 밭일·가축·나무하기를 함께 맡길 수 있어요.',
     '일을 하나 더 맡길 때마다 그 머슴의 품삯이 100냥씩 올라요.',
@@ -1979,6 +1991,7 @@ function fixState(s){
   s.sjN=s.sjN|0;s.sjOrd=s.sjOrd==null?-1:s.sjOrd|0; /* v140 운종가 시전: 치른 큰 주문 수 · 마지막으로 치른 철 */
   s.posts=s.posts&&typeof s.posts==='object'&&!Array.isArray(s.posts)?s.posts:{};for(const k in s.posts)if(!POSTS[k])delete s.posts[k]; /* v137 세운 역참 */
   s.hh=s.hh&&typeof s.hh==='object'?s.hh:{hand:0,guard:0};s.hh.hand=s.hh.hand|0;s.hh.guard=s.hh.guard|0;
+  if(!Array.isArray(s.hh.gs))s.hh.gs=[];s.waeN=s.waeN|0;s.wae=s.wae&&typeof s.wae==='object'?s.wae:null; /* v153: 사병 명부 · 왜구 */
   s.debt=Math.max(0,Math.round(+s.debt||0));if(s.past==null)s.past=s.graze?1:0;
   if(!s.fland||typeof s.fland!=='object'){s.fland={};for(const k in s.ffarm){const q=k.split(','),b=landAt(+q[0],+q[1]);if(b>=0)s.fland[b]=1}}
   s.tax=s.tax&&typeof s.tax==='object'?s.tax:{due:0,late:0,sn:Math.floor((Math.max(1,s.day|0)-1)/7)};s.tax.due=Math.max(0,Math.round(+s.tax.due||0));s.tax.late=s.tax.late|0;s.tax.sn=s.tax.sn|0;
@@ -2410,8 +2423,9 @@ function updGuards(dt){
     if(gTrail.length&&Math.abs(gTrail[0][0]-P.x)+Math.abs(gTrail[0][1]-P.y)>1){gTrail.length=0;for(const g of gMen){g.m=0;g.foe=null}} /* 문을 드나들거나 멀리 옮겨졌으면 줄을 새로 선다 */
     if(!gTrail.length||gTrail[0][0]!==P.x||gTrail[0][1]!==P.y){gTrail.unshift([P.x,P.y]);if(gTrail.length>9)gTrail.length=9}
   }else gTrail.length=0;
-  while(gMen.length<n){const p=home?guardPost(gMen.length):[P.x,P.y];gMen.push({m:home?3:0,x:p[0],y:p[1],fx:p[0],fy:p[1],t:1,dir:[0,1],foe:null,skip:null,cd:0,bt:0,hp:3,hurt:0,lunge:0,pw:rnd(3,8),st:0,away:null})}
-  gMen.length=n;
+  const us=gUsable(),ros=gRoster();for(let i=gMen.length-1;i>=0;i--)if(!us.includes(gMen[i].ri))gMen.splice(i,1); /* v153: 사병마다 명부의 한 사람이다(ri). 곁을 떠난 사람은 뺀다 */
+  while(gMen.length<n){const ri=us.find(k=>!gMen.some(o=>o.ri===k));if(ri===undefined)break;const p=home?guardPost(gMen.length):[P.x,P.y],lv=gLv(ros[ri]);gMen.push({m:home?3:0,x:p[0],y:p[1],fx:p[0],fy:p[1],t:1,dir:[0,1],foe:null,skip:null,cd:0,bt:0,ri,lv,hp:gHp(lv),mhp:gHp(lv),hurt:0,lunge:0,pw:rnd(3,8),st:0,away:null})}
+  if(gMen.length>n)gMen.length=n;
   const peace=scene==='palace'||scene==='resort';gHit-=dt;const look=gHit<=0&&!peace;if(gHit<=0)gHit=.4;
   const engage=(g,f)=>{g.m=1;g.foe=f;g.cd=.5;g.bt=1.3;g.st=0;g.away=null};
   for(let i=0;i<gMen.length;i++){
@@ -2430,12 +2444,13 @@ function updGuards(dt){
       if(Math.abs(b.x-g.x)+Math.abs(b.y-g.y)===1){
         const D=BEASTS[b.k];g.st=0;g.dir=[b.x-g.x,b.y-g.y];b.gf=.35;g.cd-=dt;
         if(g.cd<=0){
-          g.cd=2.6;g.lunge=.2;b.hp-=1;b.mad=1;sfx('spear');shots.push({x0:0,y0:0,x1:rx(b)*T+16,y1:ry(b)*T+12,t:.14,hit:true});
+          g.cd=Math.max(1.6,2.6-.08*g.lv);g.lunge=.2;b.hp-=1+Math.floor(g.lv/4);b.mad=1;sfx('spear');shots.push({x0:0,y0:0,x1:rx(b)*T+16,y1:ry(b)*T+12,t:.14,hit:true});
+          {const up=gGain(g.ri,b.hp<=0?3+Math.floor(D.lv/4):1);if(up){g.lv=up;g.mhp=gHp(up);g.hp=g.mhp;float(ros[g.ri].n+' Lv.'+up+'!',(g.x+.5)*T,g.y*T-40,'#f7d24a');sfx('level')}} /* v153: 싸운 만큼 자란다 */
           if(b.hp<=0){if(mg&&mg.b===b)mg=null;huntKill(b,true);g.m=2;g.foe=null;continue}
         }
         if(D.bite){g.bt-=dt;if(g.bt<=0){
           const dm=D.lv>=12?2:1;g.bt=2.6;g.hp-=dm;g.hurt=.5;sfx('hurt');float('-'+dm,(g.x+.5)*T,g.y*T-22,'#ff7a5a');
-          if(g.hp<=0){S.hh.hurt=(S.hh.hurtDay===S.day?S.hh.hurt|0:0)+1;S.hh.hurtDay=S.day;float('사병이 다쳐 행랑채로 물러났어요',(g.x+.5)*T,g.y*T-36,'#ff7a5a');gMen.splice(i,1);touch();return}
+          if(g.hp<=0){S.hh.hurt=(S.hh.hurtDay===S.day?S.hh.hurt|0:0)+1;S.hh.hurtDay=S.day;if(ros[g.ri])ros[g.ri].hd=S.day;float((ros[g.ri]?ros[g.ri].n:'사병')+' · 다쳐서 행랑채로 물러났어요',(g.x+.5)*T,g.y*T-36,'#ff7a5a');gMen.splice(i,1);touch();return}
         }}
       }else if(!guardStep(g,(x,y)=>Math.abs(x-b.x)+Math.abs(y-b.y)===1)){g.st+=dt;if(g.st>1.5){g.skip=b;g.m=2;g.foe=null;g.st=0}}else g.st=0;
       continue;
@@ -2468,8 +2483,10 @@ function drawGuards(c,list,labels){
       gx=mv?lerp(pv[0],q[0],t):q[0];gy=mv?lerp(pv[1],q[1],t):q[1];d=mv?[q[0]-pv[0],q[1]-pv[1]]:[Math.sign(nx[0]-q[0]),Math.sign(nx[1]-q[1])];
     }else{gx=lerp(g.fx,g.x,g.t);gy=lerp(g.fy,g.y,g.t);d=g.dir;mv=g.t<1}
     const dd=d[0]&&d[1]?[d[0],0]:d[0]||d[1]?d:[0,1],L=g.lunge>0?5:0,cx=(gx+.5)*T+dd[0]*L,fy=(gy+.9)*T+dd[1]*L-bridgeRise(gx,gy);
-    list.push([gy+.05,()=>{if(g.hurt>0&&Math.floor(now*16)%2)c.globalAlpha=.45;drawChar(c,cx,fy,GUARD_LOOK,dd,mv,now*(g.m===3?.6:stepPace())+i*.37);line(c,cx+8,fy-10,cx+11,fy-36,'#7a5230',1.6);poly(c,[cx+9.5,fy-36,cx+11,fy-43,cx+12.5,fy-36],'#cfd6dc');c.globalAlpha=1}]);
-    if(g.m===1&&g.hp<3&&!mg)labels.push(()=>label(c,cx,fy-52,'♥'.repeat(Math.max(1,g.hp))));
+    const q=S.hh.gs&&S.hh.gs[g.ri];
+    list.push([gy+.05,()=>{if(g.hurt>0&&Math.floor(now*16)%2)c.globalAlpha=.45;drawChar(c,cx,fy,gLook(g.lv),dd,mv,now*(g.m===3?.6:stepPace())+i*.37);gArmor(c,cx,fy,g.lv);line(c,cx+8,fy-10,cx+11,fy-36,'#7a5230',1.6);poly(c,[cx+9.5,fy-36,cx+11,fy-43,cx+12.5,fy-36],'#cfd6dc');c.globalAlpha=1}]);
+    if(g.m===1&&g.hp<g.mhp&&!mg)labels.push(()=>label(c,cx,fy-52,'♥'.repeat(Math.max(1,g.hp))));
+    else if(q&&!mg)labels.push(()=>label(c,cx,fy-52,'Lv.'+g.lv+' '+q.n)); /* v153: 머리 위에 레벨과 이름 */
   }
 }
 const FIEFS=[null,{n:'작은 마을',cost:200000,pay:20000,g:1},{n:'고을',cost:600000,pay:70000,g:2},{n:'큰 고을',cost:1500000,pay:180000,g:3}];
@@ -2614,7 +2631,7 @@ const storyLeft=id=>STORY[id].length-(S.story[id]|0),STORY_ALL=Object.values(STO
 const HAND_PAY=200,HAND_MORE=100,HAND_EN=40,GUARD_PAY=250,HAND_TILES=12,HAND_SOW=6,RAID_LV=8,RAID_FIX=2500;
 const handMax=()=>S.camp?0:Math.max(0,S.house-2),guardMax=()=>isNoble()?3:0;
 const guardsAway=()=>(S.caravans||[]).reduce((a,q)=>a+(q.g|0),0); /* v142: 상단을 따라간 사병은 돌아올 때까지 자리에 없다 */
-const guardsOn=()=>S.hh&&S.hhOff!==S.day?Math.max(0,(S.hh.guard|0)-(S.hh.hurtDay===S.day?S.hh.hurt|0:0)-guardsAway()):0; /* v136: 싸우다 다친 사병은 그날 쉰다 */
+const guardsOn=()=>S.hh&&S.hhOff!==S.day?gUsable().length:0; /* v136: 싸우다 다친 사병은 그날 쉰다. v153: 명부(gRoster)에서 조련 간 사람·다친 사람·상단을 따라간 수를 뺀다 */
 const raidPals=()=>TOWN_IDS.filter(id=>hearts(id)>=3&&!S.ruin[id]);
 /* 행랑채(v139, 사용자 요청: 사병이 다치면 어디서 낫나 · 내 집 옆에 머슴과 사병이 지낼 곳을): 머슴이나 사병을 하나라도 들이면 내 집 곁 풀밭에 작은 초가 행랑채가 선다(가로 두 칸, 값 없음).
    다친 사병은 그날 행랑채 툇마루에 머리를 싸매고 앉아 쉬고, 다음 날 아침에 나아서 돌아온다. 머슴도 툇마루에 앉아 있다. 앞에서 행동하면 사람 수와 다친 사병을 알려 준다.
@@ -2732,16 +2749,19 @@ function openHousehold(){
   openModal('가솔',body=>{
     const H=S.hh,hm=handMax(),gm=guardMax(),pay=handPay()+H.guard*GUARD_PAY;
     body.appendChild(el('p','note','집안일을 거들 사람을 들여요. 품삯은 아침마다 나가요(지금 하루 '+won(pay)+' · 가진 돈 '+won(S.coins)+'). 돈이 모자란 날은 일을 쉬어요.'));
-    const set=(k,d)=>()=>{H[k]=Math.max(0,H[k]+d);sfx(d>0?'coin':'pick');applyHaeng();saveAll();openHousehold()};
+    const set=(k,d)=>()=>{if(k==='guard'&&d<0){const A=gRoster();let w=0;A.forEach((q,i)=>{if((q.x|0)<(A[w].x|0))w=i});A.splice(w,1)} /* v153: 레벨이 가장 낮은 사병이 나간다 */
+      H[k]=Math.max(0,H[k]+d);sfx(d>0?'coin':'pick');applyHaeng();saveAll();openHousehold()};
     row(body,el('span','badge','머'),'머슴 '+H.hand+'/'+hm+'명',['머슴마다 밭일·가축·나무하기를 맡겨요(행랑채 → 일 맡기기)','한 사람의 하루 기력 '+HAND_EN+' · 아침마다 기력이 닿는 데까지 해요','품삯 하루 '+won(HAND_PAY)+' · 일 하나 더 맡기면 +'+won(HAND_MORE)+(hm?'':' · 너른 초가집부터 둘 수 있어요(집이 클수록 한 사람씩 더)')],
       [['들이기',set('hand',1),H.hand>=hm],['내보내기',set('hand',-1),H.hand<1]]);
     row(body,el('span','badge','병'),'사병 '+H.guard+'/'+(gm||3)+'명',['산적이 쳐들어오면 맞서 싸워요 · 내가 덮쳐질 때 한 사람마다 1할씩 덜 다쳐요'+(H.hurtDay===S.day&&H.hurt?' · 오늘 다쳐서 쉬는 사병 '+H.hurt+'명':'')+(guardsAway()?' · 상단을 따라간 사병 '+guardsAway()+'명':''),'품삯 하루 '+won(GUARD_PAY)+(gm?'':' · 양반만 사병을 둘 수 있어요(궁궐의 한 좌랑에게 "신분 일")')],
       [['들이기',set('guard',1),H.guard>=gm],['내보내기',set('guard',-1),H.guard<1]]);
+    if(H.guard>0)body.appendChild(el('p','note',gRoster().map(q=>'Lv.'+gLv(q)+' '+q.n+(gTraining(q)?'(조련 중)':q.hd===S.day?'(다침)':'')).join(' · ')+' · 서쪽 들판 훈련장에서 키워요 · 내보내면 레벨이 가장 낮은 사람이 나가요'));
     if(H.guard>0)row(body,el('span','badge','行'),'사병 데리고 다니기: '+(H.out?'켬':'끔'),['켜면 뒤를 따라오며, 덮치는 짐승과 내가 맞힌 짐승에게 달려가 싸워요','끄면 집 앞을 지켜요 · 데리고 나가 마을을 비우면 습격을 못 막아요','데리고 나간 날은 품삯을 반 더 줘요(한 사람 하루 '+won(Math.round(GUARD_PAY*1.5))+')'],[[H.out?'두고 다니기':'데리고 다니기',()=>{H.out=H.out?0:1;sfx('pick');saveAll();openHousehold()}]]);
     body.appendChild(el('p','sub','마을 지키기'));
     const R=S.raid,pals=raidPals().map(id=>NPCS[id].name);
     body.appendChild(el('p','note',S.level<RAID_LV?'레벨 '+RAID_LV+'부터는 가끔 산적 떼가 마을을 노려요.':R&&R.day===S.day&&!R.won?(R.up?'산적 '+R.left+'명이 마을에 남아 있어요! 활로 쏘거나 맞붙어 물리쳐요.':'오늘 저녁 6시쯤 산적 '+R.n+'명쯤이 쳐들어온다는 소문이에요. 그때 마을에 있어야 막을 수 있어요.'):'산적 떼는 엿새에서 아흐레에 한 번쯤 와요. 아침 쪽지에 소문이 적혀요.'));
     body.appendChild(el('p','note','함께 막아 줄 이웃(♥3부터): '+(pals.length?pals.join(', '):'아직 없어요')+' · 사병 '+guardsOn()+'명. 못 막은 산적은 이웃집을 부수고 돈을 털어 가요. 부서진 집은 목수 모루에게 한 채 '+won(RAID_FIX)+'과 나무 8개로 고쳐요.'));
+    {const V=S.wae;body.appendChild(el('p','note',S.level<WAE_LV?'레벨 '+WAE_LV+'부터는 철마다 한 번 왜구가 바닷가로 와요.':V&&V.day===S.day&&!V.won?(V.up?'왜구가 바닷가에 올라왔어요! 물결 '+V.wave+'/'+V.waves+' · 남은 '+V.left+'명':'오늘 저녁 6시에 왜구가 바닷가로 와요 · 물결 '+V.waves+'번 · 한 번에 '+V.per+'명'):'왜구는 철마다 닷새째 저녁에 와요 · 물리친 횟수 '+(S.waeN|0)+' · 물리칠수록 더 세게 와요'))}
   });
 }
 function raidWatch(){const R=S.raid;if(R&&R.day===S.day&&!R.up&&S.min>=1080&&scene==='town'&&!mg&&!fishing&&P.t>=1)raidStart()}
@@ -2773,7 +2793,7 @@ function raidMorning(msgs){
   }
   if(S.level<RAID_LV||S.camp)return;
   if(!S.raidNext){S.raidNext=S.day+ri(3,5);return}
-  if(!S.raid&&S.day>=S.raidNext&&!fest()){
+  if(!S.raid&&S.day>=S.raidNext&&!fest()&&!(S.wae&&S.wae.day===S.day)){ /* v153: 왜구가 오는 날에는 산적이 하루 미룬다 */
     S.raid={day:S.day,n:4+Math.min(3,Math.floor(S.level/6)),up:0,left:0,won:0};S.raidNext=S.day+ri(6,9);
     msgs.push('산적 떼가 오늘 저녁 마을을 노린다는 소문 · 저녁 6시에 마을을 지켜요');
   }
@@ -3115,7 +3135,7 @@ function taxArrest(){
 function econMorning(msgs){
   if(outlawDay())msgs.push('현상 날 · '+outlawName()+'이 사냥터 숲에 숨어들었대요 · 현상금 2,500냥 넘게');
   if(S.hh.hurtDay===S.day-1&&S.hh.hurt>0){msgs.push('다친 사병 '+S.hh.hurt+'명이 행랑채에서 쉬고 나았어요');S.hh.hurt=0} /* v139 */
-  raidMorning(msgs);hhMorning(msgs);caravanMorning(msgs);
+  waeMorning(msgs);raidMorning(msgs);hhMorning(msgs);drillMorning(msgs);caravanMorning(msgs);
   if(S.day%5===0&&have('ssal')){const n=have('ssal');gain('ssal',-n);gain('ssal_old',n);msgs.push('쌀섬 '+n+'섬이 묵은쌀이 됐어요(헐값)')}
   const X=S.tax,sn=Math.floor((S.day-1)/7);
   if(sn>X.sn){
@@ -4964,6 +4984,8 @@ function renderTown(c){
     if(near&&!mg)labels.push(()=>label(c,x,y+9,f.n));
   }
   if(haengAt&&scene==='town'){const hq=haengAt,hx=(hq.x+1)*T,hy=(hq.y+1)*T;list.push([hq.y+.3,()=>haengArt(c,hq)]);if(!mg&&Math.abs(P.x-hq.x-.5)+Math.abs(P.y-hq.y)<=3)labels.push(()=>label(c,hx,hy-56,haengHurt()?'행랑채 · 다친 사병 '+haengHurt()+'명':'행랑채'))} /* v139 행랑채 */
+  if(scene==='wild'&&wz===4&&drillAt){const dx=(drillAt.x+2.5)*T,dy=drillAt.y*T;list.push([drillAt.y+1.1,()=>drillYardArt(c)]);if(!mg&&Math.abs(P.x-drillAt.x-2)+Math.abs(P.y-drillAt.y)<=5)labels.push(()=>label(c,dx,dy-22,'훈련장'))} /* v153 훈련장 */
+  if(scene==='town'&&S.wae&&S.wae.day===S.day&&!S.wae.won&&S.min>=1020)waeCoast().forEach((q,i)=>list.push([q[1]+.1,()=>waeShipArt(c,(q[0]+.5)*T,(q[1]+.8)*T,i)])); /* v153 왜선: 저녁 5시부터 바다에 보인다 */
   {const pk=postHere(),ps=pk&&postSpot(pk);if(ps){const x=(ps[0]+.5)*T,y=(ps[1]+.9)*T,built=!!S.posts[pk];list.push([ps[1]+.1,()=>postArt(c,x,y,built)]);if(!mg&&Math.abs(P.x-ps[0])+Math.abs(P.y-ps[1])<=3)labels.push(()=>label(c,x,y-(built?52:40),built?'역참':'역참 터'))}} /* v137 역참 */
   for(const r of bridgeRuns)list.push([r.y+.6,()=>drawBridgeFront(c,r)]); /* 앞쪽 난간은 다리 위의 사람(순서 y+.2)보다 나중에 */
   for(const o of ROCKS)if(inV(o))list.push([o.y,()=>drawRock(c,o)]);
@@ -5808,6 +5830,7 @@ function act(tg,x,y){
   case 'moor':moorStart(tg.x,tg.y,1);break;
   case 'sail':moorStart(tg.x,tg.y,0);break;
   case 'post':postTalk(tg.k);break;
+  case 'drill':openDrill();break;
   case 'haeng':haengTalk();break;
   case 'sijeon':if(!asleep())sijeonTalk(tg.k);break;
   case 'rfolk':resFolkTalk(tg.f);break;
@@ -6141,7 +6164,7 @@ function mgEnd(){
   touch();
 }
 function updMg(dt){
-  updShots(dt);updPk(dt);updUse(dt);updBombs(dt);updTut();taxWatch();raidWatch();nightWatch();updGuards(dt);updHands(dt);
+  updShots(dt);updPk(dt);updUse(dt);updBombs(dt);updTut();taxWatch();raidWatch();waeWatch();nightWatch();updGuards(dt);updHands(dt);
   if(drops.length){
     for(const d of drops)d.t+=dt*1.7;
     for(const d of drops)if(d.t>=1){S.pickups.push({x:d.x,y:d.y,id:d.id});if(P.x===d.x&&P.y===d.y&&P.t>=1)grab(S.pickups.length-1)}
@@ -6692,7 +6715,7 @@ let beasts=[];
 const beastOn=(x,y)=>scene!=='home'?beasts.find(b=>b.x===x&&b.y===y):undefined;
 function spawnBeasts(){
   beasts=[];if(!S||S.wild<=0)return;
-  const sea=season(),kinds=Object.keys(BEASTS).filter(k=>k!=='deer'&&!BEASTS[k].deep&&BEASTS[k].s.includes(sea)&&!(BEASTS[k].bite&&!BEASTS[k].mild&&S.level<BEASTS[k].lv)); /* v122(사용자 의견: 범이 너무 아프다): 먼저 덤비는 짐승(범)은 그 레벨이 되어야 마을 둘레에 나온다 */
+  const sea=season(),kinds=Object.keys(BEASTS).filter(k=>k!=='deer'&&!BEASTS[k].deep&&!BEASTS[k].man&&BEASTS[k].s.includes(sea)&&!(BEASTS[k].bite&&!BEASTS[k].mild&&S.level<BEASTS[k].lv)); /* v122(사용자 의견: 범이 너무 아프다): 먼저 덤비는 짐승(범)은 그 레벨이 되어야 마을 둘레에 나온다 */
   const far=GRASS.filter(([x,y])=>Math.abs(x-SPAWN[0])+Math.abs(y-SPAWN[1])>7&&!BLD.some(b=>Math.abs(x-b.door[0])+Math.abs(y-b.door[1])<4));
   for(let i=0,g=0;i<S.wild&&g<300;g++){
     const [x,y]=pick(far);if(objAt[y][x]||beasts.some(b=>b.x===x&&b.y===y)||herd.some(a=>a.x===x&&a.y===y)||S.pickups.some(p=>p.x===x&&p.y===y))continue;
@@ -6757,7 +6780,7 @@ function spawnField(){
 function enterField(){
   if(scene!=='town'||WEST_Y<0)return;
   scene='wild';wz=4;useMap(FIELD);townBeasts=beasts;S.pickTown=S.pickups;S.pickups=S.fpick||fieldPickups();S.away='field';
-  S.farmTown=S.farm;S.farm=S.ffarm||{};S.pickups=S.pickups.filter(p=>!S.farm[p.x+','+p.y]); /* 밭을 들판 것으로 바꿔 끼운다 */
+  S.farmTown=S.farm;S.farm=S.ffarm||{};S.pickups=S.pickups.filter(p=>!S.farm[p.x+','+p.y]&&!(FIELD.objAt[p.y][p.x]&&FIELD.objAt[p.y][p.x].t==='drill')); /* 밭을 들판 것으로 바꿔 끼운다. v153: 훈련장 터에 놓인 것은 치운다 */
   spawnField();miniRef=null;buildGround();mg=null;fishing=null;drops=[];warp(W-2,FIELD_Y,[-1,0]);syncPlace();hud();S.seenField=1;
   toast('서쪽 들판에 들어왔어요. 동쪽 길로 나가면 마을이에요');
   tip('field','들판에는 순한 짐승만 살아요. 들나물과 꽃이 많이 나고, 둥근 못에서는 낚시를, 둔덕 위에서는 멀리 내려다볼 수 있어요');
@@ -7906,6 +7929,126 @@ function postSpot(k){
 }
 function applyPosts(){for(const k in POSTS){const q=postSpot(k),m=postMap(k);if(q&&!m.objAt[q[1]][q[0]])m.objAt[q[1]][q[0]]={t:'post',k,x:q[0],y:q[1]}}}
 applyPosts();
+/* ───────── 사병 키우기 · 훈련장 · 왜구 침입(v153) ─────────
+   사용자 요청: 도적이나 왜군도 쳐들어오게 · 사병을 키울 수 있게 · 훈련장은 서쪽 들판에 → 사냥과 성장을 계속해야 하게.
+   물어서 정한 것: 사병은 한 사람씩 이름과 레벨 · 나와 사냥 다니며 싸운 만큼 자라고, 돈을 내고 훈련장에 맡겨도 자란다 · 왜구는 철마다 한 번 큰 싸움.
+   · 명부 S.hh.gs=[{n 이름,x 경험,hd 다친 날,tr 조련에서 돌아오는 날,tx 그때 얻을 경험}] — 사람 수는 S.hh.guard 그대로이고 gRoster가 맞춘다.
+     레벨 gLv=1+√(경험/12)(최고 10), 내 레벨의 절반까지만 자란다(gCap) → 내가 자라야 사병도 자란다. 싸울 때 한 번 치면 1, 쓰러뜨리면 3+짐승 레벨/4.
+     레벨이 오르면 버티는 힘(gHp)·치는 힘(1+레벨/4)·치는 빠르기가 늘고, 4·8레벨에 옷차림이 바뀐다(gLook·gArmor). 머리 위에 "Lv.N 이름".
+   · 훈련장: 서쪽 들판의 빈 풀밭에 선다(drillAt, 가로 다섯 칸·세로 두 칸, 저장하지 않는다). 교관에게 삯(drillFee)을 주고 사흘 맡기면 돌아오는 아침에 경험을 얻는다.
+     그동안 그 사병은 곁에 없고(gUsable) 훈련장에서 창을 찌르는 모습이 보인다. 급하면 데려올 수 있다(삯은 안 돌려주고 경험도 없다).
+   · 왜구: 레벨 WAE_LV부터 철마다 닷새째 저녁 6시, 바닷가 모래밭으로 물결(wave)을 지어 올라온다. 5시부터 바다에 배가 보인다. S.wae={day,up,wave,waves,per,left,won}.
+     물리친 횟수(S.waeN)가 늘수록 물결·사람 수·기운이 늘고 왜장이 섞인다(내 레벨이 아니라 횟수에 따라 세진다 → 계속 자라야 막는다). 지면 세지지 않는다.
+     다 물리치면 포상과 공 3. 못 막으면 산적 때처럼 집이 부서지고 돈을 털린다. 밸런스: 철에 한 번뿐이라 돈이 끝없이 불어나지 않는다 */
+const G_NAMES=['돌쇠','억쇠','장쇠','무쇠','칠복','만복','범석','천동'],G_LVMAX=10,DRILL_DAYS=3;
+const gLv=q=>Math.min(G_LVMAX,1+Math.floor(Math.sqrt((q.x|0)/12))),gNext=l=>12*l*l,gHp=l=>3+Math.floor(l/2),gCap=()=>Math.max(1,Math.min(G_LVMAX,Math.floor(S.level/2)));
+const gTraining=q=>!!q.tr&&q.tr>S.day,drillFee=l=>400+250*l,drillXp=l=>18+6*l;
+function gRoster(){const Q=S.hh,n=Q.guard|0;if(!Array.isArray(Q.gs))Q.gs=[];const A=Q.gs;if(A.length>n)A.length=n;while(A.length<n)A.push({n:G_NAMES.find(s=>!A.some(q=>q.n===s))||'사병',x:0});return A}
+function gUsable(){const L=[];gRoster().forEach((q,i)=>{if(!gTraining(q)&&q.hd!==S.day)L.push(i)});L.length=Math.max(0,L.length-guardsAway());return L} /* 지금 곁에 있는 사병의 명부 번호 */
+function gGain(i,n){const q=gRoster()[i];if(!q)return 0;const a=gLv(q);q.x=Math.min(gNext(Math.max(a,gCap()))-1,(q.x|0)+n);const b=gLv(q);return b>a?b:0} /* 레벨이 올랐으면 새 레벨을 돌려준다 */
+const gLook=l=>l>=8?Object.assign({},GUARD_LOOK,{shirt:'#2f3f34',rib:'#f7d24a'}):l>=4?Object.assign({},GUARD_LOOK,{shirt:'#6a2a24',rib:'#f7d24a'}):GUARD_LOOK;
+function gArmor(c,cx,fy,l){if(l>=4){rr(c,cx-8,fy-28,4,4,1,'#8a9399');rr(c,cx+4,fy-28,4,4,1,'#8a9399')}if(l>=8)line(c,cx,fy-44,cx+3,fy-51,'#c8392f',2.2)} /* 4레벨: 어깨 갑옷 · 8레벨: 붉은 상모 */
+function drillMorning(msgs){
+  if(!S.hh||!Array.isArray(S.hh.gs))return;const back=[];
+  gRoster().forEach((q,i)=>{if(q.tr&&q.tr<=S.day){gGain(i,q.tx|0);delete q.tr;delete q.tx;back.push(q.n+' Lv.'+gLv(q))}});
+  if(back.length)msgs.push('조련을 마치고 돌아온 사병 · '+back.join(' · '));
+}
+let drillAt=null;
+function applyDrill(){
+  const m=FIELD,ps=postSpot('field'),ok=(x,y)=>m.tile[y][x]===0&&!m.objAt[y][x],inR=(x,y,R)=>x>=R[0]-1&&x<=R[2]+1&&y>=R[1]-1&&y<=R[3]+1;
+  let best=null,bd=1e9;
+  for(let y=3;y<H-5;y++)for(let x=3;x<W-8;x++){
+    let fine=true;
+    for(let b=0;b<3&&fine;b++)for(let a=-1;a<=5;a++){const X=x+a,Y=y+b,yard=b<2&&a>=0&&a<5; /* 터 다섯 칸×두 칸, 그 양옆과 아래 한 줄은 드나들 수 있어야 한다 */
+      if(!(yard?ok(X,Y):ok(X,Y)||(m.tile[Y][X]===1&&!m.objAt[Y][X]))||inR(X,Y,FFARM)||inR(X,Y,FPAST)||inR(X,Y,FIELD_HILL)||(ps&&Math.abs(X-ps[0])<=1&&Math.abs(Y-ps[1])<=1)){fine=false;break}}
+    if(!fine)continue;
+    const d=Math.abs(x+2-10)+Math.abs(y-17);if(d<bd){bd=d;best=[x,y]}
+  }
+  if(!best)return;drillAt={x:best[0],y:best[1]};
+  for(let b=0;b<2;b++)for(let a=0;a<5;a++)m.objAt[best[1]+b][best[0]+a]={t:'drill',x:best[0]+a,y:best[1]+b};
+}
+applyDrill();
+const DRILL_LOOK={skin:'#d9a878',hair:'#4a4440',shirt:'#3a2f4a',bot:'#2a2a30',rib:'#f7d24a',sex:'m',hat:'jeonrip',beard:1};
+function drillYardArt(c){
+  const X=drillAt.x*T,Y=drillAt.y*T,w=5*T,h=2*T,tr=S.hh&&Array.isArray(S.hh.gs)?S.hh.gs.filter(gTraining):[];
+  rr(c,X+2,Y+6,w-4,h-8,6,'#b9a57c');rr(c,X+5,Y+9,w-10,h-14,5,'#cdbb92'); /* 다진 흙마당 */
+  for(let i=0;i<=5;i++)rr(c,X+3+i*(w-9)/5,Y-8,3,16,1,'#6a4a2a');line(c,X+4,Y-3,X+w-4,Y-3,'#8a6238',2);line(c,X+4,Y+3,X+w-4,Y+3,'#8a6238',2); /* 뒤쪽 나무 울 */
+  rr(c,X+10,Y-12,2.5,46,1,'#5a4030');poly(c,[X+12,Y-12,X+30,Y-8,X+12,Y-2],'#b5332a');line(c,X+17,Y-9,X+17,Y-5,'#f7d24a',1.6); /* 영기 */
+  for(let i=0;i<3;i++){const sx=X+26+i*5;line(c,sx,Y+30,sx+2,Y+4,'#7a5230',1.6);poly(c,[sx+1,Y+4,sx+2,Y-2,sx+3,Y+4],'#cfd6dc')}rr(c,X+23,Y+22,18,2.5,1,'#6a4a2a'); /* 창걸이 */
+  {const tx=X+w-14,ty=Y+20;rr(c,tx-1.5,ty-6,3,26,1,'#6a4a2a');circ(c,tx,ty-12,10,'#e9d8b0');circ(c,tx,ty-12,6.5,'#b5332a');circ(c,tx,ty-12,3,'#e9d8b0')} /* 과녁 */
+  {const hx=X+w-26,hy=Y+50;rr(c,hx-1.5,hy-26,3,26,1,'#6a4a2a');rr(c,hx-9,hy-22,18,3,1,'#6a4a2a');ell(c,hx,hy-14,6,9,'#d9b96a');circ(c,hx,hy-28,5,'#d9b96a')} /* 허수아비 */
+  if(npcOut())drawChar(c,X+54,Y+30,DRILL_LOOK,[0,1],false,0); /* 교관 */
+  tr.forEach((q,i)=>{const gx=X+70+i*20,gy=Y+h-6,th=Math.max(0,Math.sin(now*3.2+i*1.7))*6,lv=gLv(q);drawChar(c,gx,gy,gLook(lv),[1,0],false,0);gArmor(c,gx,gy,lv);line(c,gx+2+th,gy-17,gx+22+th,gy-19,'#7a5230',1.6);poly(c,[gx+22+th,gy-21,gx+28+th,gy-19,gx+22+th,gy-17],'#cfd6dc')}); /* 맡겨 둔 사병: 창 찌르기 */
+}
+function openDrill(){
+  if(asleep('교관'))return;
+  openModal('훈련장',body=>{
+    const A=gRoster(),us=gUsable(),cap=gCap();
+    body.appendChild(el('p','note','교관에게 맡기면 사흘 뒤 아침에 자라서 돌아와요 · 그동안은 곁에 없어요'));
+    body.appendChild(el('p','note','사병 레벨은 내 레벨의 절반까지(지금 '+cap+') · 함께 사냥해도 자라요 · 가진 돈 '+won(S.coins)));
+    if(!A.length)body.appendChild(el('p',null,isNoble()?'사병이 없어요. "가솔"에서 들여요.':'사병은 양반이 되면 둘 수 있어요.'));
+    A.forEach((q,i)=>{
+      const lv=gLv(q),tr=gTraining(q),fee=drillFee(lv),full=lv>=cap,base=gNext(lv-1),here=us.includes(i);
+      const st=tr?'조련 중 · '+(q.tr-S.day)+'일 뒤 아침에 돌아와요':q.hd===S.day?'다쳐서 오늘은 쉬어요':!here?'상단을 따라갔어요':full?(lv>=G_LVMAX?'다 자랐어요':'내 레벨이 오르면 더 자라요'):'경험 '+((q.x|0)-base)+'/'+(gNext(lv)-base)+' · 삯 '+won(fee)+' · 경험 +'+drillXp(lv);
+      row(body,el('span','badge',String(lv)),'Lv.'+lv+' '+q.n,[st,'버티는 힘 '+gHp(lv)+' · 치는 힘 '+(1+Math.floor(lv/4))],
+        tr?[['데려오기',()=>{delete q.tr;delete q.tx;sfx('pick');saveAll();openDrill()}]]
+          :[['맡기기',()=>{if(gTraining(q)||S.coins<fee||!gUsable().includes(i))return;addCoins(-fee);q.tr=S.day+DRILL_DAYS;q.tx=drillXp(lv);sfx('coin');saveAll();openDrill()},full||!here||S.coins<fee]]);
+    });
+  });
+}
+const waeDay=()=>(S.day-1)%7===4&&S.level>=WAE_LV&&!S.camp;
+const waePlan=n=>({waves:Math.min(4,2+(n>=2?1:0)+(n>=5?1:0)),per:Math.min(6,3+Math.floor(n/2))});
+let waeNext=0,waeShips=null;
+function waeHomes(n){const homes=BLD.map(b=>b.id).filter(id=>NPCS[id]&&!NPCS[id].at&&!S.ruin[id]||id==='hun'&&!S.ruin[id]).sort(()=>Math.random()-.5).slice(0,Math.min(3,n));for(const id of homes)S.ruin[id]={k:'broken',until:1e9,raid:1};return homes.length}
+function waeMorning(msgs){
+  const V=S.wae;
+  if(V&&V.day<S.day){
+    if(!V.won){
+      const left=V.up?(V.waves-V.wave)*V.per+V.left:V.waves*V.per,hn=waeHomes(left),loss=Math.min(S.coins,4000,Math.round(S.coins*.05));S.coins-=loss;
+      msgs.push('왜구가 마을을 휩쓸고 갔어요 · '+(hn?'집 '+hn+'채가 부서지고 ':'')+won(loss)+'을 빼앗겼어요'+(hn?' · 목수 모루에게 고쳐요':''));
+    }
+    S.wae=null;waeNext=0;waeShips=null;
+  }
+  if(waeDay()&&!S.wae&&!fest()){const p=waePlan(S.waeN|0);S.wae={day:S.day,up:0,wave:0,waves:p.waves,per:p.per,left:0,won:0};msgs.push('봉화가 올랐어요 · 왜구의 배가 다가와요 · 저녁 6시에 바닷가를 지켜요')}
+}
+function waeCoast(){ /* 배가 뜰 바다 칸(모래밭에서 두 칸 나간 바다) 둘 */
+  if(waeShips&&waeShips.every(q=>TOWN.tile[q[1]][q[0]]===4))return waeShips;const tl2=TOWN.tile,L=[];
+  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){if(tl2[y][x]!==2)continue;
+    for(const [dx,dy] of DIRS){const a=x+dx*2,b=y+dy*2;if(a<1||b<1||a>W-2||b>H-2)continue;if(tl2[y+dy][x+dx]===4&&tl2[b][a]===4&&!TOWN.objAt[b][a])L.push([a,b,x,y])}}
+  const out=[];for(const q of L.sort((p,r)=>(p[0]*7+p[1]*13)%11-(r[0]*7+r[1]*13)%11)){if(out.every(o=>Math.abs(o[0]-q[0])+Math.abs(o[1]-q[1])>=6))out.push(q);if(out.length>=2)break}
+  return waeShips=out;
+}
+function waeSpawn(n,boss){
+  const ships=waeCoast(),nth=S.waeN|0,sand=[],road=[];
+  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++){const t=TOWN.tile[y][x];if((t!==2&&t!==1)||!canStep(x,y)||beastOn(x,y))continue;const d=Math.abs(x-P.x)+Math.abs(y-P.y);if(d<4)continue;
+    if(t===2&&(!ships.length||ships.some(s=>Math.abs(s[2]-x)+Math.abs(s[3]-y)<=6)))sand.push([x,y]);else if(t===1&&d>=7&&d<=13)road.push([x,y])}
+  const pool=sand.length>=n?sand:sand.concat(road);
+  for(let i=0;i<n&&pool.length;i++){const q=pool.splice(Math.floor(Math.random()*pool.length),1)[0],b=mkBeast(boss&&i===0?'waejang':'waegu',q[0],q[1]);b.hp+=Math.min(3,Math.floor(nth/3));b.raid=1;b.wae=1;b.mad=1;beasts.push(b)}
+}
+function waeStart(){
+  const V=S.wae,g=guardsOn();V.up=1;V.wave=1;V.left=V.per;waeSpawn(V.per,V.waves===1&&(S.waeN|0)>=1);sfx('err');saveAll();
+  dialog({who:'마을',text:'"왜구다! 바닷가에 왜구가 올라왔다!"\n· 물결 '+V.waves+'번 · 한 번에 '+V.per+'명\n'+(g?'· 사병 '+g+'명이 맞서 싸워요\n':'')+'· 활이나 맞붙기로 물리쳐요\n(자기 전까지 못 막으면 집이 부서져요)'});
+}
+function waeWatch(){
+  const V=S.wae;if(!V||V.day!==S.day||V.won||scene!=='town')return;
+  if(!V.up){if(S.min>=1080&&!mg&&!fishing&&P.t>=1)waeStart();return}
+  if(waeNext){if(now>=waeNext&&!mg){waeNext=0;V.wave++;V.left=V.per;waeSpawn(V.per,V.wave===V.waves&&(S.waeN|0)>=1);sfx('err');float('왜구 물결 '+V.wave+'/'+V.waves+'!');saveAll()}return}
+  if(V.left>0&&!beasts.some(b=>b.wae))waeSpawn(V.left,false); /* 다시 불러온 뒤에도 남은 왜구가 서 있게 */
+}
+function waeKill(){
+  const V=S.wae;if(!V||V.won)return;V.left=Math.max(0,V.left-1);if(V.left)return;
+  if(V.wave>=V.waves)waeWon();else{waeNext=now+5;float('다음 물결이 밀려와요…')}
+}
+function waeWon(){
+  const V=S.wae,pay=350*V.waves*V.per;V.won=1;S.waeN=(S.waeN|0)+1;S.coins+=pay;S.merit=(S.merit|0)+3;for(const id of TOWN_IDS)addFriend(id,10);hud();sfx('level');saveAll();
+  setTimeout(()=>{if(S)toast('왜구를 모두 물리쳤어요! · 포상 '+won(pay)+' · 공 +3')},1200);
+}
+function waeShipArt(c,x,y,i){
+  const bob=Math.sin(now*1.3+i*2)*1.5;y+=bob;
+  poly(c,[x-22,y-6,x+22,y-6,x+16,y+5,x-16,y+5],'#3a2a1e');line(c,x-22,y-6,x+22,y-6,'#6a4a2a',2);poly(c,[x+22,y-6,x+28,y-12,x+20,y-6],'#3a2a1e');
+  rr(c,x-1.5,y-40,3,34,1,'#5a4030');rr(c,x-14,y-38,28,22,2,'#efe6d2');rr(c,x-14,y-30,28,4,0,'#2c3a52');rr(c,x-14,y-38,28,2.5,1,'#6a4a2a');
+  for(let k=0;k<3;k++)circ(c,x-10+k*10,y-10,2.6,'#1f1f24');
+}
 function horseArt(c,x,y,t,s,rider){
   const sw=t?Math.sin(t*22)*5:0,bob=t?Math.abs(Math.sin(t*22))*2:0;c.save();c.translate(x,y-bob);c.scale(s,s);
   line(c,-12,-14,-17,-4,'#3a2a1e',2.6); /* 꼬리 */
@@ -9074,7 +9217,8 @@ function shoot(m){
 /* 짐승을 잡았을 때의 셈: 활로 잡든 맞붙어 잡든(melee) 여기로 온다. 맞붙어 잡으면 경험치가 조금 더 붙는다 */
 function huntKill(b,melee){
   const D=BEASTS[b.k];beasts.splice(beasts.indexOf(b),1);
-  if(D.man&&b.raid){const R=S.raid;if(R&&!R.won){R.left=Math.max(0,R.left-1);if(!R.left)raidWon()}}
+  if(b.wae)waeKill();
+  else if(D.man&&b.raid){const R=S.raid;if(R&&!R.won){R.left=Math.max(0,R.left-1);if(!R.left)raidWon()}}
   else if(D.man){if(b.k==='chief')S.chiefUp=0;else if(b.k==='raider')S.snowBand=Math.max(0,(S.snowBand|0)-1);else if(b.k==='outlaw'){S.outlawDead=S.day;S.outlawN=(S.outlawN|0)+1;setTimeout(()=>{if(S)toast('현상범 '+outlawName()+'을 붙잡았어요! 현상금을 받았어요')},1500)}else S.bandN=Math.max(0,(S.bandN|0)-1)}
   else if(b.k==='kboar'){if(S.boss)S.boss.dead=1}
   else if(scene==='wild'){if(wz===2){if(b.k==='wdeer')S.wdDead=S.day;else S.royN=Math.max(0,S.royN-1)}else if(wz===3){if(b.k==='wtiger')S.wtDead=S.day;else S.snowN=Math.max(0,S.snowN-1)}else if(wz)S.deepN=Math.max(0,S.deepN-1);else S.wildN=Math.max(0,S.wildN-1)}else S.wild=Math.max(0,S.wild-1);
@@ -9110,8 +9254,9 @@ function huntClick(b){
 function drawBeast(c,b){
   const mv=b.t<1,gx=(rx(b)+.5)*T,gy=(ry(b)+.9)*T,y=gy-(mv?Math.abs(Math.sin(now*14))*3:0);
   if(BEASTS[b.k].man){ /* 산적: 사람 모습에 몽둥이(두목은 칼)를 들었다 */
-    const d=b.dir[0]||b.dir[1]?b.dir:[0,1],sx=d[0]<0?-1:1,ch=b.k==='chief'||b.k==='outlaw'||b.k==='raider';
+    const d=b.dir[0]||b.dir[1]?b.dir:[0,1],sx=d[0]<0?-1:1,ch=b.k==='chief'||b.k==='outlaw'||b.k==='raider'||b.k==='waegu'||b.k==='waejang';
     drawChar(c,gx,gy,BANDITS[b.k],d,mv,now);
+    if(b.k==='waejang'){c.strokeStyle='#f7d24a';c.lineWidth=2;c.beginPath();c.arc(gx,gy-41,6,Math.PI*1.1,Math.PI*1.9);c.stroke();rr(c,gx-7,gy-28,3,5,1,'#3a3a40');rr(c,gx+4,gy-28,3,5,1,'#3a3a40')} /* 왜장: 투구의 초승달 장식과 어깨 갑옷 */
     if(ch){line(c,gx+sx*9,gy-14,gx+sx*17,gy-30,'#cfd6dc',2.4);line(c,gx+sx*7,gy-13,gx+sx*11,gy-15,'#8a5a34',3)}else line(c,gx+sx*9,gy-12,gx+sx*15,gy-28,'#7a5230',3.2);
     if(b.stun>0)for(let i=0;i<3;i++)star(c,gx+Math.cos(now*6+i*2.1)*9,gy-44+Math.sin(now*6+i*2.1)*3,2.6,'#f7d24a');
     return;
@@ -9125,7 +9270,7 @@ const beastSpr=k=>spr('b'+k,()=>bake(64,60,32,52,0,0,c2=>beastArt(c2,k)));
 function beastArt(c,k){
   c.save();
   switch(k){
-  case 'bandit':case 'chief':case 'raider':case 'outlaw':drawChar(c,0,-2,BANDITS[k],[0,1],false,0);break;
+  case 'bandit':case 'chief':case 'raider':case 'outlaw':case 'waegu':case 'waejang':drawChar(c,0,-2,BANDITS[k],[0,1],false,0);break;
   case 'fox':for(const lx of [-7,5])rr(c,lx,-6,2.6,6,1,'#b9551c');ell(c,-1,-9,10,5.5,'#e8842e');ell(c,0,-7,6,2.6,'#fff1dc');
     c.fillStyle='#e8842e';c.beginPath();c.moveTo(-9,-9);c.quadraticCurveTo(-22,-12,-19,-22);c.quadraticCurveTo(-12,-18,-8,-12);c.fill();circ(c,-19.5,-20,3.2,'#fff7ea');
     circ(c,10,-12,5.5,'#e8842e');poly(c,[6,-16,7,-23,10,-17],'#b9551c');poly(c,[11,-17,14,-23,15,-15],'#b9551c');poly(c,[12,-12,19,-9.5,12,-8],'#fff1dc');circ(c,18.5,-9.6,1.2,'#1f1612');circ(c,11,-13,1,'#1f1612');break;
@@ -9227,7 +9372,7 @@ function openHunt(){
     for(const id in BEASTS){
       const B=BEASTS[id],n=S.bag[id]|0;if(B.royal&&!S.seenRoyal)continue; /* 금원의 짐승은 그곳에 가 본 뒤에만 적힌다 */
       const seen=n>0||(B.royal?false:!B.deep||(S.seenDeep&&S.level>=B.lv)),c=el('div','cell'+(seen?'':' unk'));
-      c.appendChild(icon('beast',id));c.appendChild(el('b',null,seen?B.n:'???'));c.appendChild(el('small',null,'레벨 '+B.lv+' · '+(B.royal?'금원':B.deep?'깊은 산':'숲')));c.appendChild(el('small',null,n?'잡은 수 '+n:'아직 못 잡음'));g.appendChild(c);
+      c.appendChild(icon('beast',id));c.appendChild(el('b',null,seen?B.n:'???'));c.appendChild(el('small',null,'레벨 '+B.lv+' · '+(B.wae?'바닷가':B.royal?'금원':B.deep?'깊은 산':'숲')));c.appendChild(el('small',null,n?'잡은 수 '+n:'아직 못 잡음'));g.appendChild(c);
     }
     body.appendChild(g);
   });
@@ -10405,6 +10550,8 @@ const GUIDE=[
   {k:'salt',lv:3,t:'소금섬과 굴비 두름',d:()=>'장날 보부상이 팔아요. 소금섬은 천천히 오르내리니 쌀 때 사서 비쌀 때 팔고(상하지 않아요), 굴비는 날마다 6%씩 오르지만 나흘째부터 상할 수 있어요. 장부의 "오늘 시세"에서 값을 봐요',done:()=>!!S.mkDone.salt},
   {k:'fief',lv:12,t:'식읍 받기',d:()=>'양반이 되면 궁궐의 한 좌랑에게 "식읍"을 청해요. 고을을 사 두면 철마다 세곡이 들어와요. 고을마다 지킬 사병이 있어야 온전히 받아요',done:()=>(S.fief|0)>0},
   {k:'party',lv:RAID_LV,t:'사병 데리고 다니기',d:()=>'"나"의 "가솔"에서 "사병 데리고 다니기"를 켜면 사병들이 뒤를 따라오며 덮치는 짐승과 내가 맞힌 짐승에게 달려가 싸워요. 끄면 집 앞을 지켜요',done:()=>!!(S.hh.out&&S.hh.guard)},
+  {k:'wae',lv:WAE_LV,t:'왜구 막기',d:()=>'철마다 닷새째 저녁 6시에 왜구가 바닷가로 와요. 물결을 지어 오고, 물리칠수록 더 세게 와요. 사병을 키워 두면 든든해요',done:()=>(S.waeN|0)>0},
+  {k:'drill',lv:WAE_LV,t:'사병 키우기',d:()=>'사병은 함께 싸운 만큼 자라요. 서쪽 들판 훈련장의 교관에게 삯을 주고 사흘 맡겨도 자라요. 사병 레벨은 내 레벨의 절반까지예요',done:()=>!!(S.hh.gs&&S.hh.gs.some(q=>gLv(q)>=2))},
   {k:'bounty',lv:BEASTS.outlaw.lv,t:'현상범 잡기',d:()=>'이레에 한 번(아침 쪽지에 "현상 날"이 뜨는 날) 이름난 도적이 사냥터 숲에 숨어들어요. 잡으면 현상금 2,500냥 넘게와 공 4예요. 눈고개에는 마적이 있어요(레벨 '+BEASTS.raider.lv+'부터)',done:()=>(S.outlawN|0)>0},
   {k:'story',lv:3,t:'이웃의 사연 듣기',d:()=>'이웃과 ♥2·♥3·♥4가 되어 그 집이나 처소에 놀러 가면 사연을 하나씩 들려줘요. 마을 사람은 문을 두드리거나 말을 걸고, 궁궐·운종가 사람은 말을 걸어 \"처소에 놀러 가기\"를 청해요. 임금과 중전은 정전·중궁전에서 들려줘요. 지금까지 들은 이야기 '+Object.values(S.story).reduce((a,b)=>a+b,0)+'/'+STORY_ALL,done:()=>Object.values(S.story).reduce((a,b)=>a+b,0)>=STORY_ALL},
   {k:'caravan',lv:CARAVAN_LV,t:'상단 보내기',d:()=>'은하에게 "상단 보내기"를 청해 밑천을 맡겨요. 송도(3일)·안성(4일)·안동(5일)·동래(7일) 가운데 골라요. 먼 곳일수록 크게 벌거나 밑지고 산적 위험도 커요. 상단 창의 "딸려 보낼 사병"에서 +를 눌러 사병을 붙이면 위험이 줄어요',done:()=>(S.carN|0)>0},
@@ -11711,7 +11858,7 @@ function openDex(){
       body.appendChild(g);
     };
     const putF=k=>S.placed.some(f=>f.id===k)||!!(S.q&&S.q.placed&&S.q.placed.some(f=>f.id===k));
-    sect('짐승',Object.keys(BEASTS),k=>(S.bag[k]|0)>0,k=>icon('beast',k),k=>BEASTS[k].n,k=>'잡은 수 '+S.bag[k]+'마리',k=>BEASTS[k].royal?'금원에 가끔':BEASTS[k].snow?(k==='wtiger'?'눈고개에 가끔':'눈고개'):BEASTS[k].deep?'깊은 산':'사냥터 숲');
+    sect('짐승',Object.keys(BEASTS),k=>(S.bag[k]|0)>0,k=>icon('beast',k),k=>BEASTS[k].n,k=>'잡은 수 '+S.bag[k]+'마리',k=>BEASTS[k].wae?'철마다 바닷가':BEASTS[k].royal?'금원에 가끔':BEASTS[k].snow?(k==='wtiger'?'눈고개에 가끔':'눈고개'):BEASTS[k].deep?'깊은 산':'사냥터 숲');
     sect('가구',Object.keys(FURN),k=>S.furn[k]>0||putF(k),k=>icon('furn',k),k=>FURN[k].n,k=>'아늑함 +'+FURN[k].c,
       k=>{const F=FURN[k];return F.mall?'한양 운종가':F.buy?'잡화점':F.mkt?'장날 보부상':F.mk?PLAN_AT[F.mk.at]+'의 도안':k[1]==='_'?(k[0]==='g'?'이웃의 선물':k[0]==='r'?'반짝이는 곳':'임금의 하사품'):k==='agungi'?'모루에게 부탁':'첫 집들이'});
     sect('옷',Object.keys(OUTFITS),k=>S.owned.includes(k),k=>lookIcon(k,S.sex),k=>OUTFITS[k].n,()=>'옷장에 있어요',
@@ -11735,7 +11882,7 @@ function openSeason(){
     grid('이 철에만 낚이는 물고기',[SFISH[sea][0],SFISH2[sea][0]],k=>!!S.dex[k],k=>(DEXHINT[k]||'').split(' · ')[1]||'');
     grid('밤에만 낚이는 물고기',['jangeo','bollak'],k=>!!S.dex[k],k=>(DEXHINT[k]||'').split(' · ')[1]||'');
     grid('이 철에 주울 수 있는 것',Object.keys(FORAGE[sea]).filter(k=>k!=='branch'),k=>!!S.dex[k],k=>k==='shell'||k==='sora'||k==='ge'?'바닷가':'풀밭');
-    const bs=Object.keys(BEASTS).filter(k=>BEASTS[k].s.includes(sea)&&!BEASTS[k].royal);
+    const bs=Object.keys(BEASTS).filter(k=>BEASTS[k].s.includes(sea)&&!BEASTS[k].royal&&!BEASTS[k].wae);
     body.appendChild(el('p','note','이 철의 짐승: '+bs.map(k=>(S.bag[k]|0)>0?BEASTS[k].n:'???').join(', ')));
     const f=FESTS.find(q=>q.s===sea);
     if(f)body.appendChild(el('p','note','이 철의 명절: '+f.n+' ('+SEASONS[sea]+' '+f.d+'일)'+(d>f.d?' · 지났어요':d===f.d?' · 오늘이에요!':' · '+(f.d-d)+'일 뒤')));
