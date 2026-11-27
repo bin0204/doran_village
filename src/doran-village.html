@@ -1413,6 +1413,14 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:154,d:'11월 27일',t:'네 직업과 기술',l:[
+    '궁사·무사·협객·도사 가운데 직업을 하나 골라요. 바꿀 수도 있어요.',
+    '궁사는 멀리 쏘고, 무사는 맞붙기가 세고, 협객은 기습하고, 도사는 부적을 날려요.',
+    '"나"의 "직업"에서 기술을 찍어요. 레벨 둘마다 1점, 갈래는 두 가지예요.',
+    '벼락·연격·급소·연막 같은 기술은 싸울 때 눈에 보여요.',
+    '무관의 길은 이제 레벨 5가 되면 누구나 들어서요.',
+    '서쪽 들판 훈련장이 더 넓어졌어요.',
+    '먼바다에서는 배에 앉아 노를 저어요.']},
   {v:153,d:'11월 27일',t:'왜구와 사병 키우기',l:[
     '레벨 12부터 철마다 닷새째 저녁, 왜구가 바닷가로 쳐들어와요.',
     '물결을 지어 오고, 물리칠수록 다음에는 더 세게 와요.',
@@ -1983,6 +1991,7 @@ function fixState(s){
   s.sjN=s.sjN|0;s.sjOrd=s.sjOrd==null?-1:s.sjOrd|0; /* v140 운종가 시전: 치른 큰 주문 수 · 마지막으로 치른 철 */
   s.posts=s.posts&&typeof s.posts==='object'&&!Array.isArray(s.posts)?s.posts:{};for(const k in s.posts)if(!POSTS[k])delete s.posts[k]; /* v137 세운 역참 */
   s.hh=s.hh&&typeof s.hh==='object'?s.hh:{hand:0,guard:0};s.hh.hand=s.hh.hand|0;s.hh.guard=s.hh.guard|0;
+  s.cls=CLS[s.cls]?s.cls:'';s.sk=s.sk&&typeof s.sk==='object'&&!Array.isArray(s.sk)?s.sk:{}; /* v154: 직업과 기술 */
   if(!Array.isArray(s.hh.gs))s.hh.gs=[];s.waeN=s.waeN|0;s.wae=s.wae&&typeof s.wae==='object'?s.wae:null; /* v153: 사병 명부 · 왜구 */
   s.debt=Math.max(0,Math.round(+s.debt||0));if(s.past==null)s.past=s.graze?1:0;
   if(!s.fland||typeof s.fland!=='object'){s.fland={};for(const k in s.ffarm){const q=k.split(','),b=landAt(+q[0],+q[1]);if(b>=0)s.fland[b]=1}}
@@ -4976,7 +4985,7 @@ function renderTown(c){
     if(near&&!mg)labels.push(()=>label(c,x,y+9,f.n));
   }
   if(haengAt&&scene==='town'){const hq=haengAt,hx=(hq.x+1)*T,hy=(hq.y+1)*T;list.push([hq.y+.3,()=>haengArt(c,hq)]);if(!mg&&Math.abs(P.x-hq.x-.5)+Math.abs(P.y-hq.y)<=3)labels.push(()=>label(c,hx,hy-56,haengHurt()?'행랑채 · 다친 사병 '+haengHurt()+'명':'행랑채'))} /* v139 행랑채 */
-  if(scene==='wild'&&wz===4&&drillAt){const dx=(drillAt.x+2.5)*T,dy=drillAt.y*T;list.push([drillAt.y+1.1,()=>drillYardArt(c)]);if(!mg&&Math.abs(P.x-drillAt.x-2)+Math.abs(P.y-drillAt.y)<=5)labels.push(()=>label(c,dx,dy-22,'훈련장'))} /* v153 훈련장 */
+  if(scene==='wild'&&wz===4&&drillAt){const dx=(drillAt.x+drillAt.w/2)*T,dy=drillAt.y*T;list.push([drillAt.y+drillAt.h-.9,()=>drillYardArt(c)]);if(!mg&&Math.abs(P.x-drillAt.x-drillAt.w/2)+Math.abs(P.y-drillAt.y-drillAt.h/2)<=drillAt.w/2+4)labels.push(()=>label(c,dx,dy-22,'훈련장'))} /* v153 훈련장 */
   if(scene==='town'&&S.wae&&S.wae.day===S.day&&!S.wae.won&&S.min>=1020)waeCoast().forEach((q,i)=>list.push([q[1]+.1,()=>waeShipArt(c,(q[0]+.5)*T,(q[1]+.8)*T,i)])); /* v153 왜선: 저녁 5시부터 바다에 보인다 */
   {const pk=postHere(),ps=pk&&postSpot(pk);if(ps){const x=(ps[0]+.5)*T,y=(ps[1]+.9)*T,built=!!S.posts[pk];list.push([ps[1]+.1,()=>postArt(c,x,y,built)]);if(!mg&&Math.abs(P.x-ps[0])+Math.abs(P.y-ps[1])<=3)labels.push(()=>label(c,x,y-(built?52:40),built?'역참':'역참 터'))}} /* v137 역참 */
   for(const r of bridgeRuns)list.push([r.y+.6,()=>drawBridgeFront(c,r)]); /* 앞쪽 난간은 다리 위의 사람(순서 y+.2)보다 나중에 */
@@ -5011,7 +5020,13 @@ function renderTown(c){
     for(const bx of [15,20]){const X=bx*T+16,Y=H*T-22;rr(c,X-1,Y,2,14,1,'#8a5a34');poly(c,[X+1,Y,X+11,Y+4,X+1,Y+8],'#2f5ea8');circ(c,X,Y+16,4,'#f3ead6')}
     if(ry(P)>H-6)labels.push(()=>label(c,17.5*T+16,H*T-34,'▼ 남쪽 나루로 가는 뱃길'));
   }
-  list.push([ry(P)+.2,()=>emoDraw(c,px,(afloat?py-5:py)-bridgeRise(rx(P),ry(P)),myEmo,now-myEmoAt,fy=>drawChar(c,px,fy,playerLook(),P.dir,(P.t<1||!!useS||!!pkS)&&!afloat,now*stepPace()))]); /* 연장을 휘두를 때는 발도 디딘다(v104) */
+  list.push([ry(P)+.2,()=>emoDraw(c,px,(afloat?py-5:py)-bridgeRise(rx(P),ry(P)),myEmo,now-myEmoAt,fy=>{
+    if(!afloat){drawChar(c,px,fy,playerLook(),P.dir,P.t<1||!!useS||!!pkS,now*stepPace());return}
+    /* v154(사용자 요청: 배 위에 서 있지 말고 타고 있는 모습으로): 몸을 낮춰 다리는 뱃전 아래로 가리고(앉은 모습), 노를 쥐여 준다. 배가 움직일 때는 노를 젓는다 */
+    const sx=boatFlip?-1:1,sw=P.t<1?Math.sin(now*9)*5:Math.sin(now*1.5)*1.2;
+    c.save();c.beginPath();c.rect(px-40,fy-90,80,87);c.clip();drawChar(c,px-sx*3,fy+12,playerLook(),P.dir,false,now*stepPace());c.restore();
+    line(c,px+sx*5,fy-15,px+sx*(15+sw),fy+7,'#7a5230',2.2);ell(c,px+sx*(16+sw),fy+10,2.6,5,'#8a5a34');circ(c,px+sx*5,fy-15,2.3,playerLook().skin);
+  })]); /* 연장을 휘두를 때는 발도 디딘다(v104) */
   headRects.length=0;headStack(c,labels,px,py,tagIt(),rps&&rps.done?RPS[rps.me]:rps&&(rps.st==='pick'||rps.st==='show')?'냈어요':'',now-mySayAt<5?mySay:'',myEmo&&now-myEmoAt<EMO_T?EMO[myEmo][1]:'',mg||fishing?'':myTag()+(isNoble()?' · 양반':''));
   // 같이 하는 친구들
   for(const p of peers){
@@ -5031,7 +5046,7 @@ function renderTown(c){
     c.strokeStyle='#f7c531';c.lineWidth=2;c.beginPath();c.arc(bx,by,13+Math.sin(now*5)*1.5,0,7);c.stroke();
     labels.push(()=>label(c,bx,by-32,'쏠 수 있어요'));
   }}
-  drawSeaLife(c);drawBombs(c);drawMg(c,labels);drawShots(c);drawPk(c);drawUse(c);drawTut(c);
+  drawSeaLife(c);drawBombs(c);drawMg(c,labels);drawShots(c);drawFx(c);drawPk(c);drawUse(c);drawTut(c);
   if(fishing){
     const f=fishing,rl=f.phase==='reel',thr=rl&&f.thr===2;
     let bx=f.bx*T+16,by=f.by*T+16;
@@ -6156,7 +6171,7 @@ function mgEnd(){
   touch();
 }
 function updMg(dt){
-  updShots(dt);updPk(dt);updUse(dt);updBombs(dt);updTut();taxWatch();raidWatch();waeWatch();nightWatch();updGuards(dt);updHands(dt);
+  updShots(dt);updPk(dt);updUse(dt);updBombs(dt);updTut();updFx(dt);clsWatch();taxWatch();raidWatch();waeWatch();nightWatch();updGuards(dt);updHands(dt);
   if(drops.length){
     for(const d of drops)d.t+=dt*1.7;
     for(const d of drops)if(d.t>=1){S.pickups.push({x:d.x,y:d.y,id:d.id});if(P.x===d.x&&P.y===d.y&&P.t>=1)grab(S.pickups.length-1)}
@@ -6200,7 +6215,7 @@ function updMg(dt){
     { /* v136: 짐승이 움직이므로 겨누는 줄을 틀마다 살핀다. 코앞까지 왔으면 맞붙고, 줄에서 벗어났으면 겨누기를 푼다(아직 한 발도 못 맞혔으면 든 기력을 돌려준다) */
       const b=m.b,dx=b.x-P.x,dy=b.y-P.y,ad=Math.abs(dx)+Math.abs(dy);
       if(b.t>=1&&(dx===0||dy===0)&&ad>=1&&ad<=meleeReach()){P.dir=[Math.sign(dx),Math.sign(dy)];startMelee(b);return}
-      let ok=(dx===0)!==(dy===0)&&ad<=4+tl('bow');
+      let ok=(dx===0)!==(dy===0)&&ad<=bowRange();
       if(ok){const ux=Math.sign(dx),uy=Math.sign(dy);for(let i=1;i<ad&&ok;i++){const x=P.x+ux*i,y=P.y+uy*i;if(objAt[y][x]||tile[y][x]===6||npcOn(x,y)||herdOn(x,y)||beastOn(x,y))ok=false}if(ok)P.dir=[ux,uy]}
       if(!ok&&b.t>=1){if(!m.i)S.en=Math.min(maxEn(),S.en+2);mg=null;hud();float(jo(BEASTS[b.k].n,'이','가')+' 자리를 옮겼어요');return}
     }
@@ -6242,7 +6257,7 @@ function drawMgIn(c,labels){
     c.strokeStyle=hot?'#f7c531':'#d9412e';c.lineWidth=2;c.beginPath();c.arc(x,y,aim+.5,0,7);
     c.moveTo(x-14,y);c.lineTo(x-5,y);c.moveTo(x+5,y);c.lineTo(x+14,y);c.moveTo(x,y-14);c.lineTo(x,y-5);c.moveTo(x,y+5);c.lineTo(x,y+14);c.stroke();
     // 활을 들어 과녁 쪽으로 겨눈 모습. 머뭇거릴수록 시위를 더 당긴다
-    {const h=handAt();drawArm(c);drawBow(c,h[0],h[1],Math.atan2(y-h[1],x-h[0]),4.5+Math.min(3,m.t)+Math.sin(now*9)*.6,bowCol())}
+    {const h=handAt();drawArm(c);if(isCls('dosa'))drawBujeok(c,h[0],h[1]-6,Math.sin(now*6)*.15);else drawBow(c,h[0],h[1],Math.atan2(y-h[1],x-h[0]),4.5+Math.min(3,m.t)+Math.sin(now*9)*.6,bowCol())}
     labels.push(()=>label(c,bx,by-36,m.note||'과녁이 겹칠 때 행동!'));return;
   }
   if(m.kind==='build'){
@@ -7927,7 +7942,7 @@ applyPosts();
    · 명부 S.hh.gs=[{n 이름,x 경험,hd 다친 날,tr 조련에서 돌아오는 날,tx 그때 얻을 경험}] — 사람 수는 S.hh.guard 그대로이고 gRoster가 맞춘다.
      레벨 gLv=1+√(경험/12)(최고 10), 내 레벨의 절반까지만 자란다(gCap) → 내가 자라야 사병도 자란다. 싸울 때 한 번 치면 1, 쓰러뜨리면 3+짐승 레벨/4.
      레벨이 오르면 버티는 힘(gHp)·치는 힘(1+레벨/4)·치는 빠르기가 늘고, 4·8레벨에 옷차림이 바뀐다(gLook·gArmor). 머리 위에 "Lv.N 이름".
-   · 훈련장: 서쪽 들판의 빈 풀밭에 선다(drillAt, 가로 다섯 칸·세로 두 칸, 저장하지 않는다). 교관에게 삯(drillFee)을 주고 사흘 맡기면 돌아오는 아침에 경험을 얻는다.
+   · 훈련장: 서쪽 들판의 빈 풀밭에 선다(drillAt, 큰 터부터 맞춰 보고 줄인다, 저장하지 않는다). 교관에게 삯(drillFee)을 주고 사흘 맡기면 돌아오는 아침에 경험을 얻는다.
      그동안 그 사병은 곁에 없고(gUsable) 훈련장에서 창을 찌르는 모습이 보인다. 급하면 데려올 수 있다(삯은 안 돌려주고 경험도 없다).
    · 왜구: 레벨 WAE_LV부터 철마다 닷새째 저녁 6시, 바닷가 모래밭으로 물결(wave)을 지어 올라온다. 5시부터 바다에 배가 보인다. S.wae={day,up,wave,waves,per,left,won}.
      물리친 횟수(S.waeN)가 늘수록 물결·사람 수·기운이 늘고 왜장이 섞인다(내 레벨이 아니라 횟수에 따라 세진다 → 계속 자라야 막는다). 지면 세지지 않는다.
@@ -7947,30 +7962,42 @@ function drillMorning(msgs){
 }
 let drillAt=null;
 function applyDrill(){
-  const m=FIELD,ps=postSpot('field'),ok=(x,y)=>m.tile[y][x]===0&&!m.objAt[y][x],inR=(x,y,R)=>x>=R[0]-1&&x<=R[2]+1&&y>=R[1]-1&&y<=R[3]+1;
-  let best=null,bd=1e9;
-  for(let y=3;y<H-5;y++)for(let x=3;x<W-8;x++){
-    let fine=true;
-    for(let b=0;b<3&&fine;b++)for(let a=-1;a<=5;a++){const X=x+a,Y=y+b,yard=b<2&&a>=0&&a<5; /* 터 다섯 칸×두 칸, 그 양옆과 아래 한 줄은 드나들 수 있어야 한다 */
-      if(!(yard?ok(X,Y):ok(X,Y)||(m.tile[Y][X]===1&&!m.objAt[Y][X]))||inR(X,Y,FFARM)||inR(X,Y,FPAST)||inR(X,Y,FIELD_HILL)||(ps&&Math.abs(X-ps[0])<=1&&Math.abs(Y-ps[1])<=1)){fine=false;break}}
-    if(!fine)continue;
-    const d=Math.abs(x+2-10)+Math.abs(y-17);if(d<bd){bd=d;best=[x,y]}
+  /* v154(사용자 요청: 훈련장을 더 크게): 큰 터부터 맞춰 보고, 자리가 없으면 한 단계씩 줄인다. 터의 크기는 drillAt.w·h.
+     들판은 못·밭·목장으로 빈 땅이 좁아서, 터 안에 든 꾸밈 나무·바위(deco, 번호 없는 것)는 치우고 목장 울 바로 곁까지 쓴다. 터 아래쪽 줄로 드나든다 */
+  const m=FIELD,ps=postSpot('field'),deco=o=>!!o&&o.t==='deco'&&o.i===-1,ok=(x,y)=>m.tile[y][x]===0&&(!m.objAt[y][x]||deco(m.objAt[y][x])),
+    pass=(x,y)=>(m.tile[y][x]===0||m.tile[y][x]===1)&&!m.objAt[y][x],inR=(x,y,R,p)=>x>=R[0]-p&&x<=R[2]+p&&y>=R[1]-p&&y<=R[3]+p;
+  for(const [dw,dh] of [[8,5],[7,5],[6,5],[6,4],[6,3],[5,3],[5,2]]){
+    let best=null,bd=1e9;
+    for(let y=3;y<H-dh-3;y++)for(let x=3;x<W-dw-2;x++){
+      let fine=true,door=0;
+      for(let b=0;b<dh&&fine;b++)for(let a=0;a<dw;a++){const X=x+a,Y=y+b;
+        if(!ok(X,Y)||inR(X,Y,FFARM,1)||inR(X,Y,FPAST,0)||inR(X,Y,FIELD_HILL,1)||(ps&&Math.abs(X-ps[0])<=1&&Math.abs(Y-ps[1])<=1)){fine=false;break}}
+      if(!fine)continue;
+      for(let a=0;a<dw;a++)if(pass(x+a,y+dh))door++;if(door<3)continue;
+      const d=Math.abs(x+dw/2-13)+Math.abs(y+dh/2-18);if(d<bd){bd=d;best=[x,y]}
+    }
+    if(!best)continue;drillAt={x:best[0],y:best[1],w:dw,h:dh};
+    const inside=e=>{const X=Array.isArray(e)?e[0]:e.x,Y=Array.isArray(e)?e[1]:e.y;return X>=best[0]&&X<best[0]+dw&&Y>=best[1]&&Y<best[1]+dh};
+    for(const L of [m.TREES,m.ROCKS])if(Array.isArray(L))for(let i=L.length-1;i>=0;i--)if(inside(L[i]))L.splice(i,1);
+    for(let b=0;b<dh;b++)for(let a=0;a<dw;a++)m.objAt[best[1]+b][best[0]+a]={t:'drill',x:best[0]+a,y:best[1]+b};
+    return;
   }
-  if(!best)return;drillAt={x:best[0],y:best[1]};
-  for(let b=0;b<2;b++)for(let a=0;a<5;a++)m.objAt[best[1]+b][best[0]+a]={t:'drill',x:best[0]+a,y:best[1]+b};
 }
 applyDrill();
 const DRILL_LOOK={skin:'#d9a878',hair:'#4a4440',shirt:'#3a2f4a',bot:'#2a2a30',rib:'#f7d24a',sex:'m',hat:'jeonrip',beard:1};
 function drillYardArt(c){
-  const X=drillAt.x*T,Y=drillAt.y*T,w=5*T,h=2*T,tr=S.hh&&Array.isArray(S.hh.gs)?S.hh.gs.filter(gTraining):[];
-  rr(c,X+2,Y+6,w-4,h-8,6,'#b9a57c');rr(c,X+5,Y+9,w-10,h-14,5,'#cdbb92'); /* 다진 흙마당 */
-  for(let i=0;i<=5;i++)rr(c,X+3+i*(w-9)/5,Y-8,3,16,1,'#6a4a2a');line(c,X+4,Y-3,X+w-4,Y-3,'#8a6238',2);line(c,X+4,Y+3,X+w-4,Y+3,'#8a6238',2); /* 뒤쪽 나무 울 */
-  rr(c,X+10,Y-12,2.5,46,1,'#5a4030');poly(c,[X+12,Y-12,X+30,Y-8,X+12,Y-2],'#b5332a');line(c,X+17,Y-9,X+17,Y-5,'#f7d24a',1.6); /* 영기 */
-  for(let i=0;i<3;i++){const sx=X+26+i*5;line(c,sx,Y+30,sx+2,Y+4,'#7a5230',1.6);poly(c,[sx+1,Y+4,sx+2,Y-2,sx+3,Y+4],'#cfd6dc')}rr(c,X+23,Y+22,18,2.5,1,'#6a4a2a'); /* 창걸이 */
-  {const tx=X+w-14,ty=Y+20;rr(c,tx-1.5,ty-6,3,26,1,'#6a4a2a');circ(c,tx,ty-12,10,'#e9d8b0');circ(c,tx,ty-12,6.5,'#b5332a');circ(c,tx,ty-12,3,'#e9d8b0')} /* 과녁 */
-  {const hx=X+w-26,hy=Y+50;rr(c,hx-1.5,hy-26,3,26,1,'#6a4a2a');rr(c,hx-9,hy-22,18,3,1,'#6a4a2a');ell(c,hx,hy-14,6,9,'#d9b96a');circ(c,hx,hy-28,5,'#d9b96a')} /* 허수아비 */
-  if(npcOut())drawChar(c,X+54,Y+30,DRILL_LOOK,[0,1],false,0); /* 교관 */
-  tr.forEach((q,i)=>{const gx=X+70+i*20,gy=Y+h-6,th=Math.max(0,Math.sin(now*3.2+i*1.7))*6,lv=gLv(q);drawChar(c,gx,gy,gLook(lv),[1,0],false,0);gArmor(c,gx,gy,lv);line(c,gx+2+th,gy-17,gx+22+th,gy-19,'#7a5230',1.6);poly(c,[gx+22+th,gy-21,gx+28+th,gy-19,gx+22+th,gy-17],'#cfd6dc')}); /* 맡겨 둔 사병: 창 찌르기 */
+  const X=drillAt.x*T,Y=drillAt.y*T,w=drillAt.w*T,h=drillAt.h*T,tr=S.hh&&Array.isArray(S.hh.gs)?S.hh.gs.filter(gTraining):[];
+  rr(c,X+2,Y+6,w-4,h-8,7,'#b9a57c');rr(c,X+5,Y+9,w-10,h-14,6,'#cdbb92'); /* 다진 흙마당 */
+  if(drillAt.h>=4){c.strokeStyle='rgba(140,118,80,.7)';c.lineWidth=2.5;c.beginPath();c.ellipse(X+w*.42,Y+h*.56,w*.24,h*.2,0,0,7);c.stroke()} /* 대련하는 둥근 마당 */
+  {const n=drillAt.w+1;for(let i=0;i<n;i++)rr(c,X+3+i*(w-9)/(n-1),Y-8,3,16,1,'#6a4a2a');line(c,X+4,Y-3,X+w-4,Y-3,'#8a6238',2);line(c,X+4,Y+3,X+w-4,Y+3,'#8a6238',2)} /* 뒤쪽 나무 울 */
+  rr(c,X+3,Y-8,3,h+2,1,'#6a4a2a');rr(c,X+w-6,Y-8,3,h+2,1,'#6a4a2a'); /* 양옆 기둥 */
+  rr(c,X+12,Y-18,2.5,54,1,'#5a4030');poly(c,[X+14,Y-18,X+36,Y-13,X+14,Y-6],'#b5332a');line(c,X+20,Y-15,X+20,Y-9,'#f7d24a',1.6); /* 영기 */
+  for(let i=0;i<4;i++){const sx=X+30+i*5;line(c,sx,Y+34,sx+2,Y+6,'#7a5230',1.6);poly(c,[sx+1,Y+6,sx+2,Y,sx+3,Y+6],'#cfd6dc')}rr(c,X+27,Y+26,22,2.5,1,'#6a4a2a'); /* 창걸이 */
+  {const dx=X+20,dy=Y+h-12;rr(c,dx-9,dy-4,3,10,1,'#5a4030');rr(c,dx+6,dy-4,3,10,1,'#5a4030');ell(c,dx,dy-9,11,8,'#8a3a2a');ell(c,dx,dy-9,8,5.5,'#e9d8b0');circ(c,dx,dy-9,2.2,'#b5332a')} /* 북 */
+  for(let i=0;i<(drillAt.w>=7?3:1);i++){const tx=X+w-16-i*30,ty=Y+22;rr(c,tx-1.5,ty-6,3,26,1,'#6a4a2a');circ(c,tx,ty-12,10,'#e9d8b0');circ(c,tx,ty-12,6.5,'#b5332a');circ(c,tx,ty-12,3,'#e9d8b0')} /* 과녁 */
+  for(let i=0;i<(drillAt.h>=3?2:1);i++){const hx=X+w-26-i*8,hy=Y+h-10-i*30;rr(c,hx-1.5,hy-26,3,26,1,'#6a4a2a');rr(c,hx-9,hy-22,18,3,1,'#6a4a2a');ell(c,hx,hy-14,6,9,'#d9b96a');circ(c,hx,hy-28,5,'#d9b96a')} /* 허수아비 */
+  if(npcOut())drawChar(c,X+70,Y+36,DRILL_LOOK,[0,1],false,0); /* 교관 */
+  tr.forEach((q,i)=>{const gx=X+w-64-(i%2)*30,gy=Y+h-10-Math.floor(i/2)*30-(i%2?0:0),th=Math.max(0,Math.sin(now*3.2+i*1.7))*6,lv=gLv(q);drawChar(c,gx,gy,gLook(lv),[1,0],false,0);gArmor(c,gx,gy,lv);line(c,gx+2+th,gy-17,gx+22+th,gy-19,'#7a5230',1.6);poly(c,[gx+22+th,gy-21,gx+28+th,gy-19,gx+22+th,gy-17],'#cfd6dc')}); /* 맡겨 둔 사병: 창 찌르기 */
 }
 function openDrill(){
   if(asleep('교관'))return;
@@ -9048,9 +9075,9 @@ function updBeasts(dt){
     if(D.mild&&!b.mad&&dist<=2&&b.flee<=0){b.mad=1;sfx('err');toast(jo(D.n,'이','가')+' 성이 났어요! 덤벼들기 전에 물러서요')}
     const fierce=!!D.bite&&(!D.mild||b.mad);
     // 사나운 짐승(범·늑대, 성난 곰과 대왕 멧돼지)은 달아나지 않고 다가와 덮친다. 순한 짐승은 가까이 다가가면 달아난다
-    if(fierce){if(b.bite>0)b.bite-=dt;if(dist===1&&b.bite<=0&&b.flee<=0){b.bite=2.5;const hurt=Math.max(2,Math.round(D.bite*(S.level<D.lv?.6:1)*(1-.1*guardsOn())*(relic('c_claw')?.5:1)*(1-Math.min(GUARD_MAX,gearFx('guard')))));S.en=Math.max(0,S.en-hurt);huntStreak=0;hud();hurtMe(hurt); /* 알림 글 대신 다친 모습으로 보여 준다(v81) */
+    if(fierce){if(b.bite>0)b.bite-=dt;if(dist===1&&b.bite<=0&&b.flee<=0){b.bite=2.5;const hurt=clsHit(Math.max(2,Math.round(D.bite*(S.level<D.lv?.6:1)*(1-.1*guardsOn())*(relic('c_claw')?.5:1)*(1-Math.min(GUARD_MAX,gearFx('guard'))))));if(hurt){S.en=Math.max(0,S.en-hurt);huntStreak=0;hud();hurtMe(hurt)} /* 알림 글 대신 다친 모습으로 보여 준다(v81) */
         tip('bite','짐승이 덮치면 기력이 줄어요(머리 위의 붉은 숫자). 그쪽을 보고 행동하면 맞붙어 싸울 수 있어요')}}
-    else if(!D.bite&&dist<=Math.max(1,(D.shy||2)-(relic('c_bell')?1:0)))b.flee=Math.max(b.flee,1.2);
+    else if(!D.bite&&dist<=Math.max(sk('h_quiet')>=3?0:1,(D.shy||2)-(relic('c_bell')?1:0)-(isCls('hyeop')?1+Math.ceil(sk('h_quiet')/2):0)))b.flee=Math.max(b.flee,1.2); /* v154: 협객에게는 늦게 달아난다 */
     const chase=fierce&&b.flee<=0&&dist>1&&dist<=(b.rage>0?12:D.hunt);
     if(b.flee<=0&&!chase){b.wait-=dt;if(b.wait>0||b.calm>0)continue;b.wait=rnd(1.5,5)}
     // 길과 다리는 넘지 않는다
@@ -9063,15 +9090,94 @@ function updBeasts(dt){
 }
 function beastInLine(){
   if(scene==='home')return null;
-  for(let i=1;i<=4+tl('bow');i++){
+  for(let i=1;i<=bowRange();i++){
     const x=P.x+P.dir[0]*i,y=P.y+P.dir[1]*i;if(x<0||y<0||x>=W||y>=H)return null;
     const b=beastOn(x,y);if(b)return b;
     if(objAt[y][x]||tile[y][x]===6||npcOn(x,y)||herdOn(x,y))return null;
   }
   return null;
 }
+/* ───────── 직업과 기술(v154) ─────────
+   사용자 요청: 지금은 거의 화살로만 싸운다 → 조선풍 네 직업(마법사·도적·전사·궁수 = 도사·협객·무사·궁사). 게임을 시작할 때 꼭 고르고(하던 사람은 창이 뜬다), 하다가 바꿀 수 있다.
+   무관의 길은 누구나 저절로 들어선다(milAuto, 레벨 RANK_LV[0]). 다른 길과 높은 자리는 지금처럼 골라서 간다. 기술은 직업마다 두 갈래로 찍는다. 기술 효과는 눈에 보이게(fxs).
+   · S.cls=직업, S.sk={기술:단계(1~3)}. 기술 점수는 레벨 둘마다 1점(skTotal). 갈래의 둘째 기술은 첫째를 한 번 찍어야 열린다. 직업을 바꾸면 기술은 처음부터 다시 찍는다.
+   · 궁사: 활. 사거리 +1칸·이어 맞혀도 과녁이 줄지 않음·과녁 +1.5 / 맞붙기 틈이 좁다
+   · 무사: 맞붙기 한 번에 기운 +1·틈이 넓고 15% 덜 다침 / 과녁 −1.5
+   · 협객: 기습(처음 맞붙을 때 먼저 두 배로 한 번 벤다, 짐승마다 한 번)·걸음 +4%·순한 짐승이 한 칸 늦게 달아남 / 10% 더 다침
+   · 도사: 활 대신 부적(학식으로 과녁과 힘이 정해진다, 사거리 다섯 칸). 맞으면 그 짐승과 둘레 두 칸의 짐승이 묶인다 / 20% 더 다치고 맞붙기 틈이 좁고 부적 한 장에 기력 3
+   셈이 붙는 자리: aimRaw·aimRm·bowRange·meleeWin·meleeDmg·startMelee(기습)·meleePress(연격)·clsHit(다칠 때)·shoot·updBeasts(달아나는 거리)·gearFx(clsFx) */
+const CLS={
+  gung:{n:'궁사',ic:'弓',d:['특기: 멀리 쏘기 · 사거리 +1칸','이어 맞혀도 과녁이 안 줄어요 · 과녁이 커요','약점: 맞붙기 틈이 좁아요']},
+  musa:{n:'무사',ic:'武',d:['특기: 강타 · 맞붙기 한 번에 기운 +1','받아칠 틈이 넓고 15% 덜 다쳐요','약점: 활 과녁이 작아요']},
+  hyeop:{n:'협객',ic:'俠',d:['특기: 기습 · 처음 맞붙을 때 먼저 두 배로 베요','걸음이 빠르고 순한 짐승이 늦게 달아나요','약점: 10% 더 다쳐요']},
+  dosa:{n:'도사',ic:'道',d:['특기: 부적 · 맞으면 둘레 짐승까지 묶여요','활 대신 부적을 날려요 · 학식이 높을수록 세요','약점: 20% 더 다치고 부적 한 장에 기력 3']}};
+const SKILLS={
+  gung:[['명궁',[['g_aim','정조준','과녁이 단계마다 더 커져요'],['g_far','먼 화살','사거리 +1칸(3단계 +2칸)']]],['속사',[['g_twin','쌍화살','단계마다 15%로 화살 두 대(기운 1 더)'],['g_crit','급소','단계마다 10%로 두 배로 박혀요']]]],
+  musa:[['검객',[['m_power','강타 수련','맞붙기 기운 +1(3단계 +2)'],['m_chain','연격','단계마다 20%로 한 번 더 베요']]],['철벽',[['m_guard','철벽','단계마다 5% 덜 다쳐요'],['m_wide','틈 보기','받아칠 틈이 단계마다 넓어져요']]]],
+  hyeop:[['암습',[['h_amb','급습','기습의 힘이 단계마다 +1'],['h_smoke','연막','단계마다 12%로 공격을 피해요']]],['경공',[['h_step','경공','걸음이 단계마다 2% 빨라져요'],['h_quiet','숨죽이기','순한 짐승이 더 늦게 달아나요(3단계: 곁까지)']]]],
+  dosa:[['뇌법',[['d_bolt','벼락','부적의 힘 +1(3단계 +2)'],['d_chain','연쇄 벼락','단계마다 30%로 묶인 둘레 짐승도 벼락']]],['부적',[['d_bind','결박','묶는 시간 +0.8초씩(3단계: 둘레 세 칸)'],['d_ward','호신부','단계마다 6% 덜 다쳐요']]]]};
+const SK_MAX=3,sk=id=>S&&S.cls&&S.sk&&id.charAt(0)===S.cls.charAt(0)?S.sk[id]|0:0,isCls=k=>!!S&&S.cls===k;
+const skTotal=()=>Math.floor(S.level/2),skUsed=()=>Object.keys(S.sk||{}).reduce((a,k)=>a+(S.sk[k]|0),0),skLeft=()=>Math.max(0,skTotal()-skUsed());
+const clsFx=k=>k==='aim'?(isCls('gung')?1.5+.7*sk('g_aim'):isCls('musa')?-1.5:0):k==='spd'?(isCls('hyeop')?.04+.02*sk('h_step'):0):0;
+const clsHurt=()=>Math.max(.5,(isCls('musa')?.85:isCls('hyeop')?1.1:isCls('dosa')?1.2:1)-.05*sk('m_guard')-.06*sk('d_ward'));
+const bowRange=()=>isCls('dosa')?5:4+tl('bow')+(isCls('gung')?1+Math.ceil(sk('g_far')/2):0);
+const bujeokDmg=()=>1+Math.floor(sv('lore')/7)+Math.ceil(sk('d_bolt')/2),shotDmg=()=>isCls('dosa')?bujeokDmg():1+gearFx('dmg');
+let fxs=[],clsAskT=0;
+function fxAdd(k,x,y,delay){fxs.push({k,x,y,t:-(delay||0)});if(fxs.length>24)fxs.shift()}
+function updFx(dt){if(!fxs.length)return;for(const f of fxs)f.t+=dt;fxs=fxs.filter(f=>f.t<.6)}
+function drawFx(c){
+  for(const f of fxs){
+    if(f.t<0)continue;const u=f.t/.6,x=f.x,y=f.y;c.globalAlpha=Math.max(0,1-u);
+    if(f.k==='bolt'){c.strokeStyle='#fff7b0';c.lineWidth=3.2;c.lineJoin='miter';c.beginPath();c.moveTo(x-10,y-96);c.lineTo(x+7,y-66);c.lineTo(x-6,y-44);c.lineTo(x+5,y-22);c.lineTo(x,y);c.stroke();c.strokeStyle='#fff';c.lineWidth=1.2;c.stroke();circ(c,x,y,7+u*9,'rgba(255,247,176,.7)')}
+    else if(f.k==='slash'||f.k==='slash2'){c.strokeStyle=f.k==='slash2'?'#f7d24a':'#fff';c.lineWidth=3.4;c.lineCap='round';c.beginPath();c.arc(x,y,15+u*7,-2.3+u*2.2,-.7+u*2.2);c.stroke();c.lineCap='butt'}
+    else if(f.k==='crit'){for(let i=0;i<8;i++){const q=i*.785+.3;line(c,x+Math.cos(q)*(6+u*8),y+Math.sin(q)*(6+u*8),x+Math.cos(q)*(13+u*17),y+Math.sin(q)*(13+u*17),i%2?'#d9412e':'#f7d24a',2.6)}}
+    else if(f.k==='smoke'){for(let i=0;i<6;i++){const q=i*1.05;circ(c,x+Math.cos(q)*(5+u*15),y-12+Math.sin(q)*(4+u*10),6+u*5,'rgba(190,190,196,.8)')}}
+    else if(f.k==='ward'){c.strokeStyle='#f7d24a';c.lineWidth=2.4;c.beginPath();c.arc(x,y-16,15+u*7,0,7);c.stroke()}
+    c.globalAlpha=1;
+  }
+}
+function drawBujeok(c,x,y,a){c.save();c.translate(x,y);c.rotate(a||0);rr(c,-4,-8,8,16,1,'#f1d75a');line(c,0,-5,0,5,'#b5332a',1.6);line(c,-2,-2,2,-2,'#b5332a',1.2);line(c,-2,2,2,2,'#b5332a',1.2);c.restore()}
+/* 맞을 때: 협객의 연막은 피하고, 직업과 기술에 따라 덜(더) 다친다. 실제로 깎일 기력을 돌려준다(피했으면 0) */
+function clsHit(h){
+  const px=(rx(P)+.5)*T,py=(ry(P)+.9)*T;
+  if(isCls('hyeop')&&Math.random()<.12*sk('h_smoke')){fxAdd('smoke',px,py);float('피했어요!',px,py-40,'#cfd6dc');return 0}
+  if(sk('m_guard')||sk('d_ward'))fxAdd('ward',px,py);
+  return Math.max(1,Math.round(h*clsHurt()));
+}
+function milAuto(){ /* 무관의 길은 누구나 걷는다: 레벨이 되면 조건 없이 들어선다 */
+  if(!S||S.mil||S.level<RANK_LV[0]||S.camp)return;const D=TRACKS.mil;
+  S.mil={rank:0,done:0,day:0};if(!S.owned.includes(D.fit[0]))S.owned.push(D.fit[0]);saveAll();
+  toast('무관의 길에 들어섰어요 · '+D.ranks[0]+' · 궐문의 무진에게 가 봐요');
+}
+function clsWatch(){
+  if(!S||!started||busy()||mg)return;milAuto();
+  if(!S.cls&&now>=clsAskT){clsAskT=now+4;openClass()}
+}
+const clsFee=()=>1000+S.level*100;
+function openClass(){
+  const first=!S.cls,fee=clsFee();
+  openModal('직업 고르기',body=>{
+    body.appendChild(el('p','note',first?'싸우는 방식을 하나 골라요. 나중에 바꿀 수 있어요.':'직업을 바꾸면 기술은 처음부터 다시 찍어요 · 삯 '+won(fee)+' · 가진 돈 '+won(S.coins)));
+    for(const k in CLS){const C=CLS[k],on=S.cls===k;
+      row(body,el('span','badge',C.ic),C.n+(on?' · 지금':''),C.d,[[on?'지금 직업':first?'고르기':'바꾸기',()=>{if(S.cls===k||(!first&&S.coins<fee))return;if(!first)addCoins(-fee);S.cls=k;S.sk={};sfx('level');saveAll();hud();closeModal();toast(C.n+'가 됐어요 · "나"의 "직업"에서 기술을 찍어요')},on||(!first&&S.coins<fee)]])}
+  });
+}
+function openSkills(){
+  if(!S.cls){openClass();return}
+  openModal('직업과 기술',body=>{
+    const C=CLS[S.cls],left=skLeft();
+    row(body,el('span','badge',C.ic),'내 직업 · '+C.n,C.d,[['직업 바꾸기',()=>openClass()]]);
+    body.appendChild(el('p','note','남은 기술 점수 '+left+' · 레벨 둘마다 1점 · 기술마다 '+SK_MAX+'단계'));
+    for(const [rn,list] of SKILLS[S.cls]){
+      body.appendChild(el('p','sub',rn+' 갈래'));
+      list.forEach(([id,n,d],i)=>{const lv=S.sk[id]|0,lock=i>0&&!(S.sk[list[i-1][0]]|0);
+        row(body,el('span','badge',String(lv)),n+' '+lv+'/'+SK_MAX,lock?'앞의 기술을 먼저 찍어요':d,[[lv>=SK_MAX?'다 찍음':'찍기',()=>{if(skLeft()<1||(S.sk[id]|0)>=SK_MAX||lock)return;S.sk[id]=(S.sk[id]|0)+1;sfx('level');saveAll();openSkills()},lock||lv>=SK_MAX||left<1]])});
+    }
+    if(skUsed())row(body,el('span','badge','↺'),'기술 다시 찍기','찍은 점수를 모두 돌려받아요 · 삯 500냥',[['되돌리기',()=>{if(S.coins<500)return;addCoins(-500);S.sk={};sfx('pick');saveAll();openSkills()},S.coins<500]]);
+  });
+}
 // 과녁 크기: 활을 벼리거나 무예가 높거나 무진과 친하면 커진다
-const aimRaw=()=>tl('bow')*1.2+sv('arms')*.15+(perk('mujin')?1.5:0)+(relic('c_feather')?1.5:0)+gearFx('aim')+Math.min(huntRank(),S.hrank|0)*.3; /* 사냥꾼의 이름(방에서 축하를 받은 데까지)마다 조금씩 */
+const aimRaw=()=>(isCls('dosa')?2.4+sv('lore')*.15:tl('bow')*1.2+sv('arms')*.15)+(perk('mujin')?1.5:0)+(relic('c_feather')?1.5:0)+gearFx('aim')+Math.min(huntRank(),S.hrank|0)*.3; /* 사냥꾼의 이름(방에서 축하를 받은 데까지)마다 조금씩 */
 /* v75 균형: 예전에는 덤이 그대로 과녁에 더해져(최대 25쯤) 중반부터는 아무 때나 눌러도 절반 넘게 맞았다. 이제 덤 5까지는 그대로, 그 위로는 0.4배만 과녁에 붙고 과녁은 17을 넘지 않는다.
    과녁에 못 붙은 덤은 흔들림을 늦추는 데 쓰인다(aimCalm, 15%까지). 그리고 센 짐승일수록 과녁이 크게 흔들린다(aimAmp: 레벨마다 5%, 백호는 1.8배) */
 const onHill=()=>scene==='wild'&&tile[P.y]&&tile[P.y][P.x]===12;
@@ -9080,7 +9186,7 @@ const aimCalm=()=>1-Math.min(.15,Math.max(0,aimRaw()-5)*.015);
 const aimAmp=k=>1+Math.min(16,BEASTS[k].lv|0)*.05;
 /* v86(사용자 의견: 화살이 거의 한 방이라 너무 쉽다): 짐승의 기운을 올리고, 이어서 맞힐수록 과녁이 조금씩 작아진다(한 번에 10%, 세 번까지). 작은 짐승(토끼·꿩·사슴·너구리·고라니)은 그대로 한 방 */
 {const up={fox:2,sak:2,marten:2,wdeer:2,boar:3,badger:3,wolf:3,goral:3,lynx:3,tiger:5,leopard:5,bear:7,kboar:8,wtiger:9};for(const k in up)if(BEASTS[k])BEASTS[k].hp=up[k]}
-const aimRm=m=>aimR()*(1-Math.min(3,m.i|0)*.1);
+const aimRm=m=>aimR()*(isCls('gung')?1:1-Math.min(3,m.i|0)*.1); /* v154: 궁사는 이어 맞혀도 과녁이 줄지 않는다 */
 // ───────── 맞붙어 싸우기 (v76) ─────────
 // 짐승과 붙어 있으면(칼·맨손은 바로 앞 한 칸, 창은 두 칸) 활 대신 맞붙는다. 걸친 무기가 칼(ic:'sword')·창(ic:'spear')이면 그것으로, 아니면 맨손으로.
 // 짐승이 먼저 덤빈다: 노려보다가(st 0) 덤벼들면(st 1) 바깥 고리가 짐승 쪽으로 좁혀 온다. 두 고리가 겹치는 순간(앞뒤 meleeWin초)에 행동을 누르면 받아쳐서 다치게 하고,
@@ -9093,14 +9199,20 @@ const aimRm=m=>aimR()*(1-Math.min(3,m.i|0)*.1);
 const MELEE={sword:{n:'칼',w:.16,d:2},spear:{n:'창',w:.18,d:2},axe:{n:'도끼',w:.115,d:3},fist:{n:'맨손',w:.13,d:1}}; /* 도끼(v87): 틈은 가장 좁지만 한 번에 기운 3 */
 const meleeKind=()=>{const G=GEAR[S.gear&&S.gear.on.w];return G&&(G.ic==='sword'||G.ic==='spear'||G.ic==='axe')?G.ic:'fist'};
 const meleeReach=()=>meleeKind()==='spear'?(specMaster('mil','spear')?3:2):1; /* 창술 달인은 세 칸 */
-const meleeWin=m=>Math.max(.09,MELEE[m.mel].w-(BEASTS[m.b.k].lv|0)*.004+sv('arms')*.0015+specMw(m.mel)); /* 전문 갈래(검술·창술·주먹패)가 틈을 늘린다 */
+const meleeWin=m=>Math.max(.09,MELEE[m.mel].w-(BEASTS[m.b.k].lv|0)*.004+sv('arms')*.0015+specMw(m.mel)+(isCls('musa')?.02:isCls('gung')||isCls('dosa')?-.02:0)+.012*sk('m_wide')); /* 전문 갈래(검술·창술·주먹패)가 틈을 늘린다 */
 const meleeDur=k=>clamp(1.35-(BEASTS[k].sp||2)*.13,.8,1.2);
 const meleeFeint=k=>{const l=BEASTS[k].lv|0;return l>=14?.25:l>=9?.15:0};
-const meleeDmg=k=>MELEE[k].d+(k==='fist'?0:gearFx('dmg'))+((k==='sword'&&specMaster('mil','sword'))||(k==='fist'&&specMaster('rogue','jumeok'))?1:0); /* 검술·주먹패 달인은 한 번에 1 더 */
+const meleeDmg=k=>MELEE[k].d+(k==='fist'?0:gearFx('dmg'))+((k==='sword'&&specMaster('mil','sword'))||(k==='fist'&&specMaster('rogue','jumeok'))?1:0)+(isCls('musa')?1+Math.ceil(sk('m_power')/2):0); /* 검술·주먹패 달인은 한 번에 1 더. v154: 무사의 강타 */
 const beastAtk=k=>BEASTS[k].bite||3+(BEASTS[k].lv|0); /* 덤비지 않는 짐승도 붙들리면 발길질쯤은 한다 */
 const GUARD_MAX=.6; /* 장비가 짐승의 공격을 덜어 주는 한도(v76: 0.75에서 낮춤. 곰 가죽 한 벌이면 한도를 넘겨서 물려도 아프지 않았다) */
 function startMelee(b){
-  const k=meleeKind();if(BEASTS[b.k].mild)b.mad=1;
+  const k=meleeKind();
+  if(isCls('hyeop')&&!b.amb){ /* v154 협객의 기습: 그 짐승과 처음 맞붙을 때 먼저 한 번 벤다 */
+    const dmg=meleeDmg(k)*2+sk('h_amb'),bx=rx(b)*T+16,by=ry(b)*T+10;b.amb=1;b.hp-=dmg;b.mad=1;P.dir=[Math.sign(b.x-P.x),Math.sign(b.y-P.y)];
+    fxAdd('slash2',bx,by);sfx(k==='fist'?'fist':'sword');float('기습! -'+dmg,bx,by-26,'#f7d24a');
+    if(b.hp<=0){mg=null;huntKill(b,true);return}
+  }
+  if(BEASTS[b.k].mild)b.mad=1;
   mg={kind:'hunt',mel:k,b,o:b,st:0,t:rnd(.8,1.5),dur:0,stop:0,n:0,ex:0,sw:0,hurt:0,cool:0,note:''};P.path=[];P.after=null;
   tip('melee2','맞붙기('+MELEE[k].n+'):짐승이 덤벼들면 노란 고리가 좁혀 와요. 안쪽 고리와 겹쳐 초록으로 바뀌는 순간 행동을 한 번만 눌러요. 덤벼든 뒤에 너무 일찍 누르거나 놓치면 내가 다쳐요. 걸음을 옮기면 물러나요');
 }
@@ -9108,7 +9220,8 @@ function startMelee(b){
 function meleeLunge(m){m.st=1;m.dur=meleeDur(m.b.k);m.t=m.dur;m.stop=Math.random()<meleeFeint(m.b.k)?m.dur*rnd(.4,.6):0;m.note='';sfx('talk')}
 /* 짐승의 공격이 들어왔다. 기력이 바닥나면 물러난다(true를 돌려준다) */
 function meleeHurt(m,why){
-  const b=m.b,hurt=Math.max(2,Math.round(beastAtk(b.k)*(relic('c_claw')?.5:1)*(1-Math.min(GUARD_MAX,gearFx('guard')))));
+  const b=m.b,hurt=clsHit(Math.max(2,Math.round(beastAtk(b.k)*(relic('c_claw')?.5:1)*(1-Math.min(GUARD_MAX,gearFx('guard'))))));
+  if(!hurt){m.note='연막으로 피했어요!';return false}
   S.en=Math.max(0,S.en-hurt);huntStreak=0;m.hurt=.5;hud();hurtMe(hurt);m.note=why;
   if(S.en<=0){b.flee=2;mg=null;toast('기력이 다해서 물러났어요. 뭘 좀 먹고 와요');return true}
   return false;
@@ -9122,6 +9235,8 @@ function meleePress(m){
     m.st=2;m.t=.8;return;
   }
   const dmg=meleeDmg(m.mel);b.hp-=dmg;m.sw=.3;sfx(m.mel==='sword'?'sword':m.mel==='spear'?'spear':m.mel==='axe'?'axe':'fist');
+  {const bx=rx(b)*T+16,by=ry(b)*T+10;if(isCls('musa')||isCls('hyeop'))fxAdd('slash',bx,by);
+    if(b.hp>0&&Math.random()<.2*sk('m_chain')){b.hp-=dmg;fxAdd('slash2',bx,by,.12);float('연격!',bx,by-26,'#f7d24a')}} /* v154 무사의 연격 */
   if(b.hp>0){b.mad=1;m.n++;m.st=2;m.t=.7;m.note='받아쳤어요! (남은 기운 '+Math.ceil(b.hp/dmg)+')';return}
   mg=null;huntKill(b,true);
 }
@@ -9143,8 +9258,9 @@ function updMelee(m,dt){
   m.st=0;m.t=rnd(.6,1.3);m.note='';
 }
 function startHunt(b){
-  if(!useEn(2))return;
-  if(Math.abs(b.x-P.x)+Math.abs(b.y-P.y)<=meleeReach()){startMelee(b);return} /* 붙어 있으면 맞붙는다 */
+  const near=Math.abs(b.x-P.x)+Math.abs(b.y-P.y)<=meleeReach();
+  if(!useEn(!near&&isCls('dosa')?3:2))return; /* v154: 도사의 부적은 한 장에 기력 3 */
+  if(near){startMelee(b);return} /* 붙어 있으면 맞붙는다 */
   mg={kind:'hunt',b,o:b,ph:rnd(0,6),t:0,i:0,cool:0,note:''};P.path=[];P.after=null;
   tip('aim','흔들리는 과녁이 짐승에 겹칠 때 행동! 빗나가면 달아나요');
   if(BEASTS[b.k].deep)tip('aim2','짐승마다 과녁이 흔들리는 모양이 달라요. 여우는 빠르게 떨리고, 곰은 느리지만 크게 흔들려요');
@@ -9158,11 +9274,12 @@ let huntStreak=0; /* 놓치지 않고 이어서 잡은 수 (저장하지 않는�
 let shots=[];
 const bowCol=()=>{const G=GEAR[S.gear.on.w];return G&&G.look&&G.look.bow?G.look.bow:'#8a5a34'};
 const handAt=()=>[(rx(P)+.5)*T+P.dir[0]*9,(ry(P)+.9)*T-15+P.dir[1]*6];
-function shotFire(x,y,hit){const h=handAt();shots.push({x0:h[0],y0:h[1],x1:x,y1:y,t:0,hit});if(shots.length>8)shots.shift()}
+function shotFire(x,y,hit,bj){const h=handAt();shots.push({x0:h[0],y0:h[1],x1:x,y1:y,t:0,hit,bj});if(shots.length>8)shots.shift()}
 function updShots(dt){if(!shots.length)return;for(const s of shots)s.t+=dt;shots=shots.filter(s=>s.t<(s.hit?.5:1.3))}
 function drawShots(c){
   for(const s of shots){
     const u=Math.min(1,s.t/.14),x=lerp(s.x0,s.x1,u),y=lerp(s.y0,s.y1,u),a=Math.atan2(s.y1-s.y0,s.x1-s.x0),ca=Math.cos(a),sa=Math.sin(a);
+    if(s.bj){if(u<1||!s.hit){c.globalAlpha=u<1?1:Math.max(0,1-(s.t-.14)/1.1);drawBujeok(c,x,y,u<1?s.t*30:.4);c.globalAlpha=1}continue} /* v154: 도사의 부적(벼락은 fxs가 그린다) */
     if(u<1||!s.hit){
       c.globalAlpha=u<1?1:Math.max(0,1-(s.t-.14)/1.1);
       line(c,x-ca*12,y-sa*12,x,y,'#b98a5a',2);poly(c,[x+ca*3.5,y+sa*3.5,x-ca*2-sa*2.6,y-sa*2+ca*2.6,x-ca*2+sa*2.6,y-sa*2-ca*2.6],'#dfe9ee');
@@ -9196,13 +9313,25 @@ function drawBow(c,x,y,a,pull,col){
   c.lineCap='butt';c.restore();
 }
 function shoot(m){
-  const b=m.b,D=BEASTS[b.k],o=aimOff(m);sfx('bow');
-  {const bx=rx(b)*T+16,by=ry(b)*T+14,hit=Math.hypot(o[0],o[1])<=aimRm(m);shotFire(hit?bx:bx+o[0]*1.5,hit?by:by+o[1]*1.5+6,hit)}
+  const b=m.b,D=BEASTS[b.k],o=aimOff(m),dosa=isCls('dosa'),bx=rx(b)*T+16,by=ry(b)*T+14;sfx('bow');
+  {const hit=Math.hypot(o[0],o[1])<=aimRm(m);shotFire(hit?bx:bx+o[0]*1.5,hit?by:by+o[1]*1.5+6,hit,dosa)}
   if(Math.hypot(o[0],o[1])>aimRm(m)){b.flee=3;if(D.mild)b.mad=1;mg=null;huntStreak=0;sfx('err');toast('빗나갔어요! '+jo(D.n,'이','가')+(D.bite?' 놀라 물러났어요. 곧 다시 와요':' 달아나요'));return}
-  b.hp-=1+gearFx('dmg');sfx('hit');
+  /* v154 직업과 기술: 궁사의 쌍화살·급소, 도사의 부적(벼락과 묶기) */
+  let dmg=shotDmg();
+  if(isCls('gung')){
+    if(Math.random()<.15*sk('g_twin')){dmg+=1;shots.push({x0:handAt()[0],y0:handAt()[1]-5,x1:bx,y1:by-5,t:-.06,hit:true});float('쌍화살!',bx,by-30,'#f7d24a')}
+    if(Math.random()<.1*sk('g_crit')){dmg*=2;fxAdd('crit',bx,by,.14);float('급소!',bx,by-42,'#ff7a5a')}
+  }
+  b.hp-=dmg;sfx('hit');
+  if(dosa){
+    const dur=2.5+.8*sk('d_bind'),R=sk('d_bind')>=3?3:2;fxAdd('bolt',bx,by,.14);
+    for(const q of beasts){if(q===b||q.hp<=0||Math.abs(q.x-b.x)+Math.abs(q.y-b.y)>R)continue;q.stun=Math.max(q.stun||0,dur);q.bj=1;
+      if(Math.random()<.3*sk('d_chain')){q.hp=Math.max(1,q.hp-1);q.wound=1;fxAdd('bolt',rx(q)*T+16,ry(q)*T+14,.24)}}
+    if(b.hp>0){b.mad=1;b.wound=1;b.bj=1;b.stun=dur;m.i++;m.t=0;m.cool=.45;m.note='묶었어요! 한 장 더! (남은 기운 '+Math.ceil(b.hp/shotDmg())+')';return}
+  }
   if(b.hp>0){ /* v136(사용자 의견: 맞아도 그 자리에 굳어 있다): 순한 짐승은 절뚝이며 달아나니 쫓아가 다시 쏘고, 사나운 짐승은 성나서 달려드니 그대로 겨눠 한 번 더 쏘거나 맞붙는다 */
     b.mad=1;b.wound=1;m.i++;
-    if(D.bite){b.stun=.5;b.rage=4;m.t=0;m.cool=.45;m.note='명중! 달려들어요! (남은 기운 '+Math.ceil(b.hp/(1+gearFx('dmg')))+')';return}
+    if(D.bite){b.stun=.5;b.rage=4;m.t=0;m.cool=.45;m.note='명중! 달려들어요! (남은 기운 '+Math.ceil(b.hp/shotDmg())+')';return}
     b.stun=.3;b.flee=2;mg=null;float('명중! 달아나요 · 쫓아가요',rx(b)*T+16,ry(b)*T-14);return}
   mg=null;huntKill(b);
 }
@@ -9236,7 +9365,7 @@ function huntClick(b){
   b.calm=8;
   const spot=(a,r)=>{
     if(a!==b.x&&r!==b.y)return false;
-    const d=Math.abs(a-b.x)+Math.abs(r-b.y);if(d<3||d>4+tl('bow'))return false;
+    const d=Math.abs(a-b.x)+Math.abs(r-b.y);if(d<3||d>bowRange())return false;
     const sx=Math.sign(b.x-a),sy=Math.sign(b.y-r);
     for(let i=1;i<d;i++){const x=a+sx*i,y=r+sy*i;if(objAt[y][x]||tile[y][x]===6)return false}
     return true;
@@ -9250,12 +9379,14 @@ function drawBeast(c,b){
     drawChar(c,gx,gy,BANDITS[b.k],d,mv,now);
     if(b.k==='waejang'){c.strokeStyle='#f7d24a';c.lineWidth=2;c.beginPath();c.arc(gx,gy-41,6,Math.PI*1.1,Math.PI*1.9);c.stroke();rr(c,gx-7,gy-28,3,5,1,'#3a3a40');rr(c,gx+4,gy-28,3,5,1,'#3a3a40')} /* 왜장: 투구의 초승달 장식과 어깨 갑옷 */
     if(ch){line(c,gx+sx*9,gy-14,gx+sx*17,gy-30,'#cfd6dc',2.4);line(c,gx+sx*7,gy-13,gx+sx*11,gy-15,'#8a5a34',3)}else line(c,gx+sx*9,gy-12,gx+sx*15,gy-28,'#7a5230',3.2);
-    if(b.stun>0)for(let i=0;i<3;i++)star(c,gx+Math.cos(now*6+i*2.1)*9,gy-44+Math.sin(now*6+i*2.1)*3,2.6,'#f7d24a');
+    if(b.stun>0&&b.bj)drawBujeok(c,gx,gy-30,Math.sin(now*5)*.12); /* v154: 부적에 묶인 모습 */
+    else if(b.stun>0)for(let i=0;i<3;i++)star(c,gx+Math.cos(now*6+i*2.1)*9,gy-44+Math.sin(now*6+i*2.1)*3,2.6,'#f7d24a');
     return;
   }
   blit(c,shadowSpr(b.k==='rabbit'||b.k==='pheasant'||b.k==='raccoon'||b.k==='marten'?7:b.k==='kboar'||b.k==='bear'||b.k==='wtiger'?15:11),gx,gy);
   blit(c,beastSpr(b.k),gx,y,b.dir[0]<0);
-  if(b.stun>0)for(let i=0;i<3;i++)star(c,gx+Math.cos(now*6+i*2.1)*9,y-26+Math.sin(now*6+i*2.1)*3,2.6,'#f7d24a');
+  if(b.stun>0&&b.bj)drawBujeok(c,gx,y-18,Math.sin(now*5)*.12);
+  else if(b.stun>0)for(let i=0;i<3;i++)star(c,gx+Math.cos(now*6+i*2.1)*9,y-26+Math.sin(now*6+i*2.1)*3,2.6,'#f7d24a');
   else if(b.mad&&BEASTS[b.k].mild){const X=gx+(b.dir[0]<0?-12:12),Y=y-(BEASTS[b.k].big?40:34)+Math.sin(now*9)*1.5;c.fillStyle='#d9412e';c.fillRect(X-1,Y-6,3,7);c.fillRect(X-1,Y+3,3,3)} /* 성난 짐승 머리 위의 느낌표 */
 }
 const beastSpr=k=>spr('b'+k,()=>bake(64,60,32,52,0,0,c2=>beastArt(c2,k)));
@@ -10923,7 +11054,7 @@ function syncRouteGear(quiet){
 const GEAR_SLOTS=[['w','무기·도구'],['a','갑옷·옷'],['h','쓰개'],['s','신발'],['t','장신구']],GEAR_GRADE=['수수한','쓸 만한','귀한','으뜸','전설의'],GEAR_COL=['#8a7a5a','#3f8fc4','#8a63c9','#dd6a1c','#d9304a'];
 const FX_TXT={aim:v=>'사냥 과녁 +'+v,dmg:v=>'화살 힘 +'+v,en:v=>'기력 최대치 +'+v,spd:v=>'걷는 빠르기 +'+Math.round(v*100)+'%',guard:v=>'사나운 짐승에게 덜 다침 '+Math.round(v*100)+'%',luck:v=>'귀한 것이 나올 운 +'+Math.round(v*100)+'%',xp:v=>'경험치 +'+Math.round(v*100)+'%',
   cook:v=>'요리 불의 폭 +'+Math.round(v/.12*100)+'%',friend:v=>'가까워지는 빠르기 +'+Math.round(v*100)+'%',sell:v=>'파는 값 +'+Math.round(v*100)+'%'};
-const gearFx=k=>{let v=0;if(S&&S.gear)for(const s in S.gear.on){const G=GEAR[S.gear.on[s]];if(G&&G.fx[k])v+=G.fx[k]}
+const gearFx=k=>{let v=clsFx(k);if(S&&S.gear)for(const s in S.gear.on){const G=GEAR[S.gear.on[s]];if(G&&G.fx[k])v+=G.fx[k]} /* v154: 직업과 기술의 덤(clsFx)도 여기에 얹는다 */
   if(S&&S.fortune&&S.fortune.day===S.day&&S.fortune.k===k)v+=S.fortune.v; /* 점집에서 본 오늘의 운세도 여기에 얹는다 */
   if(S&&S.stayDay===S.day&&STAY_FX[k])v+=STAY_FX[k]; /* 별서에서 묵고 난 날의 덤 */
   v+=specFx(k); /* 전문 갈래의 덤 */
@@ -11629,7 +11760,7 @@ function openModal(title,build){
 }
 // 도구줄 묶음: 단추 하나가 창 여럿을 맡고, 창 위의 탭으로 오간다. TABS[묶음]=[탭 글자, 여는 함수, 그 창의 제목(openModal이 이것으로 알아본다)]
 // 묶음 단추는 마지막에 보던 탭을 다시 연다(tabLast, 저장하지 않음). 못 본 소식이 있으면 설정은 소식부터 연다
-const TABS={me:[['신분',()=>openStatus(),'신분'],['옷장',()=>openWardrobe(),'옷장'],['장비',()=>openGear(),'장비'],['가솔',()=>openHousehold(),'가솔'],['가문',()=>openClan(),'가문'],['길',()=>openRoads(),'걸어가는 길']],
+const TABS={me:[['신분',()=>openStatus(),'신분'],['옷장',()=>openWardrobe(),'옷장'],['장비',()=>openGear(),'장비'],['가솔',()=>openHousehold(),'가솔'],['가문',()=>openClan(),'가문'],['길',()=>openRoads(),'걸어가는 길'],['직업',()=>openSkills(),'직업과 기술']],
   log:[['이웃',()=>openFriends(),'이웃'],['부탁',()=>openQuests(),'오늘의 부탁'],['도감',()=>openDex(),'도감'],['지도',()=>openMap(),'마을 지도'],['길잡이',()=>openGuide(),'길잡이']],
   set:[['설정',()=>openSettings(),'설정'],['도움말',()=>openHelp(),'도움말'],['소식',()=>openNews(false),'소식']]};
 const tabLast={me:0,log:0,set:0};
@@ -12503,7 +12634,7 @@ function begin(st){
   if(groundSeason!==season())buildGround();
   // 예전 저장에는 모습 정보가 없다: 한 번 옷장을 열어 고르게 한다
   if(!S.sex){S.sex='m';setTimeout(()=>{if(S&&!busy())openWardrobe()},1500)}
-  goalRoll();initRoom();initP2P();
+  goalRoll();initRoom();initP2P();clsAskT=now+5; /* v154: 직업을 아직 안 골랐으면 조금 뒤에 고르는 창이 뜬다(clsWatch) */
   setTimeout(()=>{if(S&&!busy())tip('talk','이웃에게 자주 말을 걸어 보세요. 가까워지면 마을 안팎의 이야기를 들려줘요. 들은 이야기는 아래 "나"의 "신분"에 적혀요')},9000);
   countMe();if(/[#&]stats\b/.test(location.hash))setTimeout(()=>{if(S&&!busy())openStats()},1600);
   setTimeout(askBoot,5000);
