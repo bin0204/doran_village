@@ -624,7 +624,7 @@ const DEEPFISH=[['mackerel',28,9],['snapper',22,16],['bangeo',22,18],['muneo',15
 // 깊을수록 값진 광맥이 나온다(CAVE_ORE). 다섯 층마다(1·6·11·16) 다음에 바로 내려갈 수 있는 길이 열리고, CAVE_PRIZE는 그 층에 처음 닿았을 때의 상금
 const SNOW_Y=6,SNOW_LV=12; /* 깊은 산에서 눈고개로 이어지는 길의 줄, 눈고개에 들어갈 수 있는 레벨 */
 const HUNT_AT=[4,9],DEEP_Y=11,DEEP_LV=6; /* 사냥터 들머리의 사냥 방 자리, 깊은 산으로 이어지는 길의 줄, 깊은 산에 들어갈 수 있는 레벨 */
-const CAVE_AT=[30,3],CAVE_MAX=20,CAVE_STOPS=[1,6,11,16],CAVE_PRIZE={5:300,10:800,15:1500,20:3000};
+const GH_AT=[8,21],CAVE_AT=[30,3],CAVE_MAX=20,CAVE_STOPS=[1,6,11,16],CAVE_PRIZE={5:300,10:800,15:1500,20:3000};
 const CAVE_ORE=f=>f<=5?[['iron',1]]:f<=10?[['iron',.6],['silver',1]]:f<=15?[['silver',.6],['jade',1]]:[['jade',.55],['gold',1]];
 const ORE_COL={iron:'#d98a4a',silver:'#f4f8fb',jade:'#5fbf7a',gold:'#f7d24a'};
 // 명절: 계절마다 하루(s 계절, d 그 계절의 며칠째). 그날 잔치 마당(FEST_AT)에서 놀이(game)가 열리고, 이기면 상과 명절 음식(food)을 받는다
@@ -1152,7 +1152,7 @@ const WILD=(function(){
   for(let y=2;y<H-2;y++)for(let x=2;x<W-2;x++)if(tile[y][x]===0&&!(x<9&&y>=10&&y<=12))cells.push([x,y]);
   for(let i=cells.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[cells[i],cells[j]]=[cells[j],cells[i]]}
   const free=(x,y)=>{for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;const t=tile[y+dy][x+dx];if(t===3||t===6||objAt[y+dy][x+dx])return false}return true};
-  let nT=62,nR=14;
+  let nT=38,nR=6; /* v159(사용자 의견: 사냥터에 나무도 바위도 너무 많다): 나무 62→38, 바위 14→6 */
   for(const [x,y] of cells){
     if(!nT&&!nR)break;if(!free(x,y))continue;
     const rock=nR>0&&(nT===0||rng()<.18),o={t:'deco',k:rock?'rock':'pine',x,y,sh:0,i:-1};
@@ -1174,6 +1174,7 @@ const WILD=(function(){
   for(let y=HILL[1];y<=HILL[3];y++)for(let x=HILL[0];x<=HILL[2];x++){clear(x,y);tile[y][x]=x===HILL[0]||x===HILL[2]||y===HILL[1]||y===HILL[3]?13:12}
   tile[HILL_ST[1]][HILL_ST[0]]=14;clear(HILL_ST[0],HILL_ST[1]+1);
   for(const [x,y] of [[HILL[0]+2,HILL[1]+1],[HILL[2]-1,HILL[1]+2],[HILL[0]+1,HILL[3]-1]]){const o={t:'deco',k:'pine',x,y,sh:0,i:-1};TREES.push(o);objAt[y][x]=o}
+  clear(GH_AT[0],GH_AT[1]);clear(GH_AT[0],GH_AT[1]+1);objAt[GH_AT[1]][GH_AT[0]]={t:'ghole',x:GH_AT[0],y:GH_AT[1]}; /* v159 귀신골 어귀 */
   for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++)if((tile[y][x]===0||tile[y][x]===12)&&!objAt[y][x])GRASS.push([x,y]);
   return{tile,objAt,TREES,ROCKS,GRASS,SAND:[]};
 })();
@@ -1437,6 +1438,14 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:159,d:'11월 27일',t:'귀신골',l:[
+    '사냥터 숲 남서쪽에 귀신골 어귀가 생겼어요(레벨 8부터).',
+    '층의 귀신을 모두 물리치면 내려가는 길이 열려요. 열 층까지 있어요.',
+    '도깨비불·달걀귀신·처녀귀신·몽달귀신·구미호·장산범이 나와요.',
+    '맨 아래층에는 저승사자가 기다려요. 층마다 들어갈 레벨이 있어요.',
+    '사병도 따라 들어와요. 기력이 다하면 밖으로 물러나요.',
+    '사냥터 숲의 나무와 바위를 줄여 다니기 쉬워졌어요.',
+    '일직선이 아니어도 사거리 안이면 쏴요.']},
   {v:158,d:'11월 27일',t:'기술 힘 고르기',l:[
     '벼락 한 방에 다 쓰러지던 것을 고쳤어요.',
     '연쇄 벼락은 겨눈 짐승에 2~3, 둘레에는 1씩만 들어가요.',
@@ -2044,6 +2053,7 @@ function fixState(s){
   s.sjN=s.sjN|0;s.sjOrd=s.sjOrd==null?-1:s.sjOrd|0; /* v140 운종가 시전: 치른 큰 주문 수 · 마지막으로 치른 철 */
   s.posts=s.posts&&typeof s.posts==='object'&&!Array.isArray(s.posts)?s.posts:{};for(const k in s.posts)if(!POSTS[k])delete s.posts[k]; /* v137 세운 역참 */
   s.hh=s.hh&&typeof s.hh==='object'?s.hh:{hand:0,guard:0};s.hh.hand=s.hh.hand|0;s.hh.guard=s.hh.guard|0;
+  s.ghost=s.ghost&&typeof s.ghost==='object'?s.ghost:{max:0}; /* v159: 귀신골 */
   s.cls=CLS[s.cls]?s.cls:'';s.sk=s.sk&&typeof s.sk==='object'&&!Array.isArray(s.sk)?s.sk:{}; /* v154: 직업과 기술 */
   if(!Array.isArray(s.hh.gs))s.hh.gs=[];s.waeN=s.waeN|0;s.wae=s.wae&&typeof s.wae==='object'?s.wae:null; /* v153: 사병 명부 · 왜구 */
   s.debt=Math.max(0,Math.round(+s.debt||0));if(s.past==null)s.past=s.graze?1:0;
@@ -2439,7 +2449,7 @@ function innChat(g){float('"'+INN_SAY[(S.day+g.i*3+Math.floor(now/7))%INN_SAY.le
 // 상의원 일(S.star): 별좌가 된 사람이 하루에 한 번 한 좌랑에게 기물 재료를 대고 수고비와 공, 학식을 얻는다. 열두 번 지으면 재주로 양반 교지를 받을 수 있다
 const GUARD_LOOK={skin:'#e0b48c',hair:'#2e2a2a',shirt:'#22304f',bot:'#3a3a40',rib:'#c8392f',sex:'m',hat:'jeonrip'};
 let gTrail=[],gHit=0,gMen=[];
-const guardParty=()=>S&&S.hh&&S.hh.out&&scene!=='home'&&scene!=='sea'&&scene!=='cave'?guardsOn():0;
+const guardParty=()=>S&&S.hh&&S.hh.out&&scene!=='home'&&scene!=='sea'&&(scene!=='cave'||(cave&&cave.ghost))?guardsOn():0; /* v159: 귀신골에는 사병도 따라 들어온다 */
 /* v136(사용자 요청: 사병이 가까이 가서 싸우게 · 두고 가면 마을을 지키는 모습이 보이게 · 나처럼 걷게): 사병은 저마다 움직이는 사람이다(gMen, 저장하지 않는다).
    m 0 따라오기(자리는 내 발자국 줄이 정한다) · 1 싸우기(상대 곁으로 걸어가 창으로 친다) · 2 제자리로 돌아오기 · 3 집 앞 지키기(두고 다닐 때 마을에서, 가끔 둘레를 돈다).
    상대: 나를 덮치려는 사나운 짐승·산적, 내 화살에 맞아 다친 짐승(b.wound), 마을에 쳐들어온 산적(b.raid). 한 번 치면 기운 1, 2.6초에 한 번.
@@ -5024,6 +5034,7 @@ function renderTown(c){
   if(scene==='wild'&&wz===2){const X=SPRING_AT[0]*T,Y=SPRING_AT[1]*T;list.push([SPRING_AT[1],()=>blit(c,spr('spring',()=>bake(40,40,4,8,0,0,springArt)),X,Y)]);
     if(!mg&&Math.abs(SPRING_AT[0]-rx(P))+Math.abs(SPRING_AT[1]-ry(P))<3.2)labels.push(()=>label(c,X+16,Y-14,'약수터'));
     if(!mg&&Math.abs(ROYAL_IN[0]-rx(P))<4&&H-1-ry(P)<4)labels.push(()=>label(c,ROYAL_IN[0]*T+16,(H-2)*T+2,'궁궐로'))}
+  if(scene==='wild'&&!wz){const gx=GH_AT[0]*T+16,gy=GH_AT[1]*T+30;list.push([GH_AT[1],()=>{ghostGateArt2(c,gx,gy)}]);if(Math.abs(GH_AT[0]-rx(P))+Math.abs(GH_AT[1]-ry(P))<3.2)labels.push(()=>label(c,gx,gy-58,'귀신골'))} /* v159 */
   if(scene==='wild'&&!wz){const X=CAVE_AT[0]*T,Y=CAVE_AT[1]*T;list.push([CAVE_AT[1],()=>blit(c,spr('cavemouth',()=>bake(60,56,12,20,0,0,caveArt)),X,Y)]);if(Math.abs(CAVE_AT[0]-rx(P))+Math.abs(CAVE_AT[1]-ry(P))<3.2)labels.push(()=>label(c,X+16,Y-26,'동굴 입구'))
     // 들머리의 사냥 방과 깊은 산 가는 길목
     const hx=HUNT_AT[0]*T,hy=HUNT_AT[1]*T,news=huntNews();
@@ -5507,7 +5518,7 @@ function hud(){
   if(started)specSync(); /* 전문 갈래의 단계가 찼으면 올린다 */
   syncGuide();syncAsk();
   {const b=$('hSeason'),t=SEASONS[season()]+' '+((S.day-1)%7+1)+'일';if(b.textContent!==t)b.textContent=t;b.style.setProperty('--sc',SEASON_COL[season()])}
-  $('hDay').textContent=(S.weather==='rain'?(season()===3?'눈':'비'):S.wx==='drought'?'가뭄':S.wx==='wind'?'바람':S.wx==='rainbow'?'무지개':'맑음')+(isMarket()?' · 장날':'')+(fest()?' · '+fest().n:'')+(cupDay()?' · 사냥 대회':'')+(fairNow()&&S.seenRes?' · 사신 행차':'')+(scene==='cave'&&cave?' · 동굴 '+cave.floor+'층':'')+(scene==='sea'?' · 먼바다':'')+(scene==='resort'?' · 운종가':'')+(scene==='wild'&&wz?(wz===2?' · 금원':wz===3?' · 눈고개':wz===4?' · 서쪽 들판':wz===5?' · 국경 장터':wz===6?' · 바닷길 나루':' · 깊은 산'):'')+(mailNew()?' · 편지 '+mailNew():'');
+  $('hDay').textContent=(S.weather==='rain'?(season()===3?'눈':'비'):S.wx==='drought'?'가뭄':S.wx==='wind'?'바람':S.wx==='rainbow'?'무지개':'맑음')+(isMarket()?' · 장날':'')+(fest()?' · '+fest().n:'')+(cupDay()?' · 사냥 대회':'')+(fairNow()&&S.seenRes?' · 사신 행차':'')+(scene==='cave'&&cave?(cave.ghost?' · 귀신골 ':' · 동굴 ')+cave.floor+'층':'')+(scene==='sea'?' · 먼바다':'')+(scene==='resort'?' · 운종가':'')+(scene==='wild'&&wz?(wz===2?' · 금원':wz===3?' · 눈고개':wz===4?' · 서쪽 들판':wz===5?' · 국경 장터':wz===6?' · 바닷길 나루':' · 깊은 산'):'')+(mailNew()?' · 편지 '+mailNew():'');
   const m=Math.floor(S.min);$('hTime').textContent=String(Math.floor(m/60)).padStart(2,'0')+':'+String(Math.floor(m%60/10)*10).padStart(2,'0');
   $('hCoin').textContent=S.coins.toLocaleString('ko-KR')+'냥';
   {const b=$('hGoal'),G=S.goal;if(G&&Array.isArray(G.list)){const got=G.list.filter(q=>q.got).length,rdy=G.list.some(q=>!q.got&&goalDone(q)),t='목표 '+got+'/'+G.list.length+(rdy?' !':'');b.hidden=false;if(b.textContent!==t)b.textContent=t;b.classList.toggle('on',rdy)}else b.hidden=true} /* v141 철마다 목표 */
@@ -5913,6 +5924,7 @@ function act(tg,x,y){
   case 'beast':startHunt(tg.b);break;
   case 'peer':peerMenu(tg.p);break;
   case 'cave':caveTalk();break;
+  case 'ghole':ghostTalk();break;
   case 'pasture':grazeTalk();break;
   case 'trader':if(!asleep())traderTalk(tg.k);break;
   case 'dok':dokTalk();break;
@@ -5989,7 +6001,7 @@ function nearNpc(){
   return best;
 }
 function nearBeast(){
-  if(scene!=='wild')return null;let best=null,bd=8;
+  if(scene==='home')return null;let best=null,bd=bowRange()+4; /* v159: 숲만이 아니라 어디서든 가까운 짐승을 고른다 */
   for(const b of beasts){const d=Math.abs(b.x-P.x)+Math.abs(b.y-P.y);if(d<bd){bd=d;best=b}}
   return best;
 }
@@ -6821,7 +6833,7 @@ function spawnWild(){
 }
 function enterWild(){
   if(scene!=='town')return;
-  scene='wild';useMap(WILD);townBeasts=beasts;S.pickTown=S.pickups;S.pickups=(S.wpick||wildPickups()).filter(p=>WILD.tile[p.y]&&WILD.tile[p.y][p.x]!==13);S.away='wild'; /* 벼랑이 된 자리에 남아 있던 것은 치운다 */
+  scene='wild';useMap(WILD);townBeasts=beasts;S.pickTown=S.pickups;S.pickups=(S.wpick||wildPickups()).filter(p=>WILD.tile[p.y]&&WILD.tile[p.y][p.x]!==13&&!WILD.objAt[p.y][p.x]);S.away='wild'; /* 벼랑이 된 자리에 남아 있던 것은 치운다 */
   spawnWild();buildGround();mg=null;fishing=null;drops=[];warp(1,11,[1,0]);syncPlace();
   toast('사냥터에 들어왔어요. 서쪽 길로 나가면 마을이에요');
   tip('tiger','범을 조심해요. 가까이 붙으면 기력을 잃어요. 멀리서 여러 번 맞혀야 잡혀요');
@@ -8257,6 +8269,78 @@ function workUse(k){
   if(k==='sot'){toast(S.wNext==='rain'?'솟대의 새가 고개를 숙였어요. 내일은 '+(seasonOf(S.day+1)===3?'눈이':'비가')+' 올 것 같아요':'솟대의 새가 하늘을 봐요. 내일은 맑을 것 같아요');return}
   toast(d.n+' · '+d.perk);
 }
+/* ───────── 귀신골(v159) ─────────
+   사용자 요청: 레벨에 따라 올라갈 수 있는 던전 · 귀신이나 저승사자 같은 조선의 것들.
+   사냥터 숲 남서쪽의 무너진 굴 어귀(GH_AT)에서 들어간다. 동굴과 같은 장면(scene 'cave')을 쓰되 cave.ghost가 붙는다: 바위 대신 귀신이 있고,
+   그 층의 귀신을 모두 물리치면 내려가는 사다리가 드러난다(ghostClear). 층마다 들어갈 수 있는 레벨이 있다(GH_LV: 1층 8, 한 층에 2씩 → 10층 26).
+   처음 물리친 층에는 상금(GH_PRIZE). 하루에 한 번 물리친 층은 그날 다시 들어가도 비어 있다(S.ghost.done) → 경험치가 끝없이 불어나지 않는다.
+   귀신은 BEASTS에 얹는다(deep이라 숲·마을에는 저절로 나오지 않는다): 도깨비불 8 · 달걀귀신 10 · 처녀귀신 13 · 몽달귀신 16 · 구미호 19 · 장산범 22 · 저승사자 25(10층의 우두머리).
+   사병은 귀신골에도 따라 들어온다(guardParty). 기력이 다하면 굴 밖으로 물러난다(updFight) */
+const GH_MAX=10,GH_LV=f=>8+(f-1)*2,GH_PRIZE={1:300,3:900,5:2000,7:3500,10:7000};
+Object.assign(BEASTS,{
+  wisp:{n:'도깨비불',lv:8,hp:2,loot:[],s:[0,1,2,3],xp:26,arms:3,aim:[3.4,24,9,2.6],bite:8,hunt:7,sp:2.9,deep:1,ghost:1},
+  eggghost:{n:'달걀귀신',lv:10,hp:3,loot:[],s:[0,1,2,3],xp:34,arms:4,aim:[2.8,22,8,1.9],bite:11,hunt:7,sp:2.4,deep:1,ghost:1},
+  maiden:{n:'처녀귀신',lv:13,hp:5,loot:[],s:[0,1,2,3],xp:52,arms:6,aim:[3,23,8,2.1],bite:15,hunt:8,sp:2.7,deep:1,ghost:1},
+  mongdal:{n:'몽달귀신',lv:16,hp:7,loot:[],s:[0,1,2,3],xp:76,arms:8,aim:[2.9,24,8,2],bite:20,hunt:8,sp:2.6,deep:1,ghost:1},
+  gumiho:{n:'구미호',lv:19,hp:9,loot:['foxfur','foxfur'],s:[0,1,2,3],xp:120,arms:10,aim:[3.3,25,8,2.5],bite:26,hunt:9,sp:3.1,deep:1,big:1,ghost:1},
+  jangsan:{n:'장산범',lv:22,hp:12,loot:['tigerskin'],s:[0,1,2,3],xp:170,arms:12,aim:[3,25,8,2.1],bite:34,hunt:9,sp:3,deep:1,big:1,ghost:1},
+  reaper:{n:'저승사자',lv:25,hp:16,loot:['jade','jade'],s:[0,1,2,3],xp:260,arms:14,aim:[2.8,24,8,1.8],bite:40,hunt:10,sp:2.8,deep:1,big:1,ghost:1}});
+const GH_PLAN=f=>[['wisp','wisp','wisp'],['wisp','wisp','eggghost','eggghost'],['eggghost','eggghost','eggghost','maiden'],['maiden','maiden','wisp','wisp','eggghost'],['gumiho','maiden','maiden','mongdal'],
+  ['mongdal','mongdal','mongdal','eggghost','eggghost'],['gumiho','mongdal','mongdal','maiden','maiden'],['jangsan','gumiho','maiden','maiden','mongdal'],['jangsan','jangsan','mongdal','mongdal','gumiho'],['reaper','mongdal','mongdal','maiden','maiden']][Math.min(GH_MAX,f)-1];
+const ghDone=f=>!!(S.ghost.day===S.day&&S.ghost.done&&S.ghost.done.includes(f));
+function genGhost(f){
+  const rng=mulberry(S.day*173+f*1291+5),tile=[],objAt=[],ROCKS=[],X0=8,X1=27,Y0=6,Y1=19;
+  for(let y=0;y<H;y++){tile.push(new Array(W).fill(9));objAt.push(new Array(W).fill(null))}
+  for(let y=Y0;y<=Y1;y++)for(let x=X0;x<=X1;x++){const ex=x===X0||x===X1,ey=y===Y0||y===Y1;if((ex&&ey)||((ex||ey)&&rng()<.45))continue;tile[y][x]=10}
+  const sy=Math.floor((Y0+Y1)/2),sp=[X0+1,sy],up=[X0,sy];
+  tile[sy][X0]=9;objAt[sy][X0]={t:'ladder',x:X0,y:sy};
+  for(let dy=-1;dy<=1;dy++)for(let dx=0;dx<=1;dx++)tile[sy+dy][X0+1+dx]=10;
+  const cells=[];for(let y=Y0+1;y<Y1;y++)for(let x=X0+4;x<X1;x++)if(tile[y][x]===10)cells.push([x,y]);
+  for(let i=cells.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[cells[i],cells[j]]=[cells[j],cells[i]]}
+  const nR=Math.floor(cells.length*.07);for(let i=0;i<nR;i++){const [x,y]=cells[i],o={t:'crock',x,y,sh:0,ore:null};ROCKS.push(o);objAt[y][x]=o} /* 드문드문 놓인 바위(몸을 숨길 자리) */
+  const open=cells.slice(nR),mobs=[];
+  if(!ghDone(f))GH_PLAN(f).forEach((k,i)=>{const q=open[i];if(q)mobs.push(mkBeast(k,q[0],q[1]))});
+  const far=open.filter(q=>q[0]>X0+12),h=(far.length?far:open)[Math.floor(rng()*(far.length||open.length))];
+  cave={floor:f,ghost:1,map:{tile,objAt,TREES:[],ROCKS,GRASS:[],SAND:[]},sp,up,hid:[h[0],h[1]],found:false,glint:null,mobs};
+}
+function ghostTalk(){
+  const lv=S.level,top=Math.min(GH_MAX,(S.ghost.max|0)+1),fs=[1];if(top>1)fs.push(top);if(top>4&&!fs.includes(4))fs.splice(1,0,4);
+  if(lv<GH_LV(1)){dialog({who:'귀신골 어귀',text:'음산한 바람이 새어 나오는 무너진 굴이에요.\n금줄이 쳐져 있고, 안에서 푸른 불이 어른거려요.\n(레벨 '+GH_LV(1)+'부터 들어갈 수 있어요)'});return}
+  dialog({who:'귀신골 어귀',role:'가장 깊이 물리친 곳 '+(S.ghost.max|0)+'층',text:'귀신이 나온다는 옛 굴이에요.\n· 층의 귀신을 모두 물리치면 내려가는 길이 열려요\n· 내려갈수록 세요 · 층마다 들어갈 레벨이 있어요\n· 기력이 다하면 밖으로 물러나요',
+    choices:fs.map(f=>[f+'층 (레벨 '+GH_LV(f)+')',()=>{if(S.level<GH_LV(f)){toast('레벨 '+GH_LV(f)+'부터 내려갈 수 있어요');return}enterGhost(f)}]).concat([['그만',null]])});
+}
+function enterGhost(f){
+  const from=scene;if(from!=='wild'&&from!=='cave')return;
+  if(from==='wild'){wildBeasts=beasts;S.wpick=S.pickups;S.pickups=[]}
+  scene='cave';genGhost(f);useMap(cave.map);beasts=cave.mobs;buildGround();mg=null;fishing=null;drops=[];skQ=[];warp(cave.sp[0],cave.sp[1],[1,0]);syncPlace();
+  S.min=Math.min(1380,S.min+(from==='cave'?10:5));
+  if(!beasts.length)ghostLadder();
+  toast('귀신골 '+f+'층 · '+(beasts.length?'귀신 '+beasts.length+'마리':'오늘은 이미 물리친 층이에요'));hud();touch();
+  tip('ghost','귀신골: 층의 귀신을 모두 물리치면 내려가는 사다리가 드러나요. 왼쪽 사다리로는 밖으로 나가요');
+}
+function ghostLadder(){
+  if(!cave||!cave.ghost||cave.found)return;cave.found=true;const m=cave.map,q=cave.hid;
+  if(cave.floor<GH_MAX){const o=m.objAt[q[1]][q[0]];if(o&&o.t==='crock')m.ROCKS.splice(m.ROCKS.indexOf(o),1);m.objAt[q[1]][q[0]]={t:'ladder',down:1,x:q[0],y:q[1]}}
+}
+function ghostKill(){
+  if(!cave||!cave.ghost||beasts.length)return;const f=cave.floor;
+  if(S.ghost.day!==S.day){S.ghost.day=S.day;S.ghost.done=[]}if(!S.ghost.done.includes(f))S.ghost.done.push(f);
+  ghostLadder();sfx('level');
+  if(f>(S.ghost.max|0)){S.ghost.max=f;const pz=GH_PRIZE[f];if(pz)addCoins(pz);toast('귀신골 '+f+'층을 처음 물리쳤어요!'+(pz?' · 상금 '+won(pz):'')+(f>=GH_MAX?' · 저승사자가 물러갔어요':''))}
+  else float(f<GH_MAX?'내려가는 길이 열렸어요':'귀신골이 조용해졌어요');
+  saveAll();
+}
+function ghostGateArt(c){
+  rr(c,-22,-34,9,36,2,'#6a6f78');rr(c,13,-34,9,36,2,'#5a5f68');poly(c,[-26,-34,0,-48,26,-34,22,-30,-22,-30],'#4a4f58'); /* 무너진 돌문 */
+  rr(c,-13,-30,26,32,3,'#14161c');poly(c,[-13,2,-6,-6,2,2],'#2a2d36');poly(c,[4,2,10,-4,13,2],'#2a2d36'); /* 어두운 굴과 굴러 내린 돌 */
+  c.strokeStyle='#c9b98a';c.lineWidth=1.6;c.beginPath();c.moveTo(-20,-26);c.quadraticCurveTo(0,-20,20,-26);c.stroke();
+  for(const x of [-12,-4,4,12])poly(c,[x-2,-23,x+2,-23,x+1,-15,x-1,-15],x%8?'#f6f1e6':'#c8392f'); /* 금줄의 종이 */
+}
+function ghostGateArt2(c,x,y){c.save();c.translate(x,y);ghostGateArt(c);c.restore();ghostFlame(c,x-27,y-8,.7);ghostFlame(c,x+28,y-10,.6)}
+function ghostFlame(c,x,y,s){
+  const f=Math.sin(now*7+x)*1.5;c.globalAlpha=.3;circ(c,x,y-6,9*s,'#7fd0ff');c.globalAlpha=1;
+  poly(c,[x-5*s,y,x-3*s,y-9*s,x+f,y-17*s,x+3*s,y-9*s,x+5*s,y,x,y+3*s],'#5fb8f0');poly(c,[x-2.5*s,y,x+f*.5,y-10*s,x+2.5*s,y,x,y+2*s],'#dff4ff');
+}
 // ───────── 동굴 ─────────
 // 지금 있는 층(cave)은 저장하지 않는다. 그날과 층 번호로 씨앗을 삼아 만들기 때문에, 같은 날 같은 층은 같은 모양이고 하루가 지나면 바위가 다시 찬다
 let cave=null;
@@ -8310,8 +8394,8 @@ function enterCave(f){
 }
 function leaveCave(quiet){
   if(scene!=='cave')return;
-  scene='wild';cave=null;useMap(WILD);beasts=wildBeasts||[];S.pickups=S.wpick||[];
-  buildGround();mg=null;fishing=null;drops=[];if(!quiet){warp(CAVE_AT[0],CAVE_AT[1]+1,[0,1]);toast('동굴 밖으로 나왔어요')}syncPlace();hud();
+  const gh=!!(cave&&cave.ghost);scene='wild';cave=null;useMap(WILD);beasts=wildBeasts||[];S.pickups=S.wpick||[];
+  buildGround();mg=null;fishing=null;drops=[];if(!quiet){if(gh)warp(GH_AT[0],GH_AT[1]+1,[0,1]);else warp(CAVE_AT[0],CAVE_AT[1]+1,[0,1]);toast(gh?'귀신골 밖으로 나왔어요':'동굴 밖으로 나왔어요')}syncPlace();hud();
 }
 // 바위를 치웠을 때: 그 밑에 사다리가 숨어 있었으면 드러난다
 function clearRock(o){
@@ -8428,11 +8512,15 @@ function veinEnd(m){
   touch();
 }
 function ladderAct(o){
+  if(cave.ghost){ /* v159 귀신골 */
+    if(!o.down){dialog({who:'올라가는 사다리',text:'귀신골 '+cave.floor+'층이에요. 밖으로 나갈까요?',choices:[['밖으로 나가기',()=>leaveCave()],['더 있을게요',null]]});return}
+    if(S.level<GH_LV(cave.floor+1)){toast('레벨 '+GH_LV(cave.floor+1)+'부터 내려갈 수 있어요');return}
+    enterGhost(cave.floor+1);return}
   if(!o.down){dialog({who:'올라가는 사다리',text:'동굴 '+cave.floor+'층이에요. 밖으로 나갈까요?',choices:[['밖으로 나가기',()=>leaveCave()],['더 캘게요',null]]});return}
   enterCave(cave.floor+1);
 }
 // 같이 하기에서 서로 보이는 곳의 번호: 동굴은 층마다 다른 번호를 쓴다
-const sceneNo=()=>scene==='cave'&&cave?100+cave.floor:scene==='wild'&&wz?(wz===2?7:wz===3?9:wz===5?11:wz===6?12:6):scene==='home'&&S.inQ?(S.inQ>=2?11+S.inQ:8):SCENE_NO[scene]||0; /* 깊은 산은 6, 금원은 7, 궁궐 처소는 8, 눈고개는 9 */
+const sceneNo=()=>scene==='cave'&&cave?(cave.ghost?200:100)+cave.floor:scene==='wild'&&wz?(wz===2?7:wz===3?9:wz===5?11:wz===6?12:6):scene==='home'&&S.inQ?(S.inQ>=2?11+S.inQ:8):SCENE_NO[scene]||0; /* 깊은 산은 6, 금원은 7, 궁궐 처소는 8, 눈고개는 9 */
 // ───────── 명절 ─────────
 const festOf=day=>day>1?FESTS.find(f=>f.s===seasonOf(day)&&f.d===(day-1)%7+1)||null:null; // 첫날(1일째)은 설날로 치지 않는다
 const fest=()=>S?festOf(S.day):null;
@@ -9310,10 +9398,10 @@ const GUARD_MAX=.6; /* 장비가 짐승의 공격을 덜어 주는 한도(v76: 0
 const SWING={sword:.9,spear:1,axe:1.3,dagger:.7,staff:1,fist:.8},shotGap=()=>isCls('dosa')?1.2:isCls('hyeop')?.85:isCls('gung')?.95:1.2;
 let skCd={},skT={},skQ=[],shakeT=0,skPadT=0;
 const skOn=id=>now<(skT[id]||0),skDesk=window.matchMedia?window.matchMedia('(hover:hover) and (pointer:fine) and (min-width:700px)'):{matches:false};
-function fightLine(b){ /* 쏠 수 있나: 일직선이고 사거리 안이며 사이가 트여 있다 */
-  const dx=b.x-P.x,dy=b.y-P.y,ad=Math.abs(dx)+Math.abs(dy);if((dx===0)===(dy===0)||ad>bowRange())return null;
-  const ux=Math.sign(dx),uy=Math.sign(dy);for(let i=1;i<ad;i++){const x=P.x+ux*i,y=P.y+uy*i;if(objAt[y][x]||tile[y][x]===6||npcOn(x,y)||herdOn(x,y)||beastOn(x,y))return null}
-  return[ux,uy];
+function fightLine(b){ /* 쏠 수 있나. v159(사용자 요청: 굳이 일직선으로 안 겨눠도 되게): 사거리 안이면 비스듬히도 쏜다. 사이에 울타리·굴 벽·궁궐 담이 있으면 못 쏜다 */
+  const dx=b.x-P.x,dy=b.y-P.y,n=Math.max(Math.abs(dx),Math.abs(dy));if(n<1||n>bowRange())return null;
+  for(let i=1;i<n;i++){const x=Math.round(P.x+dx*i/n),y=Math.round(P.y+dy*i/n),t=tile[y]?tile[y][x]:6;if(t===6||t===8||t===9)return null}
+  return Math.abs(dx)>=Math.abs(dy)?[Math.sign(dx),0]:[0,Math.sign(dy)];
 }
 const fightNear=b=>{const ad=Math.abs(b.x-P.x)+Math.abs(b.y-P.y);return ad>=1&&ad<=meleeReach()};
 const fightNew=b=>{if(!b.mhp)b.mhp=Math.max(b.hp,BEASTS[b.k].hp);return{kind:'hunt',b,o:b,cd:.12,sw:0,far:0,i:0,pb:0,mel:'',note:''}};
@@ -9328,7 +9416,7 @@ function startHunt(b){
   if(mg&&mg.kind==='hunt'){if(mg.b===b){fightPress(mg);return}mg=null}
   if(!useEn(2))return;
   b.bite=Math.max(b.bite||0,1);mg=fightNew(b);P.path=[];P.after=null; /* 첫 덮치기 전에 숨 돌릴 틈을 준다 */
-  tip('fight','공격을 한 번 누르면 싸움이 시작돼요. 붙으면 무기를 휘두르고, 떨어져 일직선이면 쏴요. 걸어서 피하고, 기술 단추(1·2·3)로 몰아쳐요');
+  tip('fight','공격을 한 번 누르면 싸움이 시작돼요. 붙으면 무기를 휘두르고, 떨어져 있으면 쏴요. 걸어서 피하고, 기술 단추(1·2·3)로 몰아쳐요');
 }
 function startMelee(b){startHunt(b)}
 function fightPress(m){if(!m.pb){m.pb=1;m.cd-=.22}} /* 공격을 더 누르면 다음 한 번이 조금 빨리 나간다 */
@@ -9353,11 +9441,12 @@ function fightShot(m){
 }
 function updFight(m,dt){
   const b=m.b;if(!beasts.includes(b)||b.hp<=0){mg=null;return}
+  if(S.en<=0){mg=null;if(scene==='cave'&&cave&&cave.ghost){leaveCave();toast('기력이 다해 귀신골 밖으로 물러났어요')}else float('기력이 다했어요');return} /* v159: 기력이 다하면 싸움을 멈춘다 */
   if(m.sw>0)m.sw-=dt;m.cd-=dt;
   if(fightNear(b)){const dx=b.x-P.x,dy=b.y-P.y;m.mel=meleeKind();m.far=0;m.note='';if(P.t>=1){if(!dx||!dy)P.dir=[Math.sign(dx),Math.sign(dy)];if(m.cd<=0)fightSwing(m)}return}
   m.mel='';const u=fightLine(b);
   if(u){m.far=0;m.note='';if(P.t>=1){P.dir=u;if(m.cd<=0)fightShot(m)}return}
-  m.far+=dt;m.note='일직선에 서거나 붙어요';if(m.far>3.5||Math.abs(b.x-P.x)+Math.abs(b.y-P.y)>bowRange()+5)mg=null;
+  m.far+=dt;m.note='더 가까이 가요';if(m.far>3.5||Math.abs(b.x-P.x)+Math.abs(b.y-P.y)>bowRange()+5)mg=null;
 }
 /* 누르는 기술: 갈래의 둘째 기술이 그 갈래의 단추가 된다(skSlots). need r=겨눌 짐승(붙어 있거나 일직선) · m=붙은 짐승 */
 const ACTIVE={g_crit:{n:'급소',cd:9,need:'r'},g_twin:{n:'연사',cd:9,need:'r'},g_fire:{n:'불화살',cd:10,need:'r'},m_chain:{n:'연격',cd:8,need:'m'},m_wide:{n:'버티기',cd:16},m_roar:{n:'기합',cd:13},
@@ -9392,7 +9481,7 @@ function skUse(i){
   if(!l){float('아직 안 배운 기술',px,py-40,'#cfd6dc');return}
   if(now<(skCd[id]||0))return;
   let b=null;
-  if(A.need){b=skTarget();if(!b||(A.need==='m'?!fightNear(b):!fightNear(b)&&!fightLine(b))){float(A.need==='m'?'붙어야 써요':'일직선으로 겨눠요',px,py-40,'#cfd6dc');return}}
+  if(A.need){b=skTarget();if(!b||(A.need==='m'?!fightNear(b):!fightNear(b)&&!fightLine(b))){float(A.need==='m'?'붙어야 써요':'더 가까이 가요',px,py-40,'#cfd6dc');return}}
   if(id==='d_heal'){if(S.healDay!==S.day){S.healDay=S.day;S.healN=0}if((S.healN|0)>=3){float('오늘은 더 못 써요',px,py-40,'#cfd6dc');return}if(S.en>=maxEn())return;S.healN=(S.healN|0)+1}
   else if(!useEn(2))return;
   if(b){if(!(mg&&mg.kind==='hunt'&&mg.b===b)){mg=fightNew(b);mg.cd=.5;P.path=[];P.after=null}const dx=b.x-P.x,dy=b.y-P.y;if(!dx||!dy)P.dir=[Math.sign(dx),Math.sign(dy)]}
@@ -9464,6 +9553,7 @@ function huntKill(b,melee){
   if(b.wae)waeKill();
   else if(D.man&&b.raid){const R=S.raid;if(R&&!R.won){R.left=Math.max(0,R.left-1);if(!R.left)raidWon()}}
   else if(D.man){if(b.k==='chief')S.chiefUp=0;else if(b.k==='raider')S.snowBand=Math.max(0,(S.snowBand|0)-1);else if(b.k==='outlaw'){S.outlawDead=S.day;S.outlawN=(S.outlawN|0)+1;setTimeout(()=>{if(S)toast('현상범 '+outlawName()+'을 붙잡았어요! 현상금을 받았어요')},1500)}else S.bandN=Math.max(0,(S.bandN|0)-1)}
+  else if(scene==='cave'){ghostKill()}
   else if(b.k==='kboar'){if(S.boss)S.boss.dead=1}
   else if(b.k==='imugi'){S.imugiDead=S.day;if(scene==='wild'&&wz)S.deepN=Math.max(0,S.deepN)}
   else if(scene==='wild'){if(wz===2){if(b.k==='wdeer')S.wdDead=S.day;else S.royN=Math.max(0,S.royN-1)}else if(wz===3){if(b.k==='wtiger')S.wtDead=S.day;else S.snowN=Math.max(0,S.snowN-1)}else if(wz)S.deepN=Math.max(0,S.deepN-1);else S.wildN=Math.max(0,S.wildN-1)}else S.wild=Math.max(0,S.wild-1);
@@ -9484,17 +9574,10 @@ function huntKill(b,melee){
   tip('loot','떨어진 전리품은 그 위를 지나가면 주워요');gearDrop(b.k);if(scene==='wild'&&!D.man)planFind(planPlace(),.06,'짐승이 헤집은 덤불에서');touch();
 }
 function huntClick(b){
-  /* 바로 곁(창은 두 칸)에 일직선으로 붙어 있으면 물러나지 않고 그 자리에서 맞붙는다 */
-  {const dx=b.x-P.x,dy=b.y-P.y,d=Math.abs(dx)+Math.abs(dy);if((dx===0||dy===0)&&d>=1&&d<=meleeReach()&&P.t>=1){P.dir=[Math.sign(dx),Math.sign(dy)];if(beastInLine()===b){startHunt(b);return}}}
-  b.calm=8;
-  const spot=(a,r)=>{
-    if(a!==b.x&&r!==b.y)return false;
-    const d=Math.abs(a-b.x)+Math.abs(r-b.y);if(d<3||d>bowRange())return false;
-    const sx=Math.sign(b.x-a),sy=Math.sign(b.y-r);
-    for(let i=1;i<d;i++){const x=a+sx*i,y=r+sy*i;if(objAt[y][x]||tile[y][x]===6)return false}
-    return true;
-  };
-  if(!setPath(spot,()=>{P.dir=[Math.sign(b.x-P.x),Math.sign(b.y-P.y)];if(beastInLine()===b)startHunt(b);else toast('짐승이 자리를 옮겼어요. 다시 겨눠 봐요')}))toast('쏠 자리가 없어요. 서너 칸 떨어진 일직선 자리가 필요해요');
+  /* v159: 사거리 안이면 그 자리에서 바로 싸움을 건다. 멀면 사거리 안으로 걸어가서 건다(일직선 자리를 찾지 않는다) */
+  if(fightNear(b)||fightLine(b)){startHunt(b);return}
+  b.calm=8;const R=bowRange();
+  if(!setPath((a,r)=>{const d=Math.max(Math.abs(a-b.x),Math.abs(r-b.y));return d>=2&&d<=R-1},()=>{if(fightNear(b)||fightLine(b))startHunt(b)}))toast('다가갈 길이 없어요');
 }
 function drawBeast(c,b){
   const hk=b.hit>0&&b.kb?3:0,mv=b.t<1,gx=(rx(b)+.5)*T+(hk?b.kb[0]*hk:0),gy=(ry(b)+.9)*T+(hk?b.kb[1]*hk:0),y=gy-(mv?Math.abs(Math.sin(now*14))*3:0); /* v156: 맞으면 밀리며 번쩍인다 */
@@ -9569,6 +9652,19 @@ function beastArt(c,k){
     circ(c,12,-13,7,a);poly(c,[7,-19,9,-24,11,-18],a);poly(c,[13,-19,16,-24,17,-17],a);ell(c,15,-10,3.5,3,'#fbf6ea');circ(c,12,-14,1.2,w?'#3f8fc4':'#1f1612');circ(c,17,-11,1,'#1f1612');
     if(w){rr(c,9,-20,1.6,4,.8,m);rr(c,12,-20.5,1.6,4,.8,m)}
     c.strokeStyle=a;c.lineWidth=3;c.beginPath();c.moveTo(-14,-13);c.quadraticCurveTo(-22,-14,-20,-23);c.stroke();circ(c,-20,-23,1.8,m);break}
+  /* v159 귀신골의 것들 */
+  case 'wisp':c.globalAlpha=.3;circ(c,0,-14,13,'#7fd0ff');c.globalAlpha=1;poly(c,[-7,-6,-4,-18,0,-30,4,-18,7,-6,0,-2],'#5fb8f0');poly(c,[-3.5,-7,0,-20,3.5,-7,0,-4],'#dff4ff');circ(c,-2,-11,1,'#1f2a44');circ(c,2,-11,1,'#1f2a44');break;
+  case 'eggghost':poly(c,[-8,-2,-9,-22,9,-22,8,-2,4,-5,0,-1,-4,-5],'#f3f0e8');ell(c,0,-27,6.5,8,'#f6f1e6');poly(c,[-7,-30,-8,-16,-5,-22,-5,-33,5,-33,5,-22,8,-16,7,-30,0,-36],'#1f1a18');break;
+  case 'maiden':poly(c,[-9,-2,-9,-24,9,-24,9,-2,5,-6,0,-1,-5,-6],'#f6f4ee');rr(c,-2,-22,4,12,1,'#c8392f');ell(c,0,-29,6,7,'#e9e4dc');poly(c,[-8,-33,-9,-10,-5,-14,-4,-30,4,-30,5,-14,9,-10,8,-33,0,-38],'#15120f');
+    circ(c,-2.2,-29,1,'#1f1612');circ(c,2.2,-29,1,'#1f1612');rr(c,-1.5,-25.5,3,1.2,.6,'#c8392f');break;
+  case 'mongdal':poly(c,[-9,-2,-10,-25,10,-25,9,-2,4,-6,0,-1,-4,-6],'#5a6478');rr(c,-10,-16,20,2.5,1,'#3a4252');ell(c,0,-30,6,7,'#cfd6dc');poly(c,[-6,-35,-7,-28,0,-33,7,-28,6,-35,0,-38],'#15120f');
+    circ(c,-2.2,-30,1.1,'#d9412e');circ(c,2.2,-30,1.1,'#d9412e');line(c,-2,-26,2,-26,'#3a2a22',1.2);break;
+  case 'gumiho':c.scale(1.15,1.15);for(let i=0;i<5;i++){c.strokeStyle=i%2?'#e9e4dc':'#ffffff';c.lineWidth=4;c.lineCap='round';c.beginPath();c.moveTo(-9,-10);c.quadraticCurveTo(-20-i*1.5,-12-i*4,-17+i*2,-26-i*2.5);c.stroke();c.lineCap='butt'}
+    for(const lx of [-7,5])rr(c,lx,-6,2.6,6,1,'#d9d4c8');ell(c,-1,-9,10,5.5,'#f7f4ec');circ(c,10,-12,5.5,'#f7f4ec');poly(c,[6,-16,7,-23,10,-17],'#d9d4c8');poly(c,[11,-17,14,-23,15,-15],'#d9d4c8');poly(c,[12,-12,19,-9.5,12,-8],'#ffffff');circ(c,18.5,-9.6,1.2,'#1f1612');circ(c,11,-13,1.2,'#d9412e');break;
+  case 'jangsan':c.scale(1.3,1.3);rr(c,-11,-6,3.5,6,1,'#d9d4c8');rr(c,6,-6,3.5,6,1,'#d9d4c8');ell(c,-1,-12,14,8,'#f4f1ea');for(let i=0;i<9;i++)line(c,-12+i*3,-16,-13+i*3,-3+(i%2)*2,'#e2ddd0',1.6);
+    circ(c,12,-13,7,'#f4f1ea');for(let i=0;i<5;i++)line(c,7+i*2.5,-18,6+i*2.5,-7,'#e2ddd0',1.4);circ(c,11,-14,1.3,'#d9412e');circ(c,15,-14,1.3,'#d9412e');poly(c,[10,-9,13,-5,16,-9],'#1f1612');poly(c,[11,-9,12,-6,13,-9],'#ffffff');break;
+  case 'reaper':c.scale(1.1,1.1);poly(c,[-10,0,-9,-26,9,-26,10,0],'#15151a');poly(c,[-9,-26,0,-20,9,-26],'#2a2a32');rr(c,-1,-24,2,22,1,'#3a3a44');ell(c,0,-31,5.5,6.5,'#e9e9e4');circ(c,-2,-31,1,'#15151a');circ(c,2,-31,1,'#15151a');line(c,-2,-27.5,2,-27.5,'#6a2a2a',1.1);
+    ell(c,0,-36,13,3,'#0f0f13');rr(c,-5,-45,10,9,2,'#0f0f13');rr(c,-5,-38,10,1.5,.5,'#3a3a44');rr(c,10,-22,7,10,1,'#f3ead6');line(c,11.5,-19,15.5,-19,'#3a2a22',1);line(c,11.5,-16,15.5,-16,'#3a2a22',1);break;
   /* v155의 짐승들 */
   case 'squirrel':ell(c,-1,-6,6,4.5,'#4a3a34');c.strokeStyle='#3a2a26';c.lineWidth=5;c.lineCap='round';c.beginPath();c.moveTo(-6,-6);c.quadraticCurveTo(-14,-8,-11,-18);c.stroke();c.lineCap='butt';
     circ(c,5,-10,3.8,'#4a3a34');poly(c,[3,-13,3.5,-18,5.5,-13.5],'#3a2a26');poly(c,[5.5,-13.5,7.5,-18,8,-13],'#3a2a26');ell(c,1,-4.5,3.5,2,'#e9e0d0');circ(c,6.5,-10.5,.9,'#1f1612');break;
@@ -13378,7 +13474,7 @@ $('hSeason').addEventListener('click',()=>{if(started&&!sleeping&&!busy())openSe
 $('hDebt').addEventListener('click',()=>{if(started&&!sleeping&&!busy())openDebt()});
 $('hGoal').addEventListener('click',()=>{if(started&&!sleeping&&!busy())openGoals()});
 // 행동 단추의 글자: 지금 누르면 무엇을 하는지 보여 준다. 할 것이 없으면 "행동"이라 쓰인 채 흐려진다
-const ACT_TXT={patron:'말 걸기',feast:'먹기',land:'땅 사기',npc:'말 걸기',rock:'캐기',beast:'사냥',peer:'인사',hboard:'사냥 방',sgate:'작은 문',spring:'약수',yard:'살피기',cave:'들어\n가기',crock:'깨기',ladder:'사다리',deco:'살피기',board:'알림판',soil:'밭일',till:'밭 갈기',stock:'돌보기',kid:'돌보기',
+const ACT_TXT={patron:'말 걸기',feast:'먹기',land:'땅 사기',npc:'말 걸기',rock:'캐기',beast:'사냥',peer:'인사',hboard:'사냥 방',sgate:'작은 문',spring:'약수',yard:'살피기',cave:'들어\n가기',ghole:'귀신골',crock:'깨기',ladder:'사다리',deco:'살피기',board:'알림판',soil:'밭일',till:'밭 갈기',stock:'돌보기',kid:'돌보기',
   pen:'우리',forge:'대장간',stall:'장터',fest:'잔치',shoal:'낚시',bed:'잠자기'};
 function actLabel(){
   if(mg)return mg.kind==='hunt'?'공격':mg.kind==='forge'||mg.kind==='build'?'두드\n리기':mg.kind==='kindle'?'연타!':mg.kind==='pee'?'쉬…':mg.kind==='plane'?'밀기':mg.kind==='pour'?'따르기':mg.kind==='pound'?'치기':mg.kind==='haul'?'당기기':mg.kind==='jegi'?'차기':mg.kind==='tuho'?'던지기':mg.kind==='rope'?'버티기':mg.kind==='dance'?'얼쑤!':mg.kind==='ssi'?(mg.ph?'버티기':'밀기!'):mg.kind==='boat'?'노 젓기':mg.kind==='drill'?'치기':'지금!';
