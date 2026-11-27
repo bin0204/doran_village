@@ -1483,6 +1483,9 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:173,d:'11월 27일',t:'마을 지키는 사병',l:[
+    '마을에 둔 사병이 돌아다니는 레벨 낮은 짐승을 잡아 줘요.',
+    '잡을 때마다 이웃과 ♥가 조금 오르고(하루 다섯 번), 다섯 마리마다 공 +1이에요.']},
   {v:172,d:'11월 27일',t:'기술은 차례대로',l:[
     '갈래의 첫 기술을 다 찍어야 둘째 기술을 찍을 수 있어요.',
     '이미 찍어 둔 단계는 그대로 써요.']},
@@ -2567,11 +2570,19 @@ function guardPick(g,home){
   for(const b of beasts){
     const D=BEASTS[b.k],mine=!!mg&&mg.kind==='hunt'&&mg.b===b;if(b.hp<=0||g.skip===b)continue; /* v157(사용자 의견: 사병이 별로 일을 안 한다): 내가 싸우는 짐승에게 먼저 달려든다(전에는 내가 맞붙은 짐승은 건드리지 않았다) */
     const dp=Math.abs(b.x-P.x)+Math.abs(b.y-P.y),dg=Math.abs(b.x-g.x)+Math.abs(b.y-g.y),fierce=!!D.bite&&(!D.mild||b.mad)&&b.flee<=0;
-    if(!(b.raid||(mine&&dp<=10)||(home?fierce&&dg<=7:(fierce&&dp<=(b.rage>0?8:5))||(b.wound&&dp<=9))))continue;
+    if(!(b.raid||(mine&&dp<=10)||(home?(fierce&&dg<=7)||(scene==='town'&&!D.man&&D.lv<=Math.max(3,g.lv)&&dg<=10):(fierce&&dp<=(b.rage>0?8:5))||(b.wound&&dp<=9))))continue;
     const sc=dg+(mine?-4:gMen.some(o=>o!==g&&o.foe===b)?6:0); /* 되도록 서로 다른 상대를 맡되, 내가 싸우는 짐승에게는 함께 덤빈다 */
     if(sc<bd){bd=sc;best=b}
   }
   return best;
+}
+/* v173(사용자 요청: 마을에 둔 사병이 마을을 돌아다니는 레벨 낮은 짐승을 잡아 주고, 그러면 마을 평판이 오르게): 집을 지키는 사병은 제 레벨 아래(적어도 3)의 짐승이 열 칸 안에 오면 쫓아가 잡는다.
+   잡을 때마다 마을 이웃 한 사람과 ♥ 조금(하루 다섯 번까지, S.keepDay·keepN), 다섯 마리째마다 공 +1(S.keepAll). 평판(가문 격)은 이웃의 ♥와 공으로 셈한다 */
+function guardKeep(g){
+  if(S.keepDay!==S.day){S.keepDay=S.day;S.keepN=0}
+  if((S.keepN|0)>=5)return;S.keepN=(S.keepN|0)+1;S.keepAll=(S.keepAll|0)+1;
+  const ids=TOWN_IDS.filter(id=>S.npcs[id]),id=ids[ri(0,ids.length-1)],m=S.keepAll%5===0;if(id)addFriend(id,2);if(m)S.merit=(S.merit|0)+1;
+  float('마을 평판 ♥'+(m?' · 공 +1':''),(g.x+.5)*T,g.y*T-48,'#ff9aa8');touch();
 }
 function guardStep(g,goal){
   /* 길 찾기는 이웃·짐승·가축을 비켜 가고, 첫 걸음이 나나 다른 사병에게 막혀 있으면 옆으로 한 칸 비켜 본다 */
@@ -2615,7 +2626,7 @@ function updGuards(dt){
           g.cd=Math.max(1,1.7-.06*g.lv);g.lunge=.2;b.hp-=gDmg(g.lv);b.mad=1;sfx('spear');
           b.hit=.16;b.kb=[Math.sign(b.x-g.x),Math.sign(b.y-g.y)];if(!b.mhp)b.mhp=Math.max(b.hp+gDmg(g.lv),D.hp);float('-'+(gDmg(g.lv)),rx(b)*T+16+ri(-6,6),ry(b)*T-12,'#bcd3ff'); /* v157: 사병이 친 것도 번쩍이고 숫자가 뜬다 · 치는 박자를 2.6초 → 1.7초로 */shots.push({x0:0,y0:0,x1:rx(b)*T+16,y1:ry(b)*T+12,t:.14,hit:true});
           {const up=gGain(g.ri,b.hp<=0?3+Math.floor(D.lv/4):1);if(up){g.lv=up;g.mhp=gHp(up);g.hp=g.mhp;float(ros[g.ri].n+' Lv.'+up+'!',(g.x+.5)*T,g.y*T-40,'#f7d24a');sfx('level')}} /* v153: 싸운 만큼 자란다 */
-          if(b.hp<=0){if(mg&&mg.b===b)mg=null;huntKill(b,true);g.m=2;g.foe=null;continue}
+          if(b.hp<=0){if(mg&&mg.b===b)mg=null;if(home&&scene==='town'&&!b.raid&&!b.wae)guardKeep(g);huntKill(b,true);g.m=2;g.foe=null;continue}
         }
         if(D.bite){g.bt-=dt;if(g.bt<=0){
           const dm=D.lv>=12?2:1;g.bt=2.6;g.hp-=dm;g.hurt=.5;sfx('hurt');float('-'+dm,(g.x+.5)*T,g.y*T-22,'#ff7a5a');
