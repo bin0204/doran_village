@@ -78,7 +78,7 @@ button.chip{font:inherit;color:inherit;cursor:pointer;line-height:inherit}
 .dollme{grid-area:me;width:112px;height:168px;align-self:center;image-rendering:pixelated;background:var(--bg);border:2px solid var(--wood);border-radius:14px}
 .slot{position:relative;width:84px;height:84px;padding:0;border:3px solid var(--wood);border-radius:12px;background:var(--bg);box-shadow:inset 0 0 0 2px var(--surface),0 2px 0 var(--shade);cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:12.5px;color:var(--muted);touch-action:manipulation}
 .slot:hover{border-color:var(--wood-dk)}.slot b{position:absolute;right:3px;bottom:1px;font-size:13px;color:var(--accent);background:var(--surface);border-radius:6px;padding:0 3px}.slot em{position:absolute;left:6px;top:-10px;font-style:normal;font-size:11px;line-height:1.3;padding:0 6px;border-radius:6px;background:var(--wood);color:var(--surface)}.slot small{position:absolute;left:-14px;right:-14px;top:100%;margin-top:4px;font-size:13px;line-height:1.2;color:var(--ink);text-align:center;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.slot.rnd{border-radius:50%;width:72px;height:72px;justify-self:center;align-self:center}.slot.rnd i{font-style:normal;font-size:17px;color:var(--ink)}.slot.rnd:disabled{opacity:.55;cursor:default}
+.slot.rnd{border-radius:50%;width:72px;height:72px;justify-self:center;align-self:center}.slot.rnd canvas{width:44px;height:44px;image-rendering:pixelated}.slot.rnd:disabled{opacity:.55;cursor:default}
 #stage.ghost{border-color:#2a2440;box-shadow:0 0 0 1.5px #15121f,inset 0 0 26px rgba(90,60,170,.6)} /* v161: 귀신골에 있는 동안 놀이판 테두리가 검보랏빛으로 */
 #skPad button{position:absolute;width:48px;height:48px;border-radius:50%;border:2px solid var(--wood);background:linear-gradient(to top,rgba(74,46,24,.34) calc(var(--cd,0)*100%),transparent 0),var(--surface);color:var(--ink);font-family:var(--display);font-size:12px;line-height:1.05;padding:0;cursor:pointer;box-shadow:0 2px 0 var(--shade);touch-action:manipulation}
 #skPad button:nth-child(1){right:92px;bottom:10px}#skPad button:nth-child(2){right:78px;bottom:66px}#skPad button:nth-child(3){right:20px;bottom:94px}
@@ -1481,6 +1481,8 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:170,d:'11월 27일',t:'단련 그림',l:[
+    '단련 판에 팔·몸통·손·다리 그림이 생겼어요.']},
   {v:169,d:'11월 27일',t:'장비 칸 또렷하게',l:[
     '장비 칸과 그림을 키우고, 등급은 칸 테두리 빛깔로 보여 줘요.',
     '칸 이름은 위에 꼬리표로, 장비 이름은 크게 적었어요.',
@@ -9631,7 +9633,7 @@ function openSkills(){
     body.appendChild(el('p','note','갈래의 둘째 기술은 싸울 때 단추로 써요 · 컴퓨터는 1·2·3 키 · 기력 2'));
     /* v165(사용자 요청: 가운데 캐릭터, 단련을 눌러 올리는 느낌): 단련 판. 힘·몸·손 동그라미를 누르면 한 단계 오른다 */
     {const d=el('div','doll'),q=S.cls.charAt(0),sp=charSprite(playerLook(),'front',0),m=el('canvas');m.width=16;m.height=24;m.getContext('2d').drawImage(sp,0,0);m.className='dollme';
-      const mk=(n,ch,nm,area)=>{const id=q+'_t'+n,lv=S.sk[id]|0,b=el('button','slot rnd');b.type='button';b.style.gridArea=area;b.appendChild(el('i',null,ch));b.appendChild(el('b',null,String(lv)));b.appendChild(el('small',null,nm+' '+lv+'/10'));
+      const mk=(n,ch,nm,area)=>{const id=q+'_t'+n,lv=S.sk[id]|0,b=el('button','slot rnd');b.type='button';b.style.gridArea=area;b.appendChild(trnIcon(n));b.appendChild(el('b',null,String(lv)));b.appendChild(el('small',null,nm+' '+lv+'/10'));
         b.disabled=lv>=10||left<1;b.onclick=()=>{if(skLeft()<1||(S.sk[id]|0)>=10)return;S.sk[id]=(S.sk[id]|0)+1;sfx('level');saveAll();openSkills()};return b};
       d.appendChild(mk(1,'힘','힘 기르기','w'));d.appendChild(mk(4,'다리','다리 기르기','t'));d.appendChild(m);d.appendChild(mk(2,'몸','몸 다지기','h'));d.appendChild(mk(3,'손','손 익히기','a'));body.appendChild(d)}
     for(const [rn,list] of SKILLS[S.cls]){
@@ -9897,6 +9899,19 @@ function drawBeast(c,b){
    · plaque: 왼쪽 위에 거는 패(곳 이름과 남은 짐승 수). 사냥터의 모든 구역·동굴·귀신골이 같은 패를 쓴다(귀신골만 먹빛)
    · beastTag: 짐승 머리 위의 작은 한지 꼬리표(레벨, 나보다 세면 테와 글씨가 누렇게·붉게)와, 다친 짐승의 기운 막대(나무 테에 붉은 옻빛)
    · 겨눈 짐승 발밑의 고리는 돌아가는 붓 자국, 기술 단추는 한지 판에 붉은 낙관 숫자(쉬는 동안은 먹물이 차오른다) */
+/* 단련 판의 그림(v170, 사용자 요청: 글뿐 아니라 손 모양·몸 모양 같은 그림이 있으면 좋겠다): 힘=알통 세운 팔, 몸=저고리 입은 몸통, 손=편 손바닥, 다리=대님 맨 다리. bake로 구운 도트 그림 */
+const TRN_ART={
+  1(c){const s='#f3cfb0',d='#d9a37e';rr(c,3,25,11,13,3,'#5b7fb0');rr(c,3,25,11,3,1.5,'#7d9cc6');rr(c,11,26,20,10,5,s);ell(c,20,26,8,5.5,s);rr(c,24,11,9,22,4,s);rr(c,22,4,13,10,4,s);
+    line(c,26,5,26,9,d,1);line(c,29,5,29,9,d,1);line(c,32,6,32,9,d,1);line(c,13,35,27,35,d,1.6);line(c,14,25,19,21.5,d,1);line(c,25,14,25,24,d,1)},
+  2(c){const s='#f3cfb0',k='#d98a4a',d='#b56c33';rr(c,18,2,8,9,2,s);poly(c,[9,11,35,11,41,21,35,25,34,41,10,41,9,25,3,21],k);poly(c,[3,21,9,25,9,17],d);poly(c,[41,21,35,25,35,17],d);
+    poly(c,[15,9,22,24,29,9,32,10,22,30,12,10],'#fff7ea');poly(c,[18,9,22,18,26,9],s);line(c,22,27,29,36,'#c8392f',2.2);line(c,22,27,24,38,'#c8392f',2.2);circ(c,22,27,1.8,'#c8392f');rr(c,10,38,24,3,1,d)},
+  3(c){const s='#f3cfb0',d='#d9a37e';rr(c,15,37,14,6,1.5,'#5b7fb0');rr(c,15,37,14,2,1,'#7d9cc6');rr(c,12,20,19,19,5,s);rr(c,12,9,4.4,14,2.2,s);rr(c,17,4,4.4,19,2.2,s);rr(c,22,5,4.4,18,2.2,s);rr(c,26.8,9,4.2,14,2.1,s);
+    poly(c,[13,31,5,23,7.5,19.5,16,25],s);line(c,16,29,27,25.5,d,1);line(c,17,33,26,32,d,1);line(c,16.4,10,16.4,20,d,.8);line(c,21.6,6,21.6,20,d,.8);line(c,26.6,8,26.6,20,d,.8)},
+  4(c){const b='#efe7d2',d='#cfc4a8';poly(c,[9,3,26,3,33,20,23,27,12,16],b);poly(c,[22,19,33,20,28,35,18,34],b);line(c,13,15,23,26,d,1.2);line(c,24,21,21,33,d,1);rr(c,9,3,17,3,1,'#5b7fb0');
+    rr(c,17,31,12,3.4,1,'#c8392f');poly(c,[17,34.4,28,35,30,38,16,38],'#fff7ea');poly(c,[14,38,30,37.6,38,41,38,43,14,43],'#c9a05a');line(c,18,40.5,36,41.5,'#8a6a34',1);line(c,3,22,8,22,'#9ab7d6',1.4);line(c,2,28,9,28,'#9ab7d6',1.4);line(c,4,34,9,34,'#9ab7d6',1.4)}
+};
+const trnSpr=n=>spr('trn'+n,()=>bake(44,44,0,0,0,0,TRN_ART[n]));
+function trnIcon(n){const s=trnSpr(n),m=el('canvas');m.width=s.width;m.height=s.height;m.getContext('2d').drawImage(s,0,0);return m}
 function plaque(c,x,y,txt,dark){
   c.font='13px '+FONT;c.textAlign='left';c.textBaseline='middle';const w=c.measureText(txt).width+24,h=24;
   rr(c,x,y,w,h,5,dark?'#2a2440':'#6b4a2a');rr(c,x+2,y+2,w-4,h-4,3.5,dark?'rgba(16,14,30,.94)':'rgba(251,245,230,.96)');
