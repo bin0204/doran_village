@@ -1407,6 +1407,12 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:151,d:'11월 27일',t:'머슴에게 일 맡기기',l:[
+    '행랑채 앞에서 "일 맡기기"를 누르면 머슴마다 한 가지 일을 정해 줄 수 있어요.',
+    '밭일: 다 자란 작물을 거두고, 씨앗통의 씨앗을 심고, 모자라면 갈아서 심고, 물을 줘요.',
+    '가축: 먹이를 주고 달걀과 젖을 거둬 와요. 나무하기: 하루에 나무 여덟 개를 해 와요.',
+    '머슴 한 사람의 하루 기력은 40이에요. 기력이 닿는 데까지만 해요.',
+    '일이 늘어난 만큼 품삯이 하루 200냥이 됐어요.']},
   {v:150,d:'11월 27일',t:'북적이는 저잣거리',l:[
     '운종가에 오가는 사람들이 생겼어요. 등짐 진 보부상, 갓 쓴 양반, 광주리 인 아낙이 길을 오가요.',
     '가게 문 앞에서 멈춰 구경하기도 해요.',
@@ -2592,7 +2598,7 @@ const storyLeft=id=>STORY[id].length-(S.story[id]|0),STORY_ALL=Object.values(STO
 // 습격(S.raid={day,n,up 쳐들어왔나,left 남은 산적,won}): 레벨 8부터 엿새~아흐레마다. 아침에 소문이 돌고, 저녁 6시에 내가 마을에 있으면 산적이 길 끝에서 나타난다(raidWatch).
 //   ♥3 이웃은 저마다 하나씩, 사병도 하나씩 쫓아낸다(적어도 둘은 내가 맡는다). 남은 산적은 내가 물리친다. 다 물리치면 포상.
 //   못 물리친 산적은 밤사이 이웃집을 하나씩 부수고(S.ruin에 raid:1, 저절로 고쳐지지 않는다) 내 돈을 턴다. 부서진 집은 목수 모루에게 삯을 주고 고친다(repairTalk)
-const HAND_PAY=120,GUARD_PAY=250,HAND_TILES=12,HAND_SOW=6,RAID_LV=8,RAID_FIX=2500;
+const HAND_PAY=200,HAND_EN=40,GUARD_PAY=250,HAND_TILES=12,HAND_SOW=6,RAID_LV=8,RAID_FIX=2500;
 const handMax=()=>S.camp?0:Math.max(0,S.house-2),guardMax=()=>isNoble()?3:0;
 const guardsAway=()=>(S.caravans||[]).reduce((a,q)=>a+(q.g|0),0); /* v142: 상단을 따라간 사병은 돌아올 때까지 자리에 없다 */
 const guardsOn=()=>S.hh&&S.hhOff!==S.day?Math.max(0,(S.hh.guard|0)-(S.hh.hurtDay===S.day?S.hh.hurt|0:0)-guardsAway()):0; /* v136: 싸우다 다친 사병은 그날 쉰다 */
@@ -2626,16 +2632,20 @@ function updHands(dt){
   const n=Math.min(4,S.hh.hand|0),keys=Object.keys(S.farm);
   while(hMen.length<n){const q=haengAt?townSpot(haengAt.x+hMen.length%2,haengAt.y+1):townSpot(BLD[0].door[0]+1,BLD[0].door[1]+1);hMen.push({x:q[0],y:q[1],fx:q[0],fy:q[1],t:1,dir:[0,1],m:5,w:rnd(.5,3),goal:null,st:0,work:0})}
   hMen.length=n;
+  const jobs=handJobs(),spens=Object.keys(S.pens).filter(k=>S.pens[k].done&&Object.keys(STOCK).some(a=>STOCK[a].pen===k));let gi=-1;
   for(const g of hMen){
+    gi++;g.job=jobs[gi]||'farm'; /* v151: 맡은 일에 따라 가는 곳이 다르다(밭·우리·나무) */
     if(g.t<1){g.t=Math.min(1,g.t+dt*WALK*.7);if(g.t>=1){g.fx=g.x;g.fy=g.y}continue}
     if(g.work>0){g.work-=dt;continue}
     if(!g.goal){
       g.w-=dt;if(g.w>0)continue;g.w=rnd(2,5);
-      if(keys.length){const k=pick(keys).split(',');g.goal=[+k[0],+k[1]]}else if(haengAt)g.goal=[haengAt.x+ri(-1,2),haengAt.y+ri(1,2)];
+      if(g.job==='wood'&&TOWN.TREES.length){const o=pick(TOWN.TREES);g.goal=[o.x,o.y]}
+      else if(g.job==='stock'&&spens.length){const q=S.pens[pick(spens)];g.goal=[q.x+ri(0,1),q.y+1]}
+      else if(keys.length){const k=pick(keys).split(',');g.goal=[+k[0],+k[1]]}else if(haengAt)g.goal=[haengAt.x+ri(-1,2),haengAt.y+ri(1,2)];
       continue;
     }
     const tg=g.goal,d=Math.abs(tg[0]-g.x)+Math.abs(tg[1]-g.y);
-    if(d<=1){if(d)g.dir=[Math.sign(tg[0]-g.x),Math.sign(tg[1]-g.y)];g.goal=null;g.work=keys.length?rnd(1.5,3):0;continue}
+    if(d<=1){if(d)g.dir=[Math.sign(tg[0]-g.x),Math.sign(tg[1]-g.y)];g.goal=null;g.work=keys.length||g.job!=='farm'?rnd(1.5,3):0;continue}
     if(!guardStep(g,(x,y)=>Math.abs(x-tg[0])+Math.abs(y-tg[1])<=1)){g.st+=dt;if(g.st>1.5){g.goal=null;g.st=0}}else g.st=0;
   }
 }
@@ -2643,7 +2653,8 @@ function drawHands(c,list){
   for(const g of hMen){
     const gx=lerp(g.fx,g.x,g.t),gy=lerp(g.fy,g.y,g.t),cx=(gx+.5)*T,fy=(gy+.9)*T-bridgeRise(gx,gy),d=g.dir;
     list.push([gy+.05,()=>{drawChar(c,cx,fy,HAND_LOOK,d,g.t<1,now*.8+g.w);
-      if(g.work>0){const hx=cx+d[0]*11,hy=fy-14+d[1]*6;rr(c,hx-4,hy-4,8,6,2,'#8a9aa6');line(c,hx+3*(d[0]||1),hy-2,hx+8*(d[0]||1),hy+2,'#8a9aa6',1.6);c.fillStyle='rgba(120,190,235,.9)';for(let i=0;i<3;i++)c.fillRect(Math.round(hx+(8+i*2)*(d[0]||1)),Math.round(hy+3+((now*30+i*5)%9)),2,3)}}]); /* 물뿌리개와 떨어지는 물방울 */
+      if(g.work>0&&g.job==='wood'){const sw=Math.sin(now*9)*.5,hx=cx+d[0]*10,hy=fy-16;c.save();c.translate(hx,hy);c.rotate(sw*(d[0]||1));line(c,0,0,(d[0]||1)*9,-9,'#7a5230',2);rr(c,(d[0]||1)*9-3,-13,6,5,1,'#8a9399');c.restore()} /* 도끼질 */
+      else if(g.work>0&&g.job!=='stock'){const hx=cx+d[0]*11,hy=fy-14+d[1]*6;rr(c,hx-4,hy-4,8,6,2,'#8a9aa6');line(c,hx+3*(d[0]||1),hy-2,hx+8*(d[0]||1),hy+2,'#8a9aa6',1.6);c.fillStyle='rgba(120,190,235,.9)';for(let i=0;i<3;i++)c.fillRect(Math.round(hx+(8+i*2)*(d[0]||1)),Math.round(hy+3+((now*30+i*5)%9)),2,3)}}]); /* 물뿌리개와 떨어지는 물방울 */
   }
 }
 /* 행랑채 안(v143, 사용자 요청: 들어가서 누운 사병과 자는 머슴을 보게): 방 안 장면의 한 갈래(S.inQ 5, S.hq와 맞바꿈 · 꾸미기·잠자기 없음)다. 정전·이웃집과 같은 틀(hallOf)을 쓴다.
@@ -2673,7 +2684,7 @@ function haengBedArt(c,b){
 function openSeedBin(){
   const B=S.hh.seeds=S.hh.seeds||{},sea=season();
   openModal('씨앗통',body=>{
-    body.appendChild(el('p','note','씨앗을 넣어 두면 머슴이 아침마다 빈 밭에 심어요. 머슴 한 사람이 하루 '+HAND_SOW+'칸 · 제철 씨앗만 · 밭은 내가 갈아 둬요.'));
+    body.appendChild(el('p','note','씨앗을 넣어 두면 밭일 맡은 머슴이 아침마다 심어요. 제철 씨앗만 · 빈 밭이 모자라면 갈아서 심어요(기력이 닿는 데까지).'));
     if(!(S.hh.hand|0))body.appendChild(el('p','note','지금은 머슴이 없어요. "가솔"에서 머슴을 들여야 심어 줘요.'));
     const inB=Object.keys(B).filter(id=>B[id]>0&&ITEMS[id]);
     body.appendChild(el('p','sub','씨앗통에 든 것'));
@@ -2689,7 +2700,7 @@ function openSeedBin(){
 }
 function haengTalk(){
   const Q=S.hh,hurt=haengHurt();
-  dialog({who:'행랑채',text:'머슴과 사병이 지내는 곳이에요.\n· 머슴 '+Q.hand+'명 · 사병 '+Q.guard+'명\n'+(hurt?'· 다친 사병 '+hurt+'명이 쉬고 있어요\n· 내일 아침이면 나아요':'· 다친 사병은 여기서 하루 쉬면 나아요'),choices:[['들어가 보기',enterHaeng],['씨앗통',openSeedBin],['가솔 살피기',openHousehold],['그만',null]]});
+  dialog({who:'행랑채',text:'머슴과 사병이 지내는 곳이에요.\n· 머슴 '+Q.hand+'명 · 사병 '+Q.guard+'명\n'+(hurt?'· 다친 사병 '+hurt+'명이 쉬고 있어요\n· 내일 아침이면 나아요':'· 다친 사병은 여기서 하루 쉬면 나아요'),choices:[['일 맡기기',openHandJobs],['씨앗통',openSeedBin],['들어가 보기',enterHaeng],['가솔 살피기',openHousehold],['그만',null]]});
 }
 function haengArt(c,h){
   const x=h.x*T,by=(h.y+1)*T,hurt=haengHurt();
@@ -2709,7 +2720,7 @@ function openHousehold(){
     const H=S.hh,hm=handMax(),gm=guardMax(),pay=H.hand*HAND_PAY+H.guard*GUARD_PAY;
     body.appendChild(el('p','note','집안일을 거들 사람을 들여요. 품삯은 아침마다 나가요(지금 하루 '+won(pay)+' · 가진 돈 '+won(S.coins)+'). 돈이 모자란 날은 일을 쉬어요.'));
     const set=(k,d)=>()=>{H[k]=Math.max(0,H[k]+d);sfx(d>0?'coin':'pick');applyHaeng();saveAll();openHousehold()};
-    row(body,el('span','badge','머'),'머슴 '+H.hand+'/'+hm+'명',['아침마다 작물에 물을 줘요 · 한 사람이 밭 '+HAND_TILES+'칸 (마을 밭과 들판 밭터)','행랑채 씨앗통에 넣어 둔 씨앗도 빈 밭에 심어요 · 한 사람이 '+HAND_SOW+'칸','품삯 하루 '+won(HAND_PAY)+(hm?'':' · 너른 초가집부터 둘 수 있어요(집이 클수록 한 사람씩 더)')],
+    row(body,el('span','badge','머'),'머슴 '+H.hand+'/'+hm+'명',['머슴마다 밭일·가축·나무하기 가운데 한 가지를 맡겨요(행랑채 → 일 맡기기)','한 사람의 하루 기력 '+HAND_EN+' · 아침마다 기력이 닿는 데까지 해요','품삯 하루 '+won(HAND_PAY)+(hm?'':' · 너른 초가집부터 둘 수 있어요(집이 클수록 한 사람씩 더)')],
       [['들이기',set('hand',1),H.hand>=hm],['내보내기',set('hand',-1),H.hand<1]]);
     row(body,el('span','badge','병'),'사병 '+H.guard+'/'+(gm||3)+'명',['산적이 쳐들어오면 맞서 싸워요 · 내가 덮쳐질 때 한 사람마다 1할씩 덜 다쳐요'+(H.hurtDay===S.day&&H.hurt?' · 오늘 다쳐서 쉬는 사병 '+H.hurt+'명':'')+(guardsAway()?' · 상단을 따라간 사병 '+guardsAway()+'명':''),'품삯 하루 '+won(GUARD_PAY)+(gm?'':' · 양반만 사병을 둘 수 있어요(궁궐의 한 좌랑에게 "신분 일")')],
       [['들이기',set('guard',1),H.guard>=gm],['내보내기',set('guard',-1),H.guard<1]]);
@@ -2754,18 +2765,57 @@ function raidMorning(msgs){
     msgs.push('산적 떼가 오늘 저녁 마을을 노린다는 소문 · 저녁 6시에 마을을 지켜요');
   }
 }
+/* 머슴의 하루(v151, 사용자 의견: 머슴이 일을 너무 안 한다 → 일을 늘리되 한 사람의 기력은 정해 두고, 머슴마다 한 가지씩 맡긴다):
+   머슴 한 사람의 하루 기력은 HAND_EN. 행랑채의 "일 맡기기"에서 머슴마다 밭일·가축·나무하기 가운데 하나를 정한다(S.hh.jobs, 기본은 밭일).
+   · 밭일: 다 자란 작물 거두기(2) → 씨앗통의 제철 씨앗 심기(1) → 씨앗이 남으면 빈 풀밭을 갈아(3) 심기 → 물 주기(1). 기력이 닿는 데까지만 한다
+   · 가축: 먹이 주기(한 마리 3, 내 가방의 먹이를 쓴다) → 달걀 줍기(1) → 젖 짜기(3)
+   · 나무하기: 나무 한 개에 기력 5
+   거둔 것과 나무는 내 가방에 들어온다. 내가 한 일이 아니라 경험치는 없다. 밸런스: 일이 늘어난 만큼 품삯을 120 → 200냥으로 올렸다 */
+const HAND_JOBS={farm:'밭일',stock:'가축',wood:'나무하기'};
+function handJobs(){const H=S.hh,n=H.hand|0;if(!Array.isArray(H.jobs))H.jobs=[];H.jobs=H.jobs.filter(j=>HAND_JOBS[j]).slice(0,n);while(H.jobs.length<n)H.jobs.push('farm');return H.jobs}
+function handTillSpot(){
+  const oa=TOWN.objAt,pk=scene==='town'||scene==='home'?S.pickups:(S.pickTown||[]);let alt=null;
+  for(let y=FARM[1];y<=FARM[3];y++)for(let x=FARM[0];x<=FARM[2];x++){
+    if(TOWN.tile[y][x]!==0||oa[y][x]||S.farm[x+','+y]||pk.some(q=>q.x===x&&q.y===y))continue;
+    if([[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>S.farm[(x+a)+','+(y+b)]))return x+','+y; /* 이미 있는 밭 곁부터 */
+    if(!alt)alt=x+','+y;
+  }
+  return alt;
+}
 function hhMorning(msgs){
   const H=S.hh,pay=H.hand*HAND_PAY+Math.round(H.guard*GUARD_PAY*(H.out?1.5:1));if(!pay)return;
   if(S.coins<pay){S.hhOff=S.day;msgs.push('품삯 '+won(pay)+'을 못 줘서 가솔이 오늘 일을 쉬어요');return}
-  S.coins-=pay;let left=H.hand*HAND_TILES,wet=0,sown=0;
-  /* v149(사용자 요청: 씨앗통에 넣어 둔 씨앗은 머슴이 알아서 심게): 행랑채 씨앗통(S.hh.seeds)의 제철 씨앗을 아침마다 갈아 둔 빈 밭에 심는다. 머슴 한 사람이 하루 HAND_SOW칸.
-     밭은 내가 갈아 둬야 하고, 목화는 들판 밭터에만 심는다. 심은 것은 이어서 물도 준다(물 주기 몫 안에서). 내 경험치는 없다 */
-  {const B=H.seeds||{},sea=season();let cap=H.hand*HAND_SOW;
-    for(const F of [S.farm,S.ffarm])for(const k in F){if(cap<1)break;const p=F[k];if(p.c)continue;
-      const sid=Object.keys(B).find(id=>B[id]>0&&ITEMS[id]&&CROPS[ITEMS[id].seed]&&CROPS[ITEMS[id].seed].s.includes(sea)&&(F===S.ffarm||id!=='s_mokhwa'));if(!sid)break;
-      B[sid]--;if(B[sid]<1)delete B[sid];p.c=ITEMS[sid].seed;p.g=0;p.e=0;p.w=S.weather==='rain';cap--;sown++}}
-  if(left&&S.weather!=='rain')for(const F of [S.farm,S.ffarm])for(const k in F){const p=F[k];if(left<1)break;if(p.c&&!p.w&&CROPS[p.c]&&p.g<CROPS[p.c].days&&CROPS[p.c].s.includes(season())){p.w=true;left--;wet++}}
-  msgs.push('가솔 품삯 −'+won(pay)+(sown?' · 머슴이 씨앗 '+sown+'개를 심었어요':'')+(wet?' · 밭 '+wet+'칸에 물을 줬어요':''));
+  S.coins-=pay;
+  const R={reap:0,till:0,sow:0,wet:0,fed:0,egg:0,milk:0,wood:0},B=H.seeds=H.seeds||{},sea=season(),town=S.farmTown||S.farm;
+  const seedFor=F=>Object.keys(B).find(id=>B[id]>0&&ITEMS[id]&&CROPS[ITEMS[id].seed]&&CROPS[ITEMS[id].seed].s.includes(sea)&&(F===S.ffarm||id!=='s_mokhwa')),take=id=>{B[id]--;if(B[id]<1)delete B[id]};
+  for(const job of handJobs()){
+    let en=HAND_EN;
+    if(job==='wood'){const n=Math.floor(en/5);gain('wood',n);R.wood+=n;continue}
+    if(job==='stock'){
+      for(const k in S.pens){const q=S.pens[k],n=S.stock.filter(a=>STOCK[a.k]&&STOCK[a.k].pen===k).length;if(!n||q.fed||!q.done||en<n*3||have('feed')<n)continue;gain('feed',-n);q.fed=true;en-=n*3;R.fed+=n}
+      {const pk=scene==='town'||scene==='home'?S.pickups:(S.pickTown||[]);for(let i=pk.length-1;i>=0&&en>=1;i--)if(pk[i].id==='egg'){pk.splice(i,1);gain('egg',1);en--;R.egg++}}
+      for(const a of S.stock)if(a.milk&&en>=3){a.milk=false;gain('milk',1);en-=3;R.milk++}
+      continue;
+    }
+    for(const F of [town,S.ffarm]){
+      for(const k in F){if(en<2)break;const q=F[k];if(q.c&&CROPS[q.c]&&q.g>=CROPS[q.c].days){gain(q.c,1);q.c=null;q.g=0;q.w=false;q.e=0;en-=2;R.reap++}}
+      for(const k in F){if(en<1)break;const q=F[k];if(q.c)continue;const sid=seedFor(F);if(!sid)break;take(sid);q.c=ITEMS[sid].seed;q.g=0;q.e=0;q.w=S.weather==='rain';en--;R.sow++}
+    }
+    while(en>=4){const sid=seedFor(town);if(!sid)break;const sp=handTillSpot();if(!sp)break;town[sp]={c:ITEMS[sid].seed,g:0,w:S.weather==='rain',e:0};take(sid);en-=4;R.till++;R.sow++}
+    if(S.weather!=='rain')for(const F of [town,S.ffarm])for(const k in F){if(en<1)break;const q=F[k];if(q.c&&!q.w&&CROPS[q.c]&&q.g<CROPS[q.c].days&&CROPS[q.c].s.includes(sea)){q.w=true;en--;R.wet++}}
+  }
+  const did=[['reap','거둠'],['till','갈기'],['sow','심기'],['wet','물'],['fed','먹이'],['egg','달걀'],['milk','젖'],['wood','나무']].filter(q=>R[q[0]]).map(q=>q[1]+' '+R[q[0]]).join(' · ');
+  msgs.push('가솔 품삯 −'+won(pay)+(did?' · 머슴: '+did:''));
+}
+function openHandJobs(){
+  const J=handJobs();
+  openModal('일 맡기기',body=>{
+    body.appendChild(el('p','note','머슴마다 한 가지 일을 맡겨요. 한 사람의 하루 기력은 '+HAND_EN+'이고, 아침마다 기력이 닿는 데까지 해요.'));
+    body.appendChild(el('p','note','밭일: 거두기 2 · 심기 1 · 갈기 3 · 물 1 / 가축: 먹이 3 · 달걀 1 · 젖 3 / 나무하기: 한 개에 5'));
+    if(!J.length)body.appendChild(el('p',null,'머슴이 없어요. "가솔"에서 들여요.'));
+    J.forEach((j,i)=>row(body,el('span','badge',String(i+1)),'머슴 '+(i+1)+' · '+HAND_JOBS[j],j==='farm'?'거두고, 씨앗통의 씨앗을 심고, 물을 줘요':j==='stock'?'먹이를 주고 달걀과 젖을 거둬 와요(먹이는 내 가방에서)':'나무를 하루 '+Math.floor(HAND_EN/5)+'개 해 와요',
+      Object.keys(HAND_JOBS).map(k=>[HAND_JOBS[k],()=>{J[i]=k;sfx('pick');saveAll();openHandJobs()},j===k])));
+  });
 }
 // ───────── 이웃집 나들이(v124, 사용자 요청: 이웃집에 들어가고 싶다 · 철과 명절에 따라 달라지게) ─────────
 // 이웃집 문을 두드리거나 그 이웃에게 "집에 놀러 가기"를 청한다. ♥2부터는 언제든, ♥1이면 하루에 한 번 초대를 청할 수 있고, ♥0이면 아직 서먹해서 안 된다. 밤에는 자고 있어서 못 들어간다.
