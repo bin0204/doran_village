@@ -1178,6 +1178,34 @@ const WILD=(function(){
   for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++)if((tile[y][x]===0||tile[y][x]===12)&&!objAt[y][x])GRASS.push([x,y]);
   return{tile,objAt,TREES,ROCKS,GRASS,SAND:[]};
 })();
+/* 숲의 위아래(v160, 사용자 요청: 사냥터를 위아래로 넓히기): 지도 크기는 그대로 두고, 사냥터 숲의 북쪽 길 끝(UP_X)에 윗숲, 남쪽 길 끝(DN_X)에 아랫숲을 붙인다.
+   둘 다 사냥터와 같은 장면(scene 'wild')이고 구역 wz는 7(윗숲)·8(아랫숲). 풍경에는 저장되는 상태가 없다. 윗숲은 개울이 가로지르는 능선, 아랫숲은 못이 셋 있는 늪가 */
+const UP_X=18,DN_X=20;
+{const cl=(x,y)=>{const o=WILD.objAt[y][x];if(o&&o.t==='deco'){const a=o.k==='rock'?WILD.ROCKS:WILD.TREES,i=a.indexOf(o);if(i>=0)a.splice(i,1);WILD.objAt[y][x]=null}};
+  for(let y=0;y<=3;y++){cl(UP_X,y);cl(UP_X-1,y);cl(UP_X+1,y);if(y<3)WILD.tile[y][UP_X]=1}
+  for(let y=H-4;y<H;y++){cl(DN_X,y);cl(DN_X-1,y);cl(DN_X+1,y);if(y>H-4)WILD.tile[y][DN_X]=1}
+  for(let i=WILD.GRASS.length-1;i>=0;i--){const q=WILD.GRASS[i],t=WILD.tile[q[1]][q[0]];if(t!==0&&t!==12)WILD.GRASS.splice(i,1)}}
+function mkSide(seed,top){
+  const tile=[],objAt=[],TREES=[],ROCKS=[],GRASS=[],rng=mulberry(seed),ex=top?UP_X:DN_X;
+  for(let y=0;y<H;y++){tile.push(new Array(W).fill(0));objAt.push(new Array(W).fill(null))}
+  for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(x===0||y===0||x===W-1||y===H-1)tile[y][x]=6;
+  if(top){for(let x=1;x<W-1;x++){if(Math.abs(x-ex)<=1||(x>=6&&x<=8))continue;const y=10+Math.round(Math.sin(x*.4)*2);tile[y][x]=3;tile[y+1][x]=3}} /* 개울(여울 두 군데) */
+  else for(const [cx,cy,rx2,ry2] of [[8,8,4,2.6],[26,13,4.5,3],[13,19,3.5,2.2]])for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++)if(((x-cx)/rx2)**2+((y-cy)/ry2)**2<=1&&Math.abs(x-ex)>1)tile[y][x]=3; /* 못 셋 */
+  for(let i=0;i<4;i++)tile[top?H-1-i:i][ex]=1; /* 드나드는 길 */
+  const cells=[];for(let y=2;y<H-2;y++)for(let x=2;x<W-2;x++)if(tile[y][x]===0&&!(Math.abs(x-ex)<=1&&(top?y>H-7:y<6)))cells.push([x,y]);
+  for(let i=cells.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[cells[i],cells[j]]=[cells[j],cells[i]]}
+  const free=(x,y)=>{for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){if(!dx&&!dy)continue;const t=tile[y+dy][x+dx];if(t===3||t===6||t===1||objAt[y+dy][x+dx])return false}return true};
+  let nT=top?30:26,nR=top?6:3;
+  for(const [x,y] of cells){
+    if(!nT&&!nR)break;if(!free(x,y))continue;
+    const rock=nR>0&&(nT===0||rng()<.14),o={t:'deco',k:rock?'rock':'pine',x,y,sh:0,i:-1};
+    if(rock){ROCKS.push(o);nR--}else{TREES.push(o);nT--}
+    objAt[y][x]=o;
+  }
+  for(let y=1;y<H-1;y++)for(let x=1;x<W-1;x++)if(tile[y][x]===0&&!objAt[y][x])GRASS.push([x,y]);
+  return{tile,objAt,TREES,ROCKS,GRASS,SAND:[]};
+}
+const UPW=mkSide(2203,true),DNW=mkSide(3307,false);
 // 서쪽 들판(v109, 사용자 요청: 마을을 넓히자 → 기존 마을은 그대로 두고 서쪽에 새 구역을 붙인다). 사냥터와 같은 장면(scene 'wild')이고 구역 wz는 4.
 // 나무가 드문 너른 풀밭에 둥근 못과 낮은 둔덕이 있고, 순한 짐승만 다니며 들나물과 꽃이 많이 난다. 동쪽 길(W-1,FIELD_Y)로 마을에 돌아간다. 풍경에는 저장되는 상태가 없다
 const FIELD_Y=12,FIELD_HILL=[21,3,31,8],FIELD_ST=[26,8];
@@ -1438,6 +1466,12 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:160,d:'11월 27일',t:'윗숲과 아랫숲',l:[
+    '사냥터 숲의 북쪽 길 끝에 윗숲, 남쪽 길 끝에 아랫숲이 생겼어요.',
+    '내 레벨이 오를수록 센 짐승이 섞여 나와요. 여기서 레벨을 올려요.',
+    '품삯을 못 받아 쉬는 날에는 행랑채에 이유가 떠요.',
+    '돈이 생기면 행랑채에서 품삯을 주고 바로 일을 시킬 수 있어요.',
+    '직업을 고르기 전에 "맛보기"로 싸우는 모습을 볼 수 있어요.']},
   {v:159,d:'11월 27일',t:'귀신골',l:[
     '사냥터 숲 남서쪽에 귀신골 어귀가 생겼어요(레벨 8부터).',
     '층의 귀신을 모두 물리치면 내려가는 길이 열려요. 열 층까지 있어요.',
@@ -2054,6 +2088,7 @@ function fixState(s){
   s.posts=s.posts&&typeof s.posts==='object'&&!Array.isArray(s.posts)?s.posts:{};for(const k in s.posts)if(!POSTS[k])delete s.posts[k]; /* v137 세운 역참 */
   s.hh=s.hh&&typeof s.hh==='object'?s.hh:{hand:0,guard:0};s.hh.hand=s.hh.hand|0;s.hh.guard=s.hh.guard|0;
   s.ghost=s.ghost&&typeof s.ghost==='object'?s.ghost:{max:0}; /* v159: 귀신골 */
+  s.sideN=s.sideN&&typeof s.sideN==='object'?s.sideN:{7:14,8:14}; /* v160: 윗숲·아랫숲에 오늘 남은 짐승 */
   s.cls=CLS[s.cls]?s.cls:'';s.sk=s.sk&&typeof s.sk==='object'&&!Array.isArray(s.sk)?s.sk:{}; /* v154: 직업과 기술 */
   if(!Array.isArray(s.hh.gs))s.hh.gs=[];s.waeN=s.waeN|0;s.wae=s.wae&&typeof s.wae==='object'?s.wae:null; /* v153: 사병 명부 · 왜구 */
   s.debt=Math.max(0,Math.round(+s.debt||0));if(s.past==null)s.past=s.graze?1:0;
@@ -2807,7 +2842,13 @@ function openSeedBin(){
 }
 function haengTalk(){
   const Q=S.hh,hurt=haengHurt();
-  dialog({who:'행랑채',text:'머슴과 사병이 지내는 곳이에요.\n· 머슴 '+Q.hand+'명 · 사병 '+Q.guard+'명\n'+(hurt?'· 다친 사병 '+hurt+'명이 쉬고 있어요\n· 내일 아침이면 나아요':'· 다친 사병은 여기서 하루 쉬면 나아요'),choices:[['일 맡기기',openHandJobs],['씨앗통',openSeedBin],['들어가 보기',enterHaeng],['가솔 살피기',openHousehold],['그만',null]]});
+  dialog({who:'행랑채',text:'머슴과 사병이 지내는 곳이에요.\n· 머슴 '+Q.hand+'명 · 사병 '+Q.guard+'명\n'+(S.hhOff===S.day?'· 오늘은 품삯을 못 받아 쉬고 있어요\n':'')+(hurt?'· 다친 사병 '+hurt+'명이 쉬고 있어요\n· 내일 아침이면 나아요':'· 다친 사병은 여기서 하루 쉬면 나아요'),choices:(S.hhOff===S.day?[['품삯 주고 일 시키기',hhPayNow]]:[]).concat([['일 맡기기',openHandJobs],['씨앗통',openSeedBin],['들어가 보기',enterHaeng],['가솔 살피기',openHousehold],['그만',null]])});
+}
+/* v160(사용자 의견: 오전인데 머슴이 가만히 있다): 아침에 품삯이 모자라면 가솔이 그날 쉰다(S.hhOff). 이유가 행랑채 이름표와 대화에 보이고, 돈이 생기면 그 자리에서 품삯을 주고 일을 시킬 수 있다 */
+function hhPayNow(){
+  const pay=handPay()+Math.round(guardPayN(S.hh.guard|0)*(S.hh.out?1.5:1));
+  if(S.coins<pay){toast('품삯 '+won(pay)+'이 모자라요 · 가진 돈 '+won(S.coins));return}
+  S.hhOff=0;const m=[];hhMorning(m);hud();saveAll();toast(m[0]||'품삯을 주었어요');
 }
 function haengArt(c,h){
   const x=h.x*T,by=(h.y+1)*T,hurt=haengHurt();
@@ -5048,6 +5089,9 @@ function renderTown(c){
     // 대왕 멧돼지가 나타난 날의 발자국
     if(bossToday())S.boss.trail.forEach((q,i)=>list.push([q[1]-.45,()=>trackArt(c,q[0],q[1],i)]));
   }
+  if(scene==='wild'&&!wz&&!mg){if(ry(P)<5&&Math.abs(UP_X-rx(P))<4)labels.push(()=>label(c,(UP_X+.5)*T,26,'▲ 윗숲으로'));if(ry(P)>H-6&&Math.abs(DN_X-rx(P))<4)labels.push(()=>label(c,(DN_X+.5)*T,(H-1)*T-6,'▼ 아랫숲으로'))} /* v160 */
+  if(scene==='wild'&&wz===7&&!mg&&ry(P)>H-6&&Math.abs(UP_X-rx(P))<4)labels.push(()=>label(c,(UP_X+.5)*T,(H-1)*T-6,'▼ 사냥터 숲으로'));
+  if(scene==='wild'&&wz===8&&!mg&&ry(P)<5&&Math.abs(DN_X-rx(P))<4)labels.push(()=>label(c,(DN_X+.5)*T,26,'▲ 사냥터 숲으로'));
   if(scene==='wild'&&wz===3&&!mg&&rx(P)<5&&Math.abs(SNOW_Y-ry(P))<3)labels.push(()=>label(c,1.5*T,SNOW_Y*T-12,'깊은 산으로'));
   if(scene==='wild'&&wz===3&&!mg&&rx(P)>W-6&&Math.abs(SNOW_Y-ry(P))<3)labels.push(()=>label(c,(W-1.5)*T,SNOW_Y*T-12,'국경 장터로'));
   if(scene==='wild'&&wz===5&&!mg){if(rx(P)<5&&Math.abs(BD_Y-ry(P))<3)labels.push(()=>label(c,1.5*T,BD_Y*T-12,'눈고개로'));if(rx(P)>W-8&&Math.abs(BD_Y-ry(P))<4)labels.push(()=>label(c,(W-2)*T,10*T-4,'닫힌 국경 관문'))}
@@ -5077,7 +5121,7 @@ function renderTown(c){
     list.push([q[1]+.08,()=>{rr(c,x-15,y-3,30,8,2,'#c9a86a');rr(c,x-15,y-3,30,2,1,'#b08a4a');if(k==='hang'){rr(c,x-12,y-8,8,7,1,'#8a6238');rr(c,x+3,y-9,9,8,2,'#d9d2bc')}else if(k==='gomul'){rr(c,x-12,y-7,7,5,1,'#8a9399');line(c,x+2,y-9,x+11,y-2,'#6a4a2a',2)}else{circ(c,x-8,y-4,3.2,'#5a7a4a');circ(c,x+8,y-4,3.2,'#8a6a4a');rr(c,x-2,y-8,5,7,1,'#f3ead6')}drawChar(c,x,y-5,f.look,near?[Math.sign(P.x-q[0])||0,Math.sign(P.x-q[0])?0:Math.sign(P.y-q[1])||1]:[0,1],false,now+q[0])}]);
     if(near&&!mg)labels.push(()=>label(c,x,y+9,f.n));
   }
-  if(haengAt&&scene==='town'){const hq=haengAt,hx=(hq.x+1)*T,hy=(hq.y+1)*T;list.push([hq.y+.3,()=>haengArt(c,hq)]);list.push([hq.y+.95,()=>haengCare(c,hq)]);if(!mg&&Math.abs(P.x-hq.x-.5)+Math.abs(P.y-hq.y)<=3)labels.push(()=>label(c,hx,hy-56,haengHurt()?'행랑채 · 다친 사병 '+haengHurt()+'명':'행랑채'))} /* v139 행랑채 */
+  if(haengAt&&scene==='town'){const hq=haengAt,hx=(hq.x+1)*T,hy=(hq.y+1)*T;list.push([hq.y+.3,()=>haengArt(c,hq)]);list.push([hq.y+.95,()=>haengCare(c,hq)]);if(!mg&&Math.abs(P.x-hq.x-.5)+Math.abs(P.y-hq.y)<=3)labels.push(()=>label(c,hx,hy-56,S.hhOff===S.day?'행랑채 · 품삯을 못 받아 쉬는 중':haengHurt()?'행랑채 · 다친 사병 '+haengHurt()+'명':'행랑채'))} /* v139 행랑채 */
   if(scene==='wild'&&wz===4&&drillAt){const dx=(drillAt.x+drillAt.w/2)*T,dy=drillAt.y*T;list.push([drillAt.y+drillAt.h-.9,()=>drillYardArt(c)]);if(!mg&&Math.abs(P.x-drillAt.x-drillAt.w/2)+Math.abs(P.y-drillAt.y-drillAt.h/2)<=drillAt.w/2+4)labels.push(()=>label(c,dx,dy-22,'훈련장'))} /* v153 훈련장 */
   if(scene==='town'&&S.wae&&S.wae.day===S.day&&!S.wae.won&&S.min>=1020)waeCoast().forEach((q,i)=>list.push([q[1]+.1,()=>waeShipArt(c,(q[0]+.5)*T,(q[1]+.8)*T,i)])); /* v153 왜선: 저녁 5시부터 바다에 보인다 */
   {const pk=postHere(),ps=pk&&postSpot(pk);if(ps){const x=(ps[0]+.5)*T,y=(ps[1]+.9)*T,built=!!S.posts[pk];list.push([ps[1]+.1,()=>postArt(c,x,y,built)]);if(!mg&&Math.abs(P.x-ps[0])+Math.abs(P.y-ps[1])<=3)labels.push(()=>label(c,x,y-(built?52:40),built?'역참':'역참 터'))}} /* v137 역참 */
@@ -5518,7 +5562,7 @@ function hud(){
   if(started)specSync(); /* 전문 갈래의 단계가 찼으면 올린다 */
   syncGuide();syncAsk();
   {const b=$('hSeason'),t=SEASONS[season()]+' '+((S.day-1)%7+1)+'일';if(b.textContent!==t)b.textContent=t;b.style.setProperty('--sc',SEASON_COL[season()])}
-  $('hDay').textContent=(S.weather==='rain'?(season()===3?'눈':'비'):S.wx==='drought'?'가뭄':S.wx==='wind'?'바람':S.wx==='rainbow'?'무지개':'맑음')+(isMarket()?' · 장날':'')+(fest()?' · '+fest().n:'')+(cupDay()?' · 사냥 대회':'')+(fairNow()&&S.seenRes?' · 사신 행차':'')+(scene==='cave'&&cave?(cave.ghost?' · 귀신골 ':' · 동굴 ')+cave.floor+'층':'')+(scene==='sea'?' · 먼바다':'')+(scene==='resort'?' · 운종가':'')+(scene==='wild'&&wz?(wz===2?' · 금원':wz===3?' · 눈고개':wz===4?' · 서쪽 들판':wz===5?' · 국경 장터':wz===6?' · 바닷길 나루':' · 깊은 산'):'')+(mailNew()?' · 편지 '+mailNew():'');
+  $('hDay').textContent=(S.weather==='rain'?(season()===3?'눈':'비'):S.wx==='drought'?'가뭄':S.wx==='wind'?'바람':S.wx==='rainbow'?'무지개':'맑음')+(isMarket()?' · 장날':'')+(fest()?' · '+fest().n:'')+(cupDay()?' · 사냥 대회':'')+(fairNow()&&S.seenRes?' · 사신 행차':'')+(scene==='cave'&&cave?(cave.ghost?' · 귀신골 ':' · 동굴 ')+cave.floor+'층':'')+(scene==='sea'?' · 먼바다':'')+(scene==='resort'?' · 운종가':'')+(scene==='wild'&&wz?(wz===2?' · 금원':wz===3?' · 눈고개':wz===4?' · 서쪽 들판':wz===5?' · 국경 장터':wz===6?' · 바닷길 나루':wz===7?' · 윗숲':wz===8?' · 아랫숲':' · 깊은 산'):'')+(mailNew()?' · 편지 '+mailNew():'');
   const m=Math.floor(S.min);$('hTime').textContent=String(Math.floor(m/60)).padStart(2,'0')+':'+String(Math.floor(m%60/10)*10).padStart(2,'0');
   $('hCoin').textContent=S.coins.toLocaleString('ko-KR')+'냥';
   {const b=$('hGoal'),G=S.goal;if(G&&Array.isArray(G.list)){const got=G.list.filter(q=>q.got).length,rdy=G.list.some(q=>!q.got&&goalDone(q)),t='목표 '+got+'/'+G.list.length+(rdy?' !':'');b.hidden=false;if(b.textContent!==t)b.textContent=t;b.classList.toggle('on',rdy)}else b.hidden=true} /* v141 철마다 목표 */
@@ -5661,7 +5705,9 @@ function arrive(){
     let i;while((i=S.pickups.findIndex(p=>p.x===P.x&&p.y===P.y))>=0)grab(i);
     if(glintHere()>=0){float('반짝이는 곳! 행동으로 파내요');tip('glint','반짝이는 곳 위에서 행동을 세 번 누르면 묻힌 것을 파내요. 가끔 그곳에서만 나오는 보물이 나와요')}
     // 지도 끝의 길목을 밟으면 마을과 사냥터를 오간다
-    if(scene==='wild'&&wz===5){if(P.x===0)leaveBorder()} /* 국경 장터의 서쪽 길 끝은 눈고개 */
+    if(scene==='wild'&&(wz===7||wz===8)){if(wz===7?P.y===H-1:P.y===0)leaveSide()} /* v160: 윗숲의 남쪽 길 끝·아랫숲의 북쪽 길 끝은 사냥터 숲 */
+    else if(scene==='wild'&&!wz&&P.y===0)enterSide(7);else if(scene==='wild'&&!wz&&P.y===H-1)enterSide(8);
+    else if(scene==='wild'&&wz===5){if(P.x===0)leaveBorder()} /* 국경 장터의 서쪽 길 끝은 눈고개 */
     else if(scene==='wild'&&wz===3&&P.x===W-1)borderGate(); /* 눈고개의 동쪽 길 끝은 국경(통행 문서가 있어야) */
     else if(scene==='wild'&&wz===4){if(P.x===W-1)leaveField()} /* 서쪽 들판의 동쪽 길 끝은 마을 */
     else if(scene==='town'&&P.x===0&&P.y===WEST_Y)enterField();
@@ -6841,6 +6887,7 @@ function enterWild(){
 }
 function leaveWild(quiet){
   if(scene!=='wild')return;
+  if(wz===7||wz===8)leaveSide(true); /* v160: 윗숲·아랫숲에서 곧장 돌아올 때는 숲을 거친 셈으로 친다 */
   if(wz===4){leaveField(quiet);return} /* 들판에서 장승 길 등으로 곧장 돌아올 때 */
   if(wz===6){leavePort(true);leaveSea(quiet);return} /* 바닷길 나루에서 곧장 돌아올 때: 먼바다를 거쳐 포구로 */
   if(wz===5)leaveBorder(true); /* 국경 장터에서 곧장 나가면 눈고개를 거친 셈으로 친다 */
@@ -7090,6 +7137,33 @@ function spawnDeep(){
     if(S.chiefUp)put('chief',lead);
   }
   deepBeasts=beasts;
+}
+/* 윗숲·아랫숲(v160): 짐승과 주울 것은 sideBeasts에 따로 두고(저장하지 않는다), 하루에 S.sideN[구역]마리까지 나온다. 내 레벨이 오를수록 센 짐승이 섞인다 → 여기서 레벨을 올린다.
+   윗숲: 사슴·고라니·멧돼지에 레벨 5 범, 7 늑대, 9 승냥이, 12 스라소니, 14 표범 · 아랫숲: 너구리·멧돼지·토끼에 레벨 5 범, 6 여우, 9 곰, 10 승냥이, 13 우두머리 늑대, 18 불곰 */
+const SIDE={7:{n:'윗숲',map:()=>UPW},8:{n:'아랫숲',map:()=>DNW}};
+let sideBeasts={};
+function spawnSide(z){
+  if(sideBeasts[z]){beasts=sideBeasts[z];return}
+  beasts=[];const L=S.level,sea=season(),m=SIDE[z].map(),far=m.GRASS.filter(q=>z===7?q[1]<H-6:q[1]>5);
+  let plan=z===7?['deer','gorani','boar','rabbit','deer','badger','gorani','pheasant','boar','deer','squirrel','gorani','rabbit','boar']:['raccoon','boar','rabbit','squirrel','pheasant','boar','raccoon','gorani','rabbit','badger','boar','squirrel','raccoon','rabbit'];
+  if(L>=5)plan[3]='tiger';
+  if(z===7){if(L>=7){plan[6]='wolf';plan[9]='wolf'}if(L>=9)plan[0]='dhole';if(L>=12)plan[12]='lynx';if(L>=14)plan[5]='leopard'}
+  else{if(L>=6)plan[5]='fox';if(L>=9)plan[1]='bear';if(L>=10)plan[8]='dhole';if(L>=13)plan[11]='alpha';if(L>=18)plan[13]='bigbear'}
+  plan=plan.filter(k=>BEASTS[k].s.includes(sea));
+  const n=S.sideN&&S.sideN[z]!=null?S.sideN[z]|0:14;
+  for(let i=0;i<n&&plan.length&&far.length;i++){const k=plan[i%plan.length];for(let g=0;g<200;g++){const q=pick(far);if(beasts.some(b=>b.x===q[0]&&b.y===q[1]))continue;beasts.push(mkBeast(k,q[0],q[1]));break}}
+  sideBeasts[z]=beasts;
+}
+function enterSide(z){
+  if(scene!=='wild'||wz)return;const D=SIDE[z];
+  wildBeasts=beasts;S.wpick=S.pickups;wz=z;useMap(D.map());S.pickups=[];S.away='side';spawnSide(z);miniRef=null;buildGround();mg=null;fishing=null;drops=[];
+  if(z===7)warp(UP_X,H-2,[0,-1]);else warp(DN_X,1,[0,1]);syncPlace();hud();touch();
+  toast(D.n+'에 들어왔어요 · '+(z===7?'남쪽':'북쪽')+' 길로 나가면 사냥터 숲이에요');
+}
+function leaveSide(quiet){
+  if(scene!=='wild'||(wz!==7&&wz!==8))return;const z=wz;sideBeasts[z]=beasts;
+  wz=0;useMap(WILD);beasts=wildBeasts||[];S.pickups=S.wpick||[];S.away='wild';miniRef=null;buildGround();mg=null;fishing=null;drops=[];
+  if(!quiet){if(z===7)warp(UP_X,1,[0,1]);else warp(DN_X,H-2,[0,-1])}syncPlace();hud();
 }
 function enterDeep(){
   if(scene!=='wild'||wz)return;
@@ -8520,7 +8594,7 @@ function ladderAct(o){
   enterCave(cave.floor+1);
 }
 // 같이 하기에서 서로 보이는 곳의 번호: 동굴은 층마다 다른 번호를 쓴다
-const sceneNo=()=>scene==='cave'&&cave?(cave.ghost?200:100)+cave.floor:scene==='wild'&&wz?(wz===2?7:wz===3?9:wz===5?11:wz===6?12:6):scene==='home'&&S.inQ?(S.inQ>=2?11+S.inQ:8):SCENE_NO[scene]||0; /* 깊은 산은 6, 금원은 7, 궁궐 처소는 8, 눈고개는 9 */
+const sceneNo=()=>scene==='cave'&&cave?(cave.ghost?200:100)+cave.floor:scene==='wild'&&wz?(wz===2?7:wz===3?9:wz===5?11:wz===6?12:wz===7?21:wz===8?22:6):scene==='home'&&S.inQ?(S.inQ>=2?11+S.inQ:8):SCENE_NO[scene]||0; /* 깊은 산은 6, 금원은 7, 궁궐 처소는 8, 눈고개는 9 */
 // ───────── 명절 ─────────
 const festOf=day=>day>1?FESTS.find(f=>f.s===seasonOf(day)&&f.d===(day-1)%7+1)||null:null; // 첫날(1일째)은 설날로 치지 않는다
 const fest=()=>S?festOf(S.day):null;
@@ -9335,12 +9409,60 @@ function clsWatch(){
   if(!S.cls&&now>=clsAskT){clsAskT=now+4;openClass()}
 }
 const clsFee=()=>1000+S.level*100;
+/* 직업 맛보기(v160, 사용자 요청: 고르기 전에 잠깐 볼 수 있게): 직업 고르기 창의 "맛보기"를 누르면 그 직업이 싸우는 모습을 작은 그림판에서 되풀이해 보여 준다.
+   내 모습 그대로 나오고, 평타 → 특기 → 누르는 기술 하나의 차례로 3.2초마다 되풀이한다. 놀이의 싸움과는 따로 도는 보기용 그림이다(clsDemoDraw) */
+const CLS_DEMO={ /* h=맞는 때[초, 힘, 큰 한 방] · say=[때, 글] */
+  gung:{h:[[.42,2],[1.22,2],[2.02,2],[2.62,1],[2.74,1],[2.86,1]],say:[[2.4,'연사!']]},
+  musa:{h:[[.4,2],[1.1,2],[1.8,2],[2.4,1,1],[2.55,1],[2.7,1]],say:[[2.3,'연격!']]},
+  hyeop:{h:[[.4,1],[.9,1],[1.35,6,1],[2,1],[2.35,1],[2.7,1]],say:[[1.3,'기습!']]},
+  dosa:{h:[[.45,2],[1.45,2],[2.45,3,1]],say:[[2.35,'연쇄 벼락!']]}};
+function clsDemoDraw(c,k,t){
+  const u=t%3.2,D=CLS_DEMO[k],L=lookOf(S.outfit,S.sex||'m'),near=k==='musa'||(k==='hyeop'&&u>=1.3),px=k==='hyeop'&&u>1.1&&u<1.3?lerp(62,170,(u-1.1)/.2):near?170:62,py=86,bx=206,by=86,hx=px+9,hy=py-15;
+  const hit=D.h.find(q=>u>=q[0]&&u<q[0]+.16),sw=D.h.find(q=>u>=q[0]-.1&&u<q[0]+.12),ph=sw?clamp((u-sw[0]+.1)/.22,0,1):0;
+  c.save();c.setTransform(2,0,0,2,0,0);c.imageSmoothingEnabled=false;c.globalAlpha=1;
+  rr(c,0,0,240,100,0,'#bcc67c');rr(c,0,68,240,32,0,'#aab66a');for(let i=0;i<9;i++)rr(c,(i*37+11)%236,72+(i*13)%22,2,2,0,'#95a25a');
+  /* 짐승: 맞으면 밀리며 번쩍인다. 도사는 뒤에 여우 한 마리가 더 있다 */
+  if(k==='dosa'){blit(c,beastSpr('fox'),bx+24,by-24,true);if(u>=1.45&&u<3)drawBujeok(c,bx+24,by-40,Math.sin(t*5)*.12)}
+  blit(c,beastSpr('wolf'),bx+(hit?3:0),by,true);
+  if(hit){c.globalCompositeOperation='lighter';c.globalAlpha=.7;blit(c,beastSpr('wolf'),bx+3,by,true);c.globalAlpha=1;c.globalCompositeOperation='source-over'}
+  if(k==='dosa'&&u>=.45)drawBujeok(c,bx,by-26,Math.sin(t*5)*.12);
+  drawChar(c,px,py,L,[1,0],k==='hyeop'&&u>1.1&&u<1.3,t);
+  /* 손에 든 것과 날아가는 것 */
+  const fly=(s,dur,fn)=>{if(u>=s-dur&&u<s)fn(lerp(hx+8,bx-12,(u-s+dur)/dur))};
+  if(k==='gung'){drawBow(c,hx,hy,0,4.5+ph*3,'#8a5a34');for(const q of D.h)fly(q[0],.2,x=>{line(c,x-11,hy,x,hy,'#b98a5a',2);poly(c,[x+3.5,hy,x-1,hy-2.6,x-1,hy+2.6],'#dfe9ee')})}
+  else if(k==='dosa'){drawBujeok(c,hx,hy-6,Math.sin(t*6)*.15);for(const q of D.h)fly(q[0],.24,x=>drawBujeok(c,x,hy-4,x*.2));
+    for(const q of D.h)if(u>=q[0]&&u<q[0]+.3)for(const ox of q[2]?[0,24]:[0]){const X=bx+ox,Y=by-(ox?34:10);c.strokeStyle='#fff7b0';c.lineWidth=2.6;c.beginPath();c.moveTo(X-8,Y-62);c.lineTo(X+6,Y-42);c.lineTo(X-5,Y-26);c.lineTo(X+4,Y-12);c.lineTo(X,Y);c.stroke();circ(c,X,Y,6,'rgba(255,247,176,.6)')}}
+  else if(k==='hyeop'&&u<1.1){star(c,hx+2,hy-3,4.5,'#cfd6dc');for(const q of D.h.slice(0,2))fly(q[0],.2,x=>{c.save();c.translate(x,hy-2);c.rotate(x*.3);star(c,0,0,4.5,'#cfd6dc');c.restore()})}
+  else{const dg=k==='hyeop';c.save();c.translate(hx,hy);c.rotate(sw?-1.25+ph*2.1:-.55);rr(c,2,-1.5,dg?11:19,3,1,'#cfd6dc');poly(c,[dg?13:21,-1.5,dg?17:25,0,dg?13:21,1.5],'#cfd6dc');rr(c,-1,-3,2.6,6,1,'#e9b930');rr(c,-5,-1.5,5,3,1,'#6b4226');c.restore();
+    if(hit){c.strokeStyle=hit[2]?'#f7d24a':'#ffffff';c.lineWidth=hit[2]?4:3;c.lineCap='round';c.beginPath();c.arc(bx-2,by-14,hit[2]?20:15,-2.3+(u-hit[0])*12,-.7+(u-hit[0])*12);c.stroke();c.lineCap='butt'}}
+  if(hit&&k==='gung')for(let i=0;i<6;i++){const q=i*1.05;line(c,bx+Math.cos(q)*5,by-14+Math.sin(q)*5,bx+Math.cos(q)*11,by-14+Math.sin(q)*11,'#f7d24a',1.6)}
+  /* 깎인 기운과 기술 이름 */
+  c.font='bold 9px '+FONT;c.textAlign='center';c.textBaseline='middle';
+  for(const q of D.h)if(u>=q[0]&&u<q[0]+.5){const a=1-(u-q[0])/.5;c.globalAlpha=a;c.lineWidth=2.5;c.strokeStyle='rgba(30,22,16,.85)';const tx=bx+((q[0]*37)%14)-7,ty=by-36-(u-q[0])*26;c.strokeText('-'+q[1],tx,ty);c.fillStyle=q[2]?'#f7d24a':'#fffbe8';c.fillText('-'+q[1],tx,ty);c.globalAlpha=1}
+  for(const q of D.say)if(u>=q[0]&&u<q[0]+.7){c.font='bold 10px '+FONT;c.lineWidth=3;c.strokeStyle='rgba(30,22,16,.85)';c.strokeText(q[1],px,py-50);c.fillStyle='#f7d24a';c.fillText(q[1],px,py-50)}
+  c.restore();
+}
+function clsPick(k){
+  const first=!S.cls,fee=clsFee(),C=CLS[k];if(!C||S.cls===k||(!first&&S.coins<fee))return;
+  if(!first)addCoins(-fee);S.cls=k;S.sk={};clsGear(true);sfx('level');saveAll();hud();closeModal();toast(C.n+'가 됐어요 · "나"의 "직업"에서 기술을 찍어요');
+}
+function openClassDemo(k){
+  const C=CLS[k],first=!S.cls,fee=clsFee();
+  openModal(C.n+' 맛보기',body=>{
+    const cv2=el('canvas');cv2.width=480;cv2.height=200;cv2.style.cssText='width:100%;max-width:480px;display:block;margin:0 auto 8px;border-radius:12px;border:1.5px solid var(--line);image-rendering:pixelated';body.appendChild(cv2);
+    body.appendChild(el('p','note',C.d.join(' · ')));
+    body.appendChild(el('p','note','누르는 기술: '+SKILLS[k].map(r=>ACTIVE[r[1][1][0]].n).join(' · ')+' (그림은 맛보기예요)'));
+    const t=el('div','tabs'),b1=el('button','btn pri',S.cls===k?'지금 직업':first?'이 직업 고르기':'이 직업으로 바꾸기'),b2=el('button','btn','다른 직업 보기');b1.type='button';b2.type='button';
+    b1.disabled=S.cls===k||(!first&&S.coins<fee);b1.onclick=()=>clsPick(k);b2.onclick=()=>openClass();t.appendChild(b1);t.appendChild(b2);body.appendChild(t);
+    const c=cv2.getContext('2d'),t0=performance.now(),loop=()=>{if(!cv2.isConnected||$('modal').hidden)return;try{clsDemoDraw(c,k,(performance.now()-t0)/1000)}catch(e){return}requestAnimationFrame(loop)};loop();
+  });
+}
 function openClass(){
   const first=!S.cls,fee=clsFee();
   openModal('직업 고르기',body=>{
-    body.appendChild(el('p','note',first?'싸우는 방식을 하나 골라요. 나중에 바꿀 수 있어요.':'직업을 바꾸면 기술은 처음부터 다시 찍어요 · 삯 '+won(fee)+' · 가진 돈 '+won(S.coins)));
+    body.appendChild(el('p','note',first?'싸우는 방식을 하나 골라요. "맛보기"로 먼저 볼 수 있고, 나중에 바꿀 수 있어요.':'직업을 바꾸면 기술은 처음부터 다시 찍어요 · 삯 '+won(fee)+' · 가진 돈 '+won(S.coins)));
     for(const k in CLS){const C=CLS[k],on=S.cls===k;
-      row(body,el('span','badge',C.ic),C.n+(on?' · 지금':''),C.d,[[on?'지금 직업':first?'고르기':'바꾸기',()=>{if(S.cls===k||(!first&&S.coins<fee))return;if(!first)addCoins(-fee);S.cls=k;S.sk={};clsGear(true);sfx('level');saveAll();hud();closeModal();toast(C.n+'가 됐어요 · "나"의 "직업"에서 기술을 찍어요')},on||(!first&&S.coins<fee)]])}
+      row(body,el('span','badge',C.ic),C.n+(on?' · 지금':''),C.d,[['맛보기',()=>openClassDemo(k)],[on?'지금 직업':first?'고르기':'바꾸기',()=>clsPick(k),on||(!first&&S.coins<fee)]])}
   });
 }
 function openSkills(){
@@ -9556,7 +9678,7 @@ function huntKill(b,melee){
   else if(scene==='cave'){ghostKill()}
   else if(b.k==='kboar'){if(S.boss)S.boss.dead=1}
   else if(b.k==='imugi'){S.imugiDead=S.day;if(scene==='wild'&&wz)S.deepN=Math.max(0,S.deepN)}
-  else if(scene==='wild'){if(wz===2){if(b.k==='wdeer')S.wdDead=S.day;else S.royN=Math.max(0,S.royN-1)}else if(wz===3){if(b.k==='wtiger')S.wtDead=S.day;else S.snowN=Math.max(0,S.snowN-1)}else if(wz)S.deepN=Math.max(0,S.deepN-1);else S.wildN=Math.max(0,S.wildN-1)}else S.wild=Math.max(0,S.wild-1);
+  else if(scene==='wild'){if(wz===7||wz===8){if(!S.sideN)S.sideN={7:14,8:14};S.sideN[wz]=Math.max(0,(S.sideN[wz]|0)-1)}else if(wz===2){if(b.k==='wdeer')S.wdDead=S.day;else S.royN=Math.max(0,S.royN-1)}else if(wz===3){if(b.k==='wtiger')S.wtDead=S.day;else S.snowN=Math.max(0,S.snowN-1)}else if(wz)S.deepN=Math.max(0,S.deepN-1);else S.wildN=Math.max(0,S.wildN-1)}else S.wild=Math.max(0,S.wild-1);
   // 놓치지 않고 이어서 잡으면 경험치가 한 마리마다 10%씩(50%까지) 더 붙는다
   huntStreak++;const more=Math.min(.5,(huntStreak-1)*.1);
   float(D.n+(D.man?' 토벌!':melee?' 맞붙어 잡았어요!':' 사냥 성공!')+(huntStreak>1?' 연속 '+huntStreak+'마리':''),b.x*T+16,b.y*T-10);addXp(Math.round(D.xp*(1+more)*(melee?1.2:1)));sfx('level');
@@ -10724,7 +10846,7 @@ function nextDay(forced){
   if(scene==='wild')leaveWild(true);
   if(scene==='resort')leaveResort(true);
   if(scene==='palace')leavePalace(true);
-  S.wildN=16;wildBeasts=null;S.wpick=null;fieldBeasts=null;S.fpick=null;S.deepN=14;deepBeasts=null;S.dpick=null;S.snowN=12; /* v158(사용자 의견: 짐승이 너무 적다): 숲 10→16 · 깊은 산 9→14 · 눈고개 8→12 · 금원 8→11 · 마을 둘레 4~5→6~7 · 들판 8→12 */snowBeasts=null;S.npick=null;S.royN=11;royalBeasts=null;S.rpick=null;wz=0;huntStreak=0;
+  S.sideN={7:14,8:14};sideBeasts={};S.wildN=16;wildBeasts=null;S.wpick=null;fieldBeasts=null;S.fpick=null;S.deepN=14;deepBeasts=null;S.dpick=null;S.snowN=12; /* v158(사용자 의견: 짐승이 너무 적다): 숲 10→16 · 깊은 산 9→14 · 눈고개 8→12 · 금원 8→11 · 마을 둘레 4~5→6~7 · 들판 8→12 */snowBeasts=null;S.npick=null;S.royN=11;royalBeasts=null;S.rpick=null;wz=0;huntStreak=0;
   const cupMsg=S.cup&&S.cup.on&&!S.cup.done?cupSettle(true):''; /* 마감하지 않고 잠든 사냥 대회는 아침에 셈한다 */
   const was=season(),prevW=S.weather;
   // 쫓지 못한 까마귀가 앉아 있던 밭은 쪼아 먹힌다(다 익은 것은 잃고, 자라던 것은 하루 뒷걸음). 가뭄 든 날 물을 못 준 작물도 하루 시든다
@@ -10996,7 +11118,7 @@ function rollGlints(){
   const far=TOWN.GRASS.filter(([x,y])=>!(x>=FARM[0]&&x<=FARM[2]&&y>=FARM[1]&&y<=FARM[3])&&Math.abs(x-SPAWN[0])+Math.abs(y-SPAWN[1])>8&&!BLD.some(b=>Math.abs(x-b.door[0])+Math.abs(y-b.door[1])<3)&&!STALLS.some(s=>s.x===x&&s.y===y)); /* 좌판이 서는 칸은 뺀다 */
   S.glints={day:S.day,town:take(far,1),wild:take(WILD.GRASS.filter(q=>q[0]>14&&!(Math.abs(q[0]-HUNT_AT[0])<2&&Math.abs(q[1]-HUNT_AT[1])<3)),2),sea:take(SEA.SAND,2),deep:take(DEEP.GRASS.filter(q=>q[0]>12),2),snow:take(SNOW.GRASS.filter(q=>q[0]>10),2),royal:take(GEUMWON.GRASS.filter(q=>q[1]<H-8),2)};
 }
-const glintKey=()=>scene==='wild'&&wz?(wz===2?'royal':wz===3?'snow':wz===5?'border':wz===6?'port':'deep'):scene; /* 깊은 산과 금원의 반짝이는 곳은 따로 둔다 (나오는 것은 사냥터와 같다) */
+const glintKey=()=>scene==='wild'&&wz?(wz===7||wz===8?'side':wz===2?'royal':wz===3?'snow':wz===5?'border':wz===6?'port':'deep'):scene; /* 깊은 산과 금원의 반짝이는 곳은 따로 둔다 (나오는 것은 사냥터와 같다) */
 const glintsNow=()=>scene==='cave'?(cave&&cave.glint?[cave.glint]:[]):(S.glints&&S.glints[glintKey()])||[];
 function glintHere(){const g=glintsNow();for(let i=0;i<g.length;i++)if(g[i][0]===P.x&&g[i][1]===P.y)return i;return-1}
 let dig=null;
@@ -12884,7 +13006,7 @@ function begin(st){
   S.sound=false;S.bgm=false;bgmStop(); /* 소리는 열 때마다 꺼진 채로 시작한다(사용자 요청). 설정 창에서 켠다 */
   applyTrees();applyRocks();applyBridges();syncRouteGear(true);started=true;$('title').hidden=true;scene='town';
   // 사냥터에서 저장된 채 끝났더라도 마을에서 다시 시작한다
-  useMap(TOWN);wildBeasts=null;deepBeasts=null;snowBeasts=null;fieldBeasts=null;if(S.away==='field'&&S.pickTown){S.fpick=S.pickups;S.pickups=S.pickTown;delete S.pickTown;S.away=null}wz=0;huntStreak=0;cop=null;jailNight=false;comer=null;comeCool=rnd(40,80);cave=null;if(S.pickTown){if(S.pickups.length){if(S.away==='sea')S.spick=S.pickups;else if(S.away==='deep')S.dpick=S.pickups;else if(S.away==='snow')S.npick=S.pickups;else if(S.away==='royal')S.rpick=S.pickups;else if(S.away!=='palace')S.wpick=S.pickups}S.pickups=S.pickTown;delete S.pickTown}S.away=null;royalBeasts=null;mate=null;$('bDeco').hidden=true;warp(SPAWN[0],SPAWN[1],[0,1]);
+  useMap(TOWN);sideBeasts={};wildBeasts=null;deepBeasts=null;snowBeasts=null;fieldBeasts=null;if(S.away==='field'&&S.pickTown){S.fpick=S.pickups;S.pickups=S.pickTown;delete S.pickTown;S.away=null}wz=0;huntStreak=0;cop=null;jailNight=false;comer=null;comeCool=rnd(40,80);cave=null;if(S.pickTown){if(S.pickups.length){if(S.away==='sea')S.spick=S.pickups;else if(S.away==='deep')S.dpick=S.pickups;else if(S.away==='snow')S.npick=S.pickups;else if(S.away==='royal')S.rpick=S.pickups;else if(S.away!=='palace')S.wpick=S.pickups}S.pickups=S.pickTown;delete S.pickTown}S.away=null;royalBeasts=null;mate=null;$('bDeco').hidden=true;warp(SPAWN[0],SPAWN[1],[0,1]);
   // 가축 우리를 지도에 얹고, 새로 생긴 화덕·우리 자리에 남아 있던 주울 것은 치운다
   crownNames();applyPens();applyWorks();applyMarket();applyFest();applyFair();applyVisit();applyYard();applyHaeng();garden=null;rollGlints();dig=null;S.pickups=S.pickups.filter(p=>!(TOWN.objAt[p.y]&&TOWN.objAt[p.y][p.x]));spawnHerd();placing=false;syncPlace();
   if(groundSeason!==season())buildGround();
