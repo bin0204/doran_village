@@ -1401,6 +1401,11 @@ function rollQuests(s){
 // 판을 올릴 때마다 맨 앞에 한 묶음을 더한다(v는 하나씩 올린다). 저장의 news(마지막으로 본 v)보다 새 묶음이 있으면 들어올 때 창이 한 번 뜬다.
 // 이웃에게 들어서 알게 되는 길과 장소는 여기서 미리 밝히지 않고, 그런 말이 돈다는 정도만 적는다
 const NEWS=[
+  {v:138,d:'11월 27일',t:'마을에 온 보따리 상인',l:[
+    '철마다 이튿날은 대륙, 엿샛날은 섬나라 보따리 상인이 마을에 와요(레벨 4부터).',
+    '알림판 가까운 풀밭에 하루 머물러요. 아침 쪽지에 적혀요.',
+    '국경까지 안 가도 먼 나라 물건을 사고 내 물건을 팔 수 있어요.',
+    '값은 장터보다 조금 나쁘고, 하루 수량과 한도는 장터와 함께 써요.']},
   {v:137,d:'11월 27일',t:'역참과 닻',l:[
     '가 본 먼 곳에 "역참 터"가 있어요. 2만 냥과 나무 20개로 세워요.',
     '세운 역참끼리 말을 타고 오가요(삯 150냥). 마을에서는 아래 "역참" 단추로 불러요.',
@@ -4472,7 +4477,8 @@ function renderTown(c){
   if(scene==='resort')innDraw(c,list,labels);
   drawGuards(c,list,labels);
   if(scene==='resort'&&fairNow())list.push([FAIR_PAL[1]+.1,()=>fairArt(c,fairNow())]);
-  if((scene==='wild'&&(wz===5||wz===6))||(scene==='resort'&&fairNow()))for(const f of mkFolk()){ /* 국경 장터·바닷길 나루·사신 행차 큰 장의 사람들 */
+  if((scene==='wild'&&(wz===5||wz===6))||(scene==='resort'&&fairNow())||(scene==='town'&&visitAt&&visitNow()))for(const f of mkFolk()){
+    if(f.k==='peddle'){const bx=(f.x+.5)*T+13,by=(f.y+.9)*T;list.push([f.y+.12,()=>{ell(c,bx,by-5,7,6,f.n[0]==='대'?'#2e4a8a':'#9a4a6a');rr(c,bx-3,by-13,6,4,2,f.n[0]==='대'?'#243a6e':'#7a3454');line(c,bx-6,by-5,bx+6,by-5,'rgba(255,255,255,.35)',1)}])} /* v138: 곁에 내려놓은 보따리 */ /* 국경 장터·바닷길 나루·사신 행차 큰 장의 사람들 */
     const x=(f.x+.5)*T,y=(f.y+.9)*T,d=[Math.sign(P.x-f.x),Math.sign(P.y-f.y)],near=Math.abs(P.x-f.x)+Math.abs(P.y-f.y)<=3;
     list.push([f.y+.1,()=>drawChar(c,x,y,f.look,near&&(d[0]||d[1])?(d[0]&&d[1]?[0,d[1]]:d):[0,1],false,now+f.x)]);
     if(near&&!mg)labels.push(()=>label(c,x,y+9,f.n));
@@ -6275,13 +6281,35 @@ const PT_WANT={ginseng:2,silk:1.55,chinaware:1.4,ink:1.4,tigerskin:1.5,leopardsk
   PT_SELL={copper:{s:'metal',n:4},sulfur:{s:'metal',n:5},lacquer:{s:'craft',n:2},jfan:{s:'craft',n:4},pepper:{s:'craft',n:4}};
 const MKT={bd:{want:BD_WANT,sell:BD_SELL,folk:BD_FOLK,k:7919,role:'조선 사역원',hint:'산삼·더덕·털가죽·사슴뿔·전복'},
   pt:{want:PT_WANT,sell:PT_SELL,folk:PT_FOLK,k:6841,role:'조선 왜학 역관',hint:'산삼·비단·청화 자기·먹·콩·보리'}};
-const mkNow=()=>scene==='resort'?(fairNow()||'bd'):wz===6?'pt':'bd';
-const mkFolk=()=>scene==='resort'&&fairNow()?fairFolk(fairNow()):MKT[mkNow()].folk;
+/* 마을에 오는 보따리 상인(v138, 사용자 제안: 남쪽·북쪽 국경 사람들이 마을에도 한 번씩 와서 팔면 좋겠다): 철마다 이튿날은 대륙, 엿샛날은 섬나라 보따리 상인이 알림판 가까운 풀밭에 하루 머문다(visitOf).
+   국경까지 못 가 본 사람도 먼 나라 물건을 맛볼 수 있다. 밸런스: 사는 값은 장터보다 2할 5푼 비싸고 파는 값은 1할 5푼 덜 쳐준다(bdRates의 tv). 그날의 수량과 한도는 그 나라 장터 것(S.bd·S.pt)을 함께 쓰므로 돈이 더 풀리지 않는다.
+   사람은 마을 지도에 t 'trader', k 'peddle'로 잠깐 올린다(applyVisit, visitAt). 레벨 4부터 온다 */
+const visitOf=day=>(day-1)%7===1?'bd':(day-1)%7===5?'pt':null,visitNow=()=>S&&S.level>=4?visitOf(S.day):null;
+let visitAt=null;
+function visitFolk(mk){
+  const F=MKT[mk].folk,look=F.find(q=>q.k===(mk==='bd'?'silk':'craft')).look;
+  return[{k:'peddle',buy:1,n:mk==='bd'?'대륙 보따리 상인':'섬나라 보따리 상인',look,x:visitAt.x,y:visitAt.y}];
+}
+function applyVisit(){
+  const oa=TOWN.objAt;
+  if(visitAt){if(oa[visitAt.y]&&oa[visitAt.y][visitAt.x]===visitAt)oa[visitAt.y][visitAt.x]=null;visitAt=null}
+  if(!visitNow())return;
+  let best=null,bd=99;
+  for(let y=2;y<H-2;y++)for(let x=2;x<W-2;x++){
+    if(TOWN.tile[y][x]!==0||oa[y][x]||S.farm[x+','+y]||S.pickups.some(q=>q.x===x&&q.y===y))continue;
+    const d=Math.abs(x-BOARD[0])+Math.abs(y-BOARD[1]);if(d<2||d>=bd)continue;
+    if(![[0,1],[1,0],[-1,0],[0,-1]].some(([a,b])=>TOWN.tile[y+b][x+a]<=2&&!oa[y+b][x+a]))continue; /* 곁에 설 자리가 있어야 한다 */
+    bd=d;best=[x,y];
+  }
+  if(best){visitAt={t:'trader',k:'peddle',x:best[0],y:best[1]};oa[best[1]][best[0]]=visitAt}
+}
+const mkNow=()=>scene==='town'&&visitAt&&visitNow()?visitNow():scene==='resort'?(fairNow()||'bd'):wz===6?'pt':'bd';
+const mkFolk=()=>scene==='town'&&visitAt&&visitNow()?visitFolk(visitNow()):scene==='resort'&&fairNow()?fairFolk(fairNow()):MKT[mkNow()].folk;
 function bdRates(mk){
   const M=MKT[mk||mkNow()],rng=mulberry((S.day*M.k+townSeed*13+5)>>>0),ids=Object.keys(M.want).filter(k=>ITEMS[k]),hot=ids[Math.floor(rng()*ids.length)],want={},buy={};
-  const fx=scene==='resort'?1:0; /* 사신 행차 큰 장에서는 조금 더 쳐주고 조금 더 싸다 */
-  for(const k of ids)want[k]=Math.ceil(ITEMS[k].p*M.want[k]*(.85+rng()*.3)*(k===hot?1.35:1)*(1+.1*fx));
-  for(const k in M.sell)buy[k]=Math.ceil(ITEMS[k].p*.8*(.85+rng()*.4)*(1-.08*fx));
+  const fx=scene==='resort'?1:0,tv=scene==='town'?1:0; /* 사신 행차 큰 장에서는 조금 더 쳐주고 조금 더 싸다. 마을에 온 보따리 상인은 덜 쳐주고 비싸다(tv) */
+  for(const k of ids)want[k]=Math.ceil(ITEMS[k].p*M.want[k]*(.85+rng()*.3)*(k===hot?1.35:1)*(1+.1*fx)*(1-.15*tv));
+  for(const k in M.sell)buy[k]=Math.ceil(ITEMS[k].p*.8*(.85+rng()*.4)*(1-.08*fx)*(1+.25*tv));
   return{hot,want,buy};
 }
 function bdToday(mk){mk=mk||mkNow();const M=MKT[mk];if(!S[mk]||S[mk].day!==S.day){S[mk]={day:S.day,sold:0,left:{}};for(const k in M.sell)S[mk].left[k]=M.sell[k].n}return S[mk]}
@@ -6368,6 +6396,7 @@ function traderTalk(k){
   const M=MKT[mkNow()],f=mkFolk().find(q=>q.k===k);if(!f)return;
   if(k==='envoy'){envoyTalk(f);return}
   if(f.say){dialog({who:f.n,text:f.say});return}
+  if(k==='peddle'){dialog({who:f.n,text:'"먼 길을 왔소. 물건 좀 보시겠소?"\n· 값은 장터보다 조금 비싸요\n· 하루 수량과 한도는 장터와 함께 써요',choices:[['물건 사기',()=>openBdBuy('peddle')],['내 물건 팔기',openBdSell],['다음에요',null]]});return}
   const R=bdRates(),B=bdToday();
   if(k==='guide'){
     const best=Object.keys(R.want).sort((a,b)=>R.want[b]/ITEMS[b].p-R.want[a]/ITEMS[a].p).slice(0,2).map(id=>ITEMS[id].n+' '+won(R.want[id])).join(', ');
@@ -6382,7 +6411,7 @@ function openBdBuy(k){
   const M=MKT[mkNow()],f=mkFolk().find(q=>q.k===k),R=bdRates(),B=bdToday();
   openModal(f.n,body=>{
     body.appendChild(el('p','note','가진 돈 '+won(S.coins)+' · 물건은 날마다 조금씩만 들어와요'));
-    for(const id in M.sell){if(k!=='sell'&&M.sell[id].s!==k)continue;const p=R.buy[id],left=B.left[id]|0;
+    for(const id in M.sell){if(k!=='sell'&&k!=='peddle'&&M.sell[id].s!==k)continue;const p=R.buy[id],left=B.left[id]|0;
       row(body,icon('item',id),ITEMS[id].n,['남은 것 '+left+'/'+M.sell[id].n+' · 가진 것 '+have(id),(EAT[id]?'기력 +'+EAT[id]+' · ':'')+'만물상 값 '+sellPrice(id)+'냥'],[[won(p),()=>{if(S.coins<p||B.left[id]<1)return;B.left[id]--;addCoins(-p);gain(id,1);sfx('coin');openBdBuy(k)},S.coins<p||left<1]]);}
   });
 }
@@ -9585,7 +9614,8 @@ function nextDay(forced){
   if(S.wx==='wind')msgs.push('바람이 세요 · 과일나무 밑에 열매');
   if(pecked)msgs.push('까마귀가 밭 '+pecked+'칸을 쪼아 먹었어요');
   if(crowN)msgs.push('까마귀가 밭에 앉았어요 · 다가가서 쫓기');
-  applyMarket();applyFest();applyFair();
+  applyMarket();applyFest();applyFair();applyVisit();
+  {const vm=visitNow();if(vm&&visitAt)msgs.push('오늘은 '+(vm==='bd'?'대륙':'섬나라')+' 보따리 상인이 마을에 왔어요 · 알림판 곁')}
   {const f=fest(),nx=festOf(S.day+1);if(f)msgs.push('오늘은 '+f.n+' · 동쪽 마당에서 잔치');else if(nx)msgs.push('내일은 '+jo(nx.n,'이에요','예요'))}
   if(S.seenRes){const fm=fairNow(),fn=fairOf(S.day+1);if(fm)msgs.push('오늘은 '+(fm==='bd'?'대륙':'섬나라')+' 사신 행차 · 운종가에 큰 장');else if(fn)msgs.push('내일은 사신 행차 날이에요')}
   if(isMarket())msgs.push('오늘은 장날 · 동쪽 마당에 보부상');else if(marketIn()===1)msgs.push('내일은 장날이에요');
@@ -11690,7 +11720,7 @@ function begin(st){
   // 사냥터에서 저장된 채 끝났더라도 마을에서 다시 시작한다
   useMap(TOWN);wildBeasts=null;deepBeasts=null;snowBeasts=null;fieldBeasts=null;if(S.away==='field'&&S.pickTown){S.fpick=S.pickups;S.pickups=S.pickTown;delete S.pickTown;S.away=null}wz=0;huntStreak=0;cop=null;jailNight=false;comer=null;comeCool=rnd(40,80);cave=null;if(S.pickTown){if(S.pickups.length){if(S.away==='sea')S.spick=S.pickups;else if(S.away==='deep')S.dpick=S.pickups;else if(S.away==='snow')S.npick=S.pickups;else if(S.away==='royal')S.rpick=S.pickups;else if(S.away!=='palace')S.wpick=S.pickups}S.pickups=S.pickTown;delete S.pickTown}S.away=null;royalBeasts=null;mate=null;$('bDeco').hidden=true;warp(SPAWN[0],SPAWN[1],[0,1]);
   // 가축 우리를 지도에 얹고, 새로 생긴 화덕·우리 자리에 남아 있던 주울 것은 치운다
-  crownNames();applyPens();applyWorks();applyMarket();applyFest();applyFair();applyYard();garden=null;rollGlints();dig=null;S.pickups=S.pickups.filter(p=>!(TOWN.objAt[p.y]&&TOWN.objAt[p.y][p.x]));spawnHerd();placing=false;syncPlace();
+  crownNames();applyPens();applyWorks();applyMarket();applyFest();applyFair();applyVisit();applyYard();garden=null;rollGlints();dig=null;S.pickups=S.pickups.filter(p=>!(TOWN.objAt[p.y]&&TOWN.objAt[p.y][p.x]));spawnHerd();placing=false;syncPlace();
   if(groundSeason!==season())buildGround();
   // 예전 저장에는 모습 정보가 없다: 한 번 옷장을 열어 고르게 한다
   if(!S.sex){S.sex='m';setTimeout(()=>{if(S&&!busy())openWardrobe()},1500)}
